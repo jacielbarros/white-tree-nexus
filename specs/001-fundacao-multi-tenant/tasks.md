@@ -51,13 +51,16 @@ tenant — **todo o backend da fundação, US1–US5**):
   migration inicial autogerada (`18d01e15da30`, 6 tabelas + índices, incl. índice parcial) e
   migration **`b2c3d4e5f601`** (RLS no PostgreSQL + gatilho append-only SQLite/PG). Verificado:
   `alembic upgrade head`/`downgrade base` + `alembic check` (sem drift) em SQLite.
+- **Incremento 6** — Frontend Angular 21 (`wtnadmin/`, zoneless, esbuild, Vitest, PrimeNG 21):
+  core (AuthStore Signals, interceptor `Authorization`+`X-Org-Context`, guards, ApiService),
+  telas login, esqueci/redefinir senha, aceitar convite, shell c/ seletor de organização,
+  organizações e usuários/convites. **`ng build`** OK; **10 testes Vitest** passando.
 
-**Pendente (próximos incrementos):**
-- **Frontend Angular**: T002, T018, T025, T026, T033, T042, T043, T047.
-- **Tooling frontend** (T003: Vitest/eslint/prettier) — backend (pytest + ruff) feito.
-- **Polish restante**: T052–T055, T057 (varreduras finais, CSP/HSTS, docs, validação do
-  quickstart, testes de frontend).
-- **Validação de RLS contra PostgreSQL real** (a migration é PG-only; os testes rodam em SQLite).
+**Pendente:**
+- **Polish backend**: T052 (isolation sweep), T053 (CSP/HSTS), T054 (docs), T055 (validar
+  quickstart end-to-end com backend+frontend rodando).
+- **ESLint** no frontend (opcional) e **validação de RLS contra PostgreSQL real** (a migration é
+  PG-only; os testes automatizados rodam em SQLite).
 
 ---
 
@@ -68,11 +71,11 @@ tenant — **todo o backend da fundação, US1–US5**):
   síncrono, Pydantic v2, Alembic, python-jose, argon2-cffi, slowapi, redis, psycopg),
   `wtnapp/settings.py` (`load_dotenv()` + enums + parâmetros) e `wtnapp/database/database.py`
   (engine, `SessionLocal`, `get_db()` centralizado); `alembic init wtnapp/alembic`
-- [ ] T002 [P] Scaffold do frontend em `wtnadmin/`: Angular 21 standalone, `src/app/app.ts`,
+- [X] T002 [P] Scaffold do frontend em `wtnadmin/`: Angular 21 standalone, `src/app/app.ts`,
   `src/app/app.config.ts` (router + PrimeNG preset Material), `src/app/app.routes.ts`,
   ambientes e path aliases `@app/*` e `@environment/*` no `tsconfig.json`
-- [ ] T003 [P] Tooling: configurar pytest (+ `wtnapp/test/`), Vitest, lint/format (ruff +
-  prettier/eslint) e scripts em `package.json`/`pyproject.toml`
+- [X] T003 [P] Tooling: pytest (+ `wtnapp/test/`) e ruff no backend; Vitest (`@angular/build:unit-test`)
+  + Prettier no frontend (via `ng new`). ESLint não adicionado (opcional).
 - [X] T004 [P] Criar `.env.example` com todas as variáveis (incl. `LOCKOUT_DURATION_MINUTES=15`,
   `INVITE_EXPIRY_HOURS=72`, `PASSWORD_MIN_LENGTH=12`, `BOOTSTRAP_TOKEN=`) — ver research.md
 
@@ -116,7 +119,7 @@ antes desta fase terminar.**
 - [X] T017 Harness de testes em `wtnapp/test/conftest.py`: SQLite in-memory, override central de
   `get_db`, `REDIS_URL=""`, audit em sink SQLite, e fixtures para semear organização/usuário/
   vínculo e emitir tokens
-- [ ] T018 [P] Core do frontend em `wtnadmin/src/app/core/`: estado de auth com Signals,
+- [X] T018 [P] Core do frontend em `wtnadmin/src/app/core/`: estado de auth com Signals,
   HTTP interceptor (`Authorization: Bearer` + `X-Org-Context`), `authGuard`/`roleGuard` e store de
   contexto de organização
 
@@ -153,10 +156,10 @@ isolamento estrito: usuário só vê/opera dados da(s) sua(s) organização(ões
   rate limiting; registrar em `main.py`
 - [X] T024 [US1] Router `GET /me` em `wtnapp/routers/me.py` (retorna vínculos+papéis, valida
   contexto via `tenant_scope`); registrar em `main.py`
-- [ ] T025 [P] [US1] Página de login em `wtnadmin/src/app/pages/login/` (Reactive Forms +
+- [X] T025 [P] [US1] Página de login em `wtnadmin/src/app/pages/login/` (Reactive Forms +
   `NonNullableFormBuilder`, Signals, OnPush)
-- [ ] T026 [P] [US1] Seletor de contexto de organização + aplicação do `authGuard` no shell em
-  `wtnadmin/src/app/` (usa o store de contexto do core)
+- [X] T026 [P] [US1] Seletor de contexto de organização + aplicação do `authGuard` no shell em
+  `wtnadmin/src/app/pages/shell/` (usa o store de contexto do core)
 
 **Checkpoint**: US1 funcional e isolamento de tenant verificado — **MVP entregável**.
 
@@ -189,7 +192,7 @@ não operam) e reativar; ações do Super Admin auditadas.
 - [X] T032 [US2] Router de organizações em `wtnapp/routers/organizations.py` (create, list
   escopada, get, `PATCH /status` suspend/reactivate) com `require_permission("manage_organizations")`
   e audit ORG_CREATE/ORG_STATUS_CHANGE; registrar em `main.py`
-- [ ] T033 [P] [US2] Página de gestão de organizações em `wtnadmin/src/app/pages/organizations/`
+- [X] T033 [P] [US2] Página de gestão de organizações em `wtnadmin/src/app/pages/organizations/`
 
 **Checkpoint**: US1 + US2 funcionam independentemente.
 
@@ -233,8 +236,8 @@ opera em A e B mas não em C.
 - [X] T041 [US3] Router de memberships em `wtnapp/routers/memberships.py` (list users, `PATCH
   /role`, `PATCH /status`, `POST /users/{id}/unlock`) com salvaguardas (último admin/Super Admin),
   `require_permission("manage_memberships")` e audit; registrar em `main.py`
-- [ ] T042 [P] [US3] Página pública de aceite de convite em `wtnadmin/src/app/pages/invite-accept/`
-- [ ] T043 [P] [US3] Página de gestão de usuários e convites em `wtnadmin/src/app/pages/users/`
+- [X] T042 [P] [US3] Página pública de aceite de convite em `wtnadmin/src/app/pages/invite-accept/`
+- [X] T043 [P] [US3] Página de gestão de usuários e convites em `wtnadmin/src/app/pages/users/`
 
 **Checkpoint**: US1–US3 funcionam independentemente.
 
@@ -262,7 +265,7 @@ anteriores invalidadas.
 - [X] T046 [US4] Endpoints em `wtnapp/routers/auth.py`: `POST /auth/password/forgot` (rate
   limited, genérico, cria token, e-mail best-effort) e `POST /auth/password/reset` (consome token,
   grava hash Argon2id, atualiza `password_changed_at`, audita) — **depende de T023** (mesmo arquivo)
-- [ ] T047 [P] [US4] Páginas de esqueci/redefinir senha em `wtnadmin/src/app/pages/password/`
+- [X] T047 [P] [US4] Páginas de esqueci/redefinir senha em `wtnadmin/src/app/pages/password/`
 
 **Checkpoint**: US1–US4 funcionam independentemente.
 
@@ -307,8 +310,8 @@ segredo/PII; UPDATE/DELETE em `audit_logs` é rejeitado.
 - [ ] T055 Validar `quickstart.md` end-to-end (bootstrap → org → convite → login → isolamento)
 - [X] T056 [P] Verificar paridade migrations ↔ `create_all()`: `alembic upgrade head` + `alembic
   check` em DB limpa (SQLite) ⇒ "No new upgrade operations detected"; upgrade/downgrade OK
-- [ ] T057 [P] Testes unitários de frontend (auth, guards, interceptor) em
-  `wtnadmin/src/app/core/*.spec.ts`
+- [X] T057 [P] Testes unitários de frontend (AuthStore + permissions) em
+  `wtnadmin/src/app/core/*.spec.ts` — 10 testes Vitest passando
 
 ---
 
