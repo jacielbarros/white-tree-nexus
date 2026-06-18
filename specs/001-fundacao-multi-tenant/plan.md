@@ -147,11 +147,12 @@ conforme constitution. Esta feature cria a base de ambos os módulos.
 
 ## Complexity Tracking
 
-> Nenhuma violação do Constitution Check. Tabela intencionalmente vazia.
+> Uma adição de middleware, justificada e documentada (conforme processo da constitution para
+> regras de arquitetura).
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| — | — | — |
+| Middleware de **headers de segurança** (`_security_headers` em `main.py`) além de CORS/rate-limit/tenant | Aplicar CSP/HSTS/X-Content-Type-Options/X-Frame-Options/Referrer-Policy a **todas** as respostas (requisito explícito: `CSP_ENABLED`/`HSTS_ENABLED` no `.env` + T053). | Aplicar headers por dependency em cada rota seria repetitivo e fácil de esquecer; delegar ao reverse proxy acopla a segurança ao deploy. O middleware é mínimo, sem estado e não toca isolamento de tenant. |
 
 ## Phase 0 — Research
 

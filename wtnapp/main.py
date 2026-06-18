@@ -49,6 +49,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Caminhos de documentação (Swagger/Redoc) carregam assets de CDN — isentos de CSP estrita.
+_CSP_EXEMPT_PATHS = {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    """Headers de segurança (T053). Middleware justificado — ver plan.md §Complexity Tracking."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if settings.CSP_ENABLED and request.url.path not in _CSP_EXEMPT_PATHS:
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
+    if settings.HSTS_ENABLED:
+        response.headers.setdefault(
+            "Strict-Transport-Security", f"max-age={settings.HSTS_MAX_AGE}; includeSubDomains"
+        )
+    return response
+
 
 @app.exception_handler(IntegrityError)
 async def _integrity_handler(_request: Request, _exc: IntegrityError) -> JSONResponse:

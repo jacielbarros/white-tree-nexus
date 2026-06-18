@@ -137,6 +137,21 @@ Ordem de MVP: 1) Diagnóstico e Contexto · 2) Gap Analysis · 3) SoA · 4) Plan
 9) IA · 10) Dashboards avançados. Cada módulo nasce de uma spec própria
 ([Spec Kit](.specify/)) e ganha sua seção aqui quando implementado.
 
+#### Fundação Multi-Tenant (Feature 001 — implementada)
+Base de todos os módulos. Spec/plano em `specs/001-fundacao-multi-tenant/`.
+- **Backend** (`wtnapp/`): organizações (ciclo de vida), bootstrap do Super Admin, auth JWT HS512
+  (login/bloqueio/logout), redefinição de senha, convites + aceite, RBAC, isolamento de tenant e
+  auditoria append-only. Routers: `bootstrap`, `auth`, `organizations`, `invitations`,
+  `memberships`, `me`. Escopo de tenant central em `helpers/tenant_scope.py` (+ RLS no PostgreSQL);
+  RBAC em `helpers/permissions.py` (`require_permission` / `require_super_admin`); auditoria em
+  `services/audit_service.py`. Contexto de organização via header `X-Org-Context`.
+- **Frontend** (`wtnadmin/`): core (AuthStore com Signals, interceptor, guards, `ApiService`) e
+  telas login, senha (esqueci/redefinir), aceite de convite, shell c/ seletor de organização,
+  organizações e usuários/convites.
+- **Testes**: `pytest wtnapp/test` (inclui isolamento de tenant) e `npm test` em `wtnadmin/`.
+- **Migrations**: `wtnapp/alembic/` (schema inicial + RLS/gatilho append-only). Ainda **não**
+  validado contra PostgreSQL real (RLS é PG-only; testes rodam em SQLite).
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.

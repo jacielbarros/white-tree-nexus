@@ -56,11 +56,14 @@ tenant — **todo o backend da fundação, US1–US5**):
   telas login, esqueci/redefinir senha, aceitar convite, shell c/ seletor de organização,
   organizações e usuários/convites. **`ng build`** OK; **10 testes Vitest** passando.
 
+- **Incremento 7** — Polish: headers de segurança (T053, testado), varredura de isolamento de
+  tenant (T052, sem bypass), docs do módulo no `CLAUDE.md` (T054). Backend: **42 testes**.
+
 **Pendente:**
-- **Polish backend**: T052 (isolation sweep), T053 (CSP/HSTS), T054 (docs), T055 (validar
-  quickstart end-to-end com backend+frontend rodando).
-- **ESLint** no frontend (opcional) e **validação de RLS contra PostgreSQL real** (a migration é
-  PG-only; os testes automatizados rodam em SQLite).
+- **T055** — validar o quickstart **end-to-end** com backend (`uvicorn`) + frontend (`ng serve`)
+  rodando no navegador (não executado neste ambiente).
+- **Validação de RLS contra PostgreSQL real** (a migration é PG-only; os testes rodam em SQLite).
+- **ESLint** no frontend (opcional).
 
 ---
 
@@ -301,12 +304,15 @@ segredo/PII; UPDATE/DELETE em `audit_logs` é rejeitado.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T052 [P] **Tenant isolation sweep**: confirmar que nenhuma query de domínio escapou do
-  `tenant_scope` e que RLS está habilitada em todas as tabelas escopadas (`memberships`,
-  `invitations`)
-- [ ] T053 [P] Configurar headers de segurança (CSP/HSTS opt-in) via `settings.py` em
-  `wtnapp/main.py`
-- [ ] T054 [P] Atualizar docs: seção do módulo em `CLAUDE.md` e `docs/` (fundação implementada)
+- [X] T052 [P] **Tenant isolation sweep**: auditado — todo endpoint escopado passa por
+  `require_permission`→`get_org_context` (resolve/valida tenant + seta GUC de RLS); queries
+  filtram por `ctx.tenant_id` com guarda `tenant_id != ctx ⇒ 404`; RLS em `memberships`+`invitations`.
+  Nenhum bypass cross-tenant.
+- [X] T053 [P] Headers de segurança (CSP/HSTS opt-in + nosniff/DENY/Referrer-Policy) via
+  middleware em `wtnapp/main.py` (justificado em plan.md §Complexity Tracking); testado em
+  `wtnapp/test/test_security_headers.py`
+- [X] T054 [P] Atualizar docs: seção "Fundação Multi-Tenant (Feature 001 — implementada)" em
+  `CLAUDE.md`
 - [ ] T055 Validar `quickstart.md` end-to-end (bootstrap → org → convite → login → isolamento)
 - [X] T056 [P] Verificar paridade migrations ↔ `create_all()`: `alembic upgrade head` + `alembic
   check` em DB limpa (SQLite) ⇒ "No new upgrade operations detected"; upgrade/downgrade OK

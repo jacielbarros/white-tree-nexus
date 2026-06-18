@@ -49,6 +49,11 @@ RATE_LIMIT_ENABLED = _bool("RATE_LIMIT_ENABLED", "true")
 RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "5/minute")
 RATE_LIMIT_PASSWORD_REQUEST = os.getenv("RATE_LIMIT_PASSWORD_REQUEST", "3/minute")
 
+# --- Headers de segurança ---
+CSP_ENABLED = _bool("CSP_ENABLED", "true")
+HSTS_ENABLED = _bool("HSTS_ENABLED", "false")  # opt-in — só ligar em produção HTTPS
+HSTS_MAX_AGE = _int("HSTS_MAX_AGE", 31536000)
+
 # --- E-mail (SMTP) — entrega best-effort (fail-soft) ---
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = _int("SMTP_PORT", 587)
