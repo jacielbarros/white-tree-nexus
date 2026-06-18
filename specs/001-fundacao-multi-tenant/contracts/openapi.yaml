@@ -1,0 +1,411 @@
+openapi: 3.1.0
+info:
+  title: "White Tree Nexus — Fundação Multi-Tenant API"
+  version: 0.1.0
+  description: >
+    Contratos da feature 001 (fundação): bootstrap, autenticação, organizações,
+    convites, vínculos/usuários e contexto do usuário. Convenções transversais em README.md.
+    NÃO normativo de stack — descreve o comportamento observável (spec.md / research.md).
+servers:
+  - url: /
+
+# ----------------------------------------------------------------------------
+# Convenções de segurança
+#  - bearerAuth: JWT HS512 (Authorization: Bearer <token>)
+#  - X-Org-Context: organização-alvo. Obrigatório p/ Consultor (multi-org) e Super Admin.
+# ----------------------------------------------------------------------------
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: "Organização-alvo do contexto (R10). Obrigatório p/ Consultor/Super Admin."
+  responses:
+    BadRequest:
+      description: "Requisição inválida / contexto de organização ausente."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: "Não autenticado (credencial/token inválido, expirado ou revogado) — genérico."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: "Sem permissão para a ação no próprio tenant."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: "Recurso inexistente OU de outro tenant (genérico — não revela existência)."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: "Conflito (slug/e-mail duplicado, bootstrap já feito, última-admin)."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unprocessable:
+      description: "Validação de payload falhou."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooManyRequests:
+      description: "Rate limit excedido."
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    Error:
+      type: object
+      description: "Erro genérico — nunca expõe stack, tabela ou existência cross-tenant."
+      properties:
+        detail: { type: string, example: "Credenciais inválidas." }
+      required: [detail]
+    Role:
+      type: string
+      enum: [super_admin, org_admin, consultant, client, manager, process_owner, control_owner, internal_auditor, guest_collaborator]
+    OrgStatus: { type: string, enum: [active, suspended] }
+    Organization:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { $ref: '#/components/schemas/OrgStatus' }
+        created_at: { type: string, format: date-time }
+    Membership:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { type: string, enum: [active, disabled] }
+        locked: { type: boolean }
+    Invitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { type: string, enum: [pending, accepted, expired, revoked] }
+        expires_at: { type: string, format: date-time }
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, example: bearer }
+        expires_in: { type: integer, description: "segundos até expirar" }
+    Me:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        is_super_admin: { type: boolean }
+        memberships:
+          type: array
+          items:
+            type: object
+            properties:
+              tenant_id: { type: string, format: uuid }
+              org_name: { type: string }
+              role: { $ref: '#/components/schemas/Role' }
+
+paths:
+  /bootstrap/super-admin:
+    post:
+      summary: "Cria o 1º Super Admin (uma única vez; exige BOOTSTRAP_TOKEN) — FR-001"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bootstrap_token, email, full_name, password]
+              properties:
+                bootstrap_token: { type: string }
+                email: { type: string, format: email }
+                full_name: { type: string }
+                password: { type: string, minLength: 12 }
+      responses:
+        '201':
+          description: "Super Admin criado."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /auth/login:
+    post:
+      summary: "Autentica e emite JWT — FR-006/FR-009/FR-011 (rate limited)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/logout:
+    post:
+      summary: "Encerra a sessão corrente (revoga jti no Redis) — FR-007"
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: "Sessão encerrada." }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/password/forgot:
+    post:
+      summary: "Solicita redefinição (resposta genérica) — FR-013 (rate limited)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email } }
+      responses:
+        '202': { description: "Aceito (sempre genérico, exista ou não o e-mail)." }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/password/reset:
+    post:
+      summary: "Redefine a senha com token de uso único — FR-014"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 12 }
+      responses:
+        '204': { description: "Senha redefinida; sessões anteriores invalidadas." }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /me:
+    get:
+      summary: "Contexto do usuário autenticado (vínculos e papéis)."
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /organizations:
+    post:
+      summary: "Cria organização (Super Admin) — FR-002 (manage_organizations)"
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string, pattern: '^[a-z0-9-]+$' }
+      responses:
+        '201':
+          description: "Criada."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Organization' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      summary: "Lista organizações (Super Admin = todas; demais = só as suas) — FR-005"
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Organization' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /organizations/{org_id}:
+    get:
+      summary: "Detalha uma organização (membro ou Super Admin)."
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: org_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Organization' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /organizations/{org_id}/status:
+    patch:
+      summary: "Suspende/reativa organização (Super Admin) — FR-003/FR-004"
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: org_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties: { action: { type: string, enum: [suspend, reactivate] } }
+      responses:
+        '200':
+          description: "Estado alterado."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Organization' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /invitations:
+    post:
+      summary: "Convida usuário para a org do contexto — FR-016 (invite_users)"
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role: { $ref: '#/components/schemas/Role' }
+      responses:
+        '201':
+          description: "Convite criado (e-mail enviado best-effort)."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Invitation' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      summary: "Lista convites da org do contexto (invite_users)."
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Invitation' } } } }
+
+  /invitations/accept:
+    post:
+      summary: "Aceita convite (público) — define senha e ativa vínculo — FR-017/FR-018"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, full_name, password]
+              properties:
+                token: { type: string }
+                full_name: { type: string }
+                password: { type: string, minLength: 12 }
+      responses:
+        '200':
+          description: "Vínculo ativado."
+          content: { application/json: { schema: { $ref: '#/components/schemas/TokenResponse' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /invitations/{invitation_id}/revoke:
+    post:
+      summary: "Revoga convite pendente — FR-019 (invite_users)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: invitation_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/OrgContext' }
+      responses:
+        '204': { description: "Revogado." }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /invitations/{invitation_id}/resend:
+    post:
+      summary: "Reenvia e-mail de convite pendente — FR-019 (invite_users)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: invitation_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/OrgContext' }
+      responses:
+        '202': { description: "Reenvio disparado (best-effort)." }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /users:
+    get:
+      summary: "Lista usuários/vínculos da org do contexto — (view_organization)"
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses:
+        '200':
+          description: "OK."
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Membership' } } } }
+
+  /memberships/{membership_id}/role:
+    patch:
+      summary: "Altera o papel de um vínculo — FR-021 (manage_memberships)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: membership_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/OrgContext' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties: { role: { $ref: '#/components/schemas/Role' } }
+      responses:
+        '200':
+          description: "Papel alterado."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Membership' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /memberships/{membership_id}/status:
+    patch:
+      summary: "Ativa/desativa vínculo — FR-021 (manage_memberships)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: membership_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/OrgContext' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties: { status: { type: string, enum: [active, disabled] } }
+      responses:
+        '200':
+          description: "Estado alterado."
+          content: { application/json: { schema: { $ref: '#/components/schemas/Membership' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /users/{user_id}/unlock:
+    post:
+      summary: "Desbloqueia conta bloqueada por falhas de login — FR-009a (manage_memberships)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/OrgContext' }
+      responses:
+        '204': { description: "Desbloqueado (auditado)." }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }

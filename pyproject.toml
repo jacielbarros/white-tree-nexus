@@ -1,0 +1,13 @@
+[project]
+name = "wtnapp"
+version = "0.1.0"
+description = "White Tree Nexus — SaaS multi-tenant de Gestão de SGSI (ISO/IEC 27001:2022) — backend"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["wtnapp/test"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"

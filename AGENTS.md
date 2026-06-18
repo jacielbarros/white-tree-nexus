@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 > **Codinome provisório:** "White Tree Nexus". Faça find-replace pelo nome real do produto.
 > Prefixo de diretórios: `wtn` (`wtnapp/` backend, `wtnadmin/` admin web).
@@ -78,7 +78,7 @@ EVIDENCE_MAX_FILE_BYTES=20971520          # 20 MB
 # --- Recursos de IA (Módulo 10, opt-in por organização) ---
 AI_FEATURES_ENABLED=false
 ANTHROPIC_API_KEY=
-AI_MODEL=claude-sonnet-4-6                # default; usar os modelos Claude mais recentes
+AI_MODEL=Codex-sonnet-4-6                # default; usar os modelos Codex mais recentes
 ```
 
 ---
