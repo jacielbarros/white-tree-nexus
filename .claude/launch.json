@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wtnadmin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "wtnadmin", "start", "--", "--port", "4200", "--host", "127.0.0.1"],
+      "port": 4200,
+      "autoPort": false
+    }
+  ]
+}
