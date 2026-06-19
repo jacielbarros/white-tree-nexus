@@ -13,6 +13,11 @@ pela [constitution](../.specify/memory/constitution.md).
   isolamento de tenant, auditoria) de que todos os módulos dependem.
 - **Pré-requisitos importam.** Cada módulo assume que os anteriores já foram
   especificados/implementados (vínculos de evidência, controles, etc.).
+- **Padrões transversais.** O padrão **"Documento Controlado SGSI" (cláusula 7.5)** —
+  versionamento, aprovação, classificação, retenção e rastreabilidade — é compartilhado por todos
+  os módulos. Definição canônica em
+  [`iso27001-documento-controlado.md`](iso27001-documento-controlado.md). Os prompts dos módulos
+  foram **enriquecidos a partir do estudo de caso real** em `material_de_contexto/`.
 
 ## Fase MVP (nesta ordem)
 
