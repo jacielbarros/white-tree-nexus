@@ -1,0 +1,36 @@
+# --- Python (backend / wtnapp) ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.sqlite3
+*.db
+
+# --- Node / Angular (frontend / wtnadmin) ---
+node_modules/
+dist/
+.angular/
+coverage/
+*.log
+
+# --- Secrets / local config ---
+.env
+.env.*
+!.env.example
+
+# --- Evidence store (local) ---
+evidence_store/
+
+# --- Universal ---
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/

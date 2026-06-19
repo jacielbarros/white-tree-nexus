@@ -1,0 +1,136 @@
+"""Infra de testes: SQLite em arquivo temporário, override central de `get_db`, jti em memória.
+
+`conftest.py` define variáveis de ambiente ANTES de importar `wtnapp` (settings lê no import):
+- DATABASE_URL → SQLite em arquivo temp (conexões separadas p/ a sessão própria do audit)
+- REDIS_URL=memory:// → denylist de jti determinística (sem Redis real)
+- RATE_LIMIT_ENABLED=false → não dispara 429 nos testes funcionais
+"""
+
+import os
+import tempfile
+import uuid
+
+_TMP_DB = os.path.join(tempfile.gettempdir(), f"wtn_test_{uuid.uuid4().hex}.db")
+os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{_TMP_DB}"
+os.environ["REDIS_URL"] = "memory://"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-only-for-tests"
+os.environ["BOOTSTRAP_TOKEN"] = "test-bootstrap-token"
+os.environ["MAX_LOGIN_ATTEMPTS"] = "5"
+os.environ["LOCKOUT_DURATION_MINUTES"] = "15"
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from wtnapp.database import database  # noqa: E402
+from wtnapp.main import app  # noqa: E402
+from wtnapp.models import Base  # noqa: E402
+from wtnapp.models.membership_model import Membership  # noqa: E402
+from wtnapp.models.organization_model import Organization  # noqa: E402
+from wtnapp.models.user_model import User  # noqa: E402
+from wtnapp.services import crypto_service, token_service  # noqa: E402
+from wtnapp.settings import MembershipStatus, OrgStatus, Role, UserStatus  # noqa: E402
+
+DEFAULT_PASSWORD = "Sup3rSecret!2345"
+
+
+@pytest.fixture(autouse=True)
+def _reset_state():
+    """Schema limpo + denylist limpa por teste."""
+    Base.metadata.drop_all(bind=database.engine)
+    Base.metadata.create_all(bind=database.engine)
+    token_service.reset_memory_denylist()
+    yield
+    Base.metadata.drop_all(bind=database.engine)
+
+
+@pytest.fixture
+def db():
+    session = database.SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def client():
+    return TestClient(app)
+
+
+class Factory:
+    """Helpers de seed para os testes (baseline mínimo de cada user story)."""
+
+    def __init__(self, session):
+        self.db = session
+
+    def org(self, slug="acme", name=None, status=OrgStatus.active) -> Organization:
+        org = Organization(name=name or slug.upper(), slug=slug, status=status)
+        self.db.add(org)
+        self.db.commit()
+        self.db.refresh(org)
+        return org
+
+    def user(
+        self,
+        email="user@acme.com",
+        password=DEFAULT_PASSWORD,
+        full_name="User",
+        status=UserStatus.active,
+        super_admin=False,
+    ) -> User:
+        user = User(
+            email=email.lower(),
+            full_name=full_name,
+            password_hash=crypto_service.hash_password(password) if password else None,
+            status=status,
+            is_platform_super_admin=super_admin,
+        )
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def membership(self, user, org, role=Role.org_admin, status=MembershipStatus.active) -> Membership:
+        m = Membership(tenant_id=org.id, user_id=user.id, role=role, status=status)
+        self.db.add(m)
+        self.db.commit()
+        self.db.refresh(m)
+        return m
+
+
+@pytest.fixture
+def factory(db):
+    return Factory(db)
+
+
+@pytest.fixture
+def outbox(monkeypatch):
+    """Captura tokens que seriam enviados por e-mail (convite/reset) sem SMTP real."""
+    from wtnapp.services import notification_service
+
+    captured: list[dict] = []
+
+    def _invite(*, to_email, token, org_name, role):
+        captured.append({"type": "invite", "to": to_email, "token": token})
+        return True
+
+    def _reset(*, to_email, token):
+        captured.append({"type": "reset", "to": to_email, "token": token})
+        return True
+
+    monkeypatch.setattr(notification_service, "send_invite_email", _invite)
+    monkeypatch.setattr(notification_service, "send_password_reset_email", _reset)
+    return captured
+
+
+@pytest.fixture
+def login(client):
+    """Retorna headers Authorization a partir de credenciais válidas."""
+
+    def _login(email, password=DEFAULT_PASSWORD):
+        resp = client.post("/auth/login", json={"email": email, "password": password})
+        assert resp.status_code == 200, resp.text
+        return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+    return _login
