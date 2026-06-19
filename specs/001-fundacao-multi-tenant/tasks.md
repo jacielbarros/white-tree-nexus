@@ -59,11 +59,17 @@ tenant — **todo o backend da fundação, US1–US5**):
 - **Incremento 7** — Polish: headers de segurança (T053, testado), varredura de isolamento de
   tenant (T052, sem bypass), docs do módulo no `CLAUDE.md` (T054). Backend: **42 testes**.
 
-**Pendente:**
-- **T055** — validar o quickstart **end-to-end** com backend (`uvicorn`) + frontend (`ng serve`)
-  rodando no navegador (não executado neste ambiente).
-- **Validação de RLS contra PostgreSQL real** (a migration é PG-only; os testes rodam em SQLite).
-- **ESLint** no frontend (opcional).
+- **Incremento 8** — E2E local (SQLite): backend `uvicorn` + frontend `ng serve` validados ao
+  vivo (20 checks HTTP + fluxo no navegador: login c/ CORS+token, listar/criar organização). T055 ✅.
+- **Incremento 9** — Validação contra **PostgreSQL 16 real**: `alembic upgrade head` + `alembic
+  check` (sem drift); **RLS comprovada** via papel não-superusuário (contexto A⇒só A, B⇒só B,
+  sem contexto⇒0 linhas, fail-closed) e **gatilho append-only** bloqueando UPDATE/DELETE.
+  Hardening: policy passou a usar `NULLIF(current_setting('app.tenant_id',true),'')::uuid` para
+  tratar GUC vazio como "sem contexto" (sem erro de cast). DB/role de teste removidos ao final.
+
+**Pendente (opcional):**
+- **ESLint** no frontend.
+- **Configuração de remote + push** (a definir com o time: host, repositório, visibilidade).
 
 ---
 
@@ -313,7 +319,10 @@ segredo/PII; UPDATE/DELETE em `audit_logs` é rejeitado.
   `wtnapp/test/test_security_headers.py`
 - [X] T054 [P] Atualizar docs: seção "Fundação Multi-Tenant (Feature 001 — implementada)" em
   `CLAUDE.md`
-- [ ] T055 Validar `quickstart.md` end-to-end (bootstrap → org → convite → login → isolamento)
+- [X] T055 Validar `quickstart.md` end-to-end (SQLite): backend `uvicorn` + frontend `ng serve`;
+  20 checks HTTP ao vivo (bootstrap/login/ciclo de org/convites/contexto/cross-tenant 404) +
+  navegação no browser (login c/ CORS+token, listar e **criar** organização via UI). RLS contra
+  PostgreSQL real ainda pendente.
 - [X] T056 [P] Verificar paridade migrations ↔ `create_all()`: `alembic upgrade head` + `alembic
   check` em DB limpa (SQLite) ⇒ "No new upgrade operations detected"; upgrade/downgrade OK
 - [X] T057 [P] Testes unitários de frontend (AuthStore + permissions) em

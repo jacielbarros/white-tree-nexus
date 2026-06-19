@@ -45,9 +45,10 @@ def upgrade() -> None:
         for table in _SCOPED_TABLES:
             op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
             op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;")
+            # NULLIF(...,'') trata GUC ausente OU vazio como "sem contexto" (fail-closed, sem erro de cast).
             op.execute(
                 f"CREATE POLICY tenant_isolation ON {table} "
-                "USING (tenant_id = current_setting('app.tenant_id', true)::uuid);"
+                "USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);"
             )
 
 

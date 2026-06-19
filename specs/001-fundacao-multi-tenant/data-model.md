@@ -202,7 +202,7 @@ Para cada tabela escopada (`memberships`, `invitations`, e todo modelo de domín
 ALTER TABLE <t> ENABLE ROW LEVEL SECURITY;
 ALTER TABLE <t> FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON <t>
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
 ```
 
 - A dependency `tenant_scope` executa `SET LOCAL app.tenant_id = :ctx` na sessão da requisição
