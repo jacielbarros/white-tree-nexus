@@ -88,9 +88,14 @@ def get_current_principal(
 
 
 def _set_tenant_guc(db: Session, tenant_id: uuid.UUID) -> None:
-    """Defesa em profundidade: seta `app.tenant_id` para as policies RLS (apenas PostgreSQL)."""
+    """Defesa em profundidade: seta `app.tenant_id` para as policies RLS (apenas PostgreSQL).
+
+    Usa `set_config(..., is_local=true)` (equivalente a SET LOCAL, escopo de transação) porque o
+    comando `SET` do PostgreSQL NÃO aceita bind parameters — `SET LOCAL app.tenant_id = :tid` falha
+    com "syntax error at or near $1".
+    """
     if db.bind is not None and db.bind.dialect.name == "postgresql":
-        db.execute(text("SET LOCAL app.tenant_id = :tid"), {"tid": str(tenant_id)})
+        db.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": str(tenant_id)})
 
 
 def get_org_context(
