@@ -48,6 +48,8 @@ BOOTSTRAP_TOKEN = os.getenv("BOOTSTRAP_TOKEN", "")
 RATE_LIMIT_ENABLED = _bool("RATE_LIMIT_ENABLED", "true")
 RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "5/minute")
 RATE_LIMIT_PASSWORD_REQUEST = os.getenv("RATE_LIMIT_PASSWORD_REQUEST", "3/minute")
+RATE_LIMIT_FORM_TOKEN = os.getenv("RATE_LIMIT_FORM_TOKEN", "20/minute")
+RATE_LIMIT_FORM_OTP = os.getenv("RATE_LIMIT_FORM_OTP", "5/minute")
 
 # --- Headers de segurança ---
 CSP_ENABLED = _bool("CSP_ENABLED", "true")
@@ -123,6 +125,7 @@ class DocType(str, Enum):
     context_analysis = "context_analysis"
     stakeholder_map = "stakeholder_map"
     scope_statement = "scope_statement"
+    form_response = "form_response"
 
 
 class IssueOrigin(str, Enum):
@@ -168,3 +171,60 @@ class Classification(str, Enum):
     uso_interno = "uso_interno"
     confidencial = "confidencial"
     restrito = "restrito"
+
+
+# --- Motor de Workflow de Preenchimento (Feature 003) ---
+FORM_TOKEN_EXPIRY_DAYS = _int("FORM_TOKEN_EXPIRY_DAYS", 7)
+OTP_EXPIRY_MINUTES = _int("OTP_EXPIRY_MINUTES", 15)
+OTP_MAX_ATTEMPTS = _int("OTP_MAX_ATTEMPTS", 3)
+
+
+class FormKind(str, Enum):
+    diagnostic = "diagnostic"
+    gap_analysis = "gap_analysis"
+    generic = "generic"
+
+
+class FormFieldType(str, Enum):
+    text = "text"
+    textarea = "textarea"
+    boolean = "boolean"
+    number = "number"
+    select = "select"
+
+
+class AssignmentStatus(str, Enum):
+    draft = "draft"
+    pending = "pending"
+    in_progress = "in_progress"
+    submitted = "submitted"
+    returned = "returned"
+    signed = "signed"
+    completed = "completed"
+    cancelled = "cancelled"
+
+
+class AssignmentEventType(str, Enum):
+    assigned = "assigned"
+    notified = "notified"
+    claimed = "claimed"
+    saved = "saved"
+    submitted = "submitted"
+    returned = "returned"
+    signed = "signed"
+    countersigned = "countersigned"
+    completed = "completed"
+    cancelled = "cancelled"
+    reminded = "reminded"
+    otp_requested = "otp_requested"
+
+
+class SignerRole(str, Enum):
+    filler = "filler"
+    assigner = "assigner"
+
+
+class TemplateStatus(str, Enum):
+    draft = "draft"
+    active = "active"
+    archived = "archived"

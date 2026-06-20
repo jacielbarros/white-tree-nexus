@@ -1,14 +1,23 @@
 # Prompt para `/speckit.specify` — Módulo 2: Gap Analysis ISO/IEC 27001:2022
 
-Pré-requisitos: Fundação multi-tenant e Módulo 1 (Diagnóstico e Contexto) especificados.
-Esta feature introduz o **seed editável dos requisitos das cláusulas 4–10 e dos 93 controles do
-Anexo A** — base para o SoA e o Plano de Ação. Agnóstico de stack.
+Pré-requisitos: Fundação multi-tenant (001), Módulo 1 — Diagnóstico e Contexto (002) e **Motor de
+Workflow de Preenchimento (003)** já implementados. Esta feature introduz o **seed editável dos
+requisitos das cláusulas 4–10 e dos 93 controles do Anexo A** — base para o SoA e o Plano de Ação.
+Agnóstico de stack.
 
 > **Enriquecido a partir do estudo de caso real (Nexim Tech)** — ver
 > `material_de_contexto/02_Estudo de Caso Nexim/(02) GapAnalysis_ISO27001_2022_NeximTech.xlsx`
 > (abas: Requisitos Cláusulas 4-10 · 93 Controles Anexo A · Dashboard · Estimativas de Esforço).
 > Reutiliza o padrão transversal **"Documento Controlado SGSI (7.5)"** — definição canônica em
 > [iso27001-documento-controlado.md](iso27001-documento-controlado.md).
+
+> **Relação com o Motor de Workflow (003) — para o `/speckit.plan`:** a Gap Analysis é um **módulo
+> próprio** (catálogo-seed + matriz de avaliação + dashboards de aderência), **não** um formulário
+> genérico do motor. Porém **deve reusar os primitivos da 003** em vez de reinventá-los: (a) o ciclo
+> **atribuir → preencher → assinar** para delegar a condução da avaliação a um preenchedor (membro
+> ou externo via link tokenizado) e (b) o **congelamento de baseline** como Documento Controlado
+> versionado/assinável. A 003 já entrega máquina de estados, trilha append-only, assinatura avançada
+> (Lei 14.063/2020), RBAC, isolamento de tenant + RLS e auditoria — tudo a ser reaproveitado no plano.
 
 ---
 
@@ -51,6 +60,14 @@ Para CADA item das duas dimensões, registrar:
 - (Opcional) Nível de maturidade e estimativa de esforço do item — insumo para priorização e para
   o Plano de Ação.
 
+== Condução atribuível e assinável (reusa o motor de workflow) ==
+A condução da Gap Analysis pode ser DELEGADA: um Consultor/Admin atribui a avaliação (ou um recorte
+dela) a um preenchedor — membro da organização ou respondente externo via link tokenizado — que é
+notificado, assume, preenche e envia, com a mesma mecânica de ciclo de vida, trilha imutável e
+notificação já existente. Concluída a avaliação, ela pode ser ASSINADA eletronicamente (nível
+avançada) e congelada como uma baseline versionada (documento controlado), gerando selo de
+integridade. Acesso cross-tenant negado (404/403) e auditado, como no restante da plataforma.
+
 == Indicadores e visões (dashboard) ==
 - Percentual de aderência calculado de forma consistente com os status, considerando apenas itens
   aplicáveis — geral e por dimensão (Cláusulas 4–10 vs Controles do Anexo A).
@@ -77,6 +94,8 @@ Requisitos observáveis (critérios de aceitação):
   (uma atualização do seed não apaga nem sobrescreve silenciosamente avaliações existentes).
 - Marcar um controle como "Não aplicável" exige justificativa, que fica disponível para o SoA.
 - Alterações em itens da matriz geram histórico (e baseline gera versão) e registro de auditoria.
+- A condução da avaliação pode ser atribuída a um preenchedor (membro ou externo via link tokenizado)
+  e, ao ser assinada, congela uma baseline imutável com selo de integridade verificável.
 
 Fora de escopo desta feature:
 - Declaração de Aplicabilidade formal (SoA) — Módulo 3, que consome a aplicabilidade/justificativas

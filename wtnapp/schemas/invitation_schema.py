@@ -26,8 +26,19 @@ class InvitationResponse(BaseModel):
 
 class AcceptInviteRequest(BaseModel):
     token: str
-    full_name: str = Field(min_length=1, max_length=200)
-    password: str
+    # Nome e senha são obrigatórios apenas para usuários NOVOS; quem já tem conta
+    # apenas confirma o vínculo (sem redefinir a senha). Validado no router.
+    full_name: str | None = Field(default=None, max_length=200)
+    password: str | None = None
+
+
+class InviteLookupResponse(BaseModel):
+    """Resolve um convite por token (público) p/ a tela de aceite decidir o que pedir."""
+
+    org_name: str
+    role: str
+    email: str
+    requires_password: bool
 
 
 class MembershipResponse(BaseModel):

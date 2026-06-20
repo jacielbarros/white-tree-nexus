@@ -19,6 +19,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_context",
         "manage_context",
         "approve_context_document",
+        # Motor de Workflow (Feature 003)
+        "assign_form",
+        "view_form",
+        "fill_form",
+        "sign_form",
     },
     Role.org_admin: {
         "invite_users",
@@ -27,14 +32,50 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_context",
         "manage_context",
         "approve_context_document",
+        # Motor de Workflow (Feature 003)
+        "assign_form",
+        "view_form",
+        "fill_form",
+        "sign_form",
     },
-    Role.consultant: {"invite_users", "view_organization", "view_context", "manage_context"},
-    Role.client: {"view_organization", "view_context"},
-    Role.manager: {"view_organization", "view_context", "manage_context"},
-    Role.process_owner: {"view_organization", "view_context", "manage_context"},
-    Role.control_owner: {"view_organization", "view_context"},
-    Role.internal_auditor: {"view_organization", "view_context"},
-    Role.guest_collaborator: {"view_organization", "view_context"},
+    Role.consultant: {
+        "invite_users",
+        "view_organization",
+        "view_context",
+        "manage_context",
+        # Motor de Workflow (Feature 003)
+        "assign_form",
+        "view_form",
+        "fill_form",
+        "sign_form",
+    },
+    Role.client: {
+        "view_organization",
+        "view_context",
+        # Motor de Workflow (Feature 003) — fill/sign verificados por ownership no router
+        "view_form",
+        "fill_form",
+        "sign_form",
+    },
+    Role.manager: {
+        "view_organization",
+        "view_context",
+        "manage_context",
+        "view_form",
+        "fill_form",
+        "sign_form",
+    },
+    Role.process_owner: {
+        "view_organization",
+        "view_context",
+        "manage_context",
+        "view_form",
+        "fill_form",
+        "sign_form",
+    },
+    Role.control_owner: {"view_organization", "view_context", "view_form"},
+    Role.internal_auditor: {"view_organization", "view_context", "view_form"},
+    Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 
 

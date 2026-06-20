@@ -3,16 +3,22 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
+  AssignmentEvent,
   Classification,
   ContextAnalysis,
   Diagnostic,
   DocumentVersion,
+  FormAssignment,
+  FormSignature,
+  FormTemplate,
   Invitation,
+  InviteLookup,
   Me,
   MembershipRow,
   Organization,
   Role,
   ScopeStatement,
+  SignaturePolicy,
   Stakeholder,
   StakeholderMap,
   Suggestion,
@@ -47,11 +53,20 @@ export class ApiService {
     return this.http.post<void>(`${this.base}/auth/password/reset`, { token, password });
   }
 
-  acceptInvite(token: string, fullName: string, password: string): Observable<TokenResponse> {
-    return this.http.post<TokenResponse>(`${this.base}/invitations/accept`, {
-      token,
-      full_name: fullName,
-      password,
+  acceptInvite(token: string, fullName?: string, password?: string): Observable<TokenResponse> {
+    const body: Record<string, string> = { token };
+    if (fullName) {
+      body['full_name'] = fullName;
+    }
+    if (password) {
+      body['password'] = password;
+    }
+    return this.http.post<TokenResponse>(`${this.base}/invitations/accept`, body);
+  }
+
+  lookupInvite(token: string): Observable<InviteLookup> {
+    return this.http.get<InviteLookup>(`${this.base}/invitations/lookup`, {
+      params: { token },
     });
   }
 
@@ -156,5 +171,118 @@ export class ApiService {
 
   acceptSuggestion(suggestionId: string): Observable<unknown> {
     return this.http.post(`${this.base}/context/suggestions/accept`, { suggestion_id: suggestionId });
+  }
+
+  // --- Templates de formulário ---
+  listTemplates(): Observable<FormTemplate[]> {
+    return this.http.get<FormTemplate[]>(`${this.base}/form-templates`);
+  }
+
+  createTemplate(payload: { kind: string; title: string; schema: unknown[] }): Observable<FormTemplate> {
+    return this.http.post<FormTemplate>(`${this.base}/form-templates`, payload);
+  }
+
+  updateTemplate(id: string, payload: Partial<{ title: string; schema: unknown[]; status: string }>): Observable<FormTemplate> {
+    return this.http.patch<FormTemplate>(`${this.base}/form-templates/${id}`, payload);
+  }
+
+  deleteTemplate(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/form-templates/${id}`);
+  }
+
+  // --- Atribuições ---
+  listAssignments(): Observable<FormAssignment[]> {
+    return this.http.get<FormAssignment[]>(`${this.base}/form-assignments`);
+  }
+
+  createAssignment(payload: {
+    template_id: string;
+    respondent_user_id?: string | null;
+    respondent_email?: string | null;
+    deadline_at?: string | null;
+    instructions?: string | null;
+  }): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/form-assignments`, payload);
+  }
+
+  getAssignment(id: string): Observable<FormAssignment> {
+    return this.http.get<FormAssignment>(`${this.base}/form-assignments/${id}`);
+  }
+
+  claimAssignment(id: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/form-assignments/${id}/claim`, {});
+  }
+
+  saveAnswers(id: string, answers: Record<string, unknown>): Observable<FormAssignment> {
+    return this.http.put<FormAssignment>(`${this.base}/form-assignments/${id}/answers`, { answers });
+  }
+
+  submitAssignment(id: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/form-assignments/${id}/submit`, {});
+  }
+
+  returnAssignment(id: string, reason: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/form-assignments/${id}/return`, { reason });
+  }
+
+  cancelAssignment(id: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/form-assignments/${id}/cancel`, {});
+  }
+
+  remindAssignment(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/form-assignments/${id}/remind`, {});
+  }
+
+  signAssignment(id: string): Observable<FormSignature> {
+    return this.http.post<FormSignature>(`${this.base}/form-assignments/${id}/sign`, {});
+  }
+
+  getAssignmentEvents(id: string): Observable<AssignmentEvent[]> {
+    return this.http.get<AssignmentEvent[]>(`${this.base}/form-assignments/${id}/events`);
+  }
+
+  getAssignmentSignatures(id: string): Observable<FormSignature[]> {
+    return this.http.get<FormSignature[]>(`${this.base}/form-assignments/${id}/signatures`);
+  }
+
+  verifyAssignment(id: string): Observable<{ valid: boolean; content_hash: string }> {
+    return this.http.get<{ valid: boolean; content_hash: string }>(`${this.base}/form-assignments/${id}/verify`);
+  }
+
+  // --- Política de assinatura ---
+  getSignaturePolicy(): Observable<SignaturePolicy> {
+    return this.http.get<SignaturePolicy>(`${this.base}/form-signature-policy`);
+  }
+
+  updateSignaturePolicy(payload: SignaturePolicy): Observable<SignaturePolicy> {
+    return this.http.put<SignaturePolicy>(`${this.base}/form-signature-policy`, payload);
+  }
+
+  // --- Respondente externo (sem auth) ---
+  getFormByToken(token: string): Observable<FormAssignment> {
+    return this.http.get<FormAssignment>(`${this.base}/forms/respond/${token}`);
+  }
+
+  claimByToken(token: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/forms/respond/${token}/claim`, {});
+  }
+
+  saveAnswersByToken(token: string, answers: Record<string, unknown>): Observable<FormAssignment> {
+    return this.http.put<FormAssignment>(`${this.base}/forms/respond/${token}/answers`, { answers });
+  }
+
+  submitByToken(token: string): Observable<FormAssignment> {
+    return this.http.post<FormAssignment>(`${this.base}/forms/respond/${token}/submit`, {});
+  }
+
+  requestOtpByToken(token: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/forms/respond/${token}/otp`, {});
+  }
+
+  signByToken(token: string, otp: string, signerName: string): Observable<FormSignature> {
+    return this.http.post<FormSignature>(`${this.base}/forms/respond/${token}/sign`, {
+      otp,
+      signer_name: signerName,
+    });
   }
 }

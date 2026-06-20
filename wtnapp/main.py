@@ -24,6 +24,10 @@ from wtnapp.routers import (
     context_analysis,
     context_overview,
     diagnostic,
+    form_assignments,
+    form_respond,
+    form_signature_policy,
+    form_templates,
     invitations,
     me,
     memberships,
@@ -124,3 +128,7 @@ app.include_router(context_analysis.router)
 app.include_router(stakeholders.router)
 app.include_router(scope.router)
 app.include_router(context_overview.router)
+app.include_router(form_templates.router)
+app.include_router(form_assignments.router)
+app.include_router(form_respond.router)
+app.include_router(form_signature_policy.router)

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard, permissionGuard } from '@app/core/guards';
 
+
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('@app/pages/login/login').then((m) => m.Login) },
   {
@@ -59,7 +60,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('@app/pages/context-overview/context-overview').then((m) => m.ContextOverviewPage),
       },
+      {
+        path: 'form-templates',
+        canActivate: [permissionGuard('view_form')],
+        loadComponent: () =>
+          import('@app/pages/form-templates/form-templates').then((m) => m.FormTemplatesPage),
+      },
+      {
+        path: 'form-assignments',
+        canActivate: [permissionGuard('view_form')],
+        loadComponent: () =>
+          import('@app/pages/form-assignments/form-assignments').then((m) => m.FormAssignmentsPage),
+      },
+      {
+        path: 'form-fill/:id',
+        canActivate: [permissionGuard('fill_form')],
+        loadComponent: () =>
+          import('@app/pages/form-fill/form-fill').then((m) => m.FormFillPage),
+      },
     ],
+  },
+  {
+    path: 'respond/:token',
+    loadComponent: () =>
+      import('@app/pages/form-respond/form-respond').then((m) => m.FormRespondPage),
   },
   { path: '', pathMatch: 'full', redirectTo: 'app' },
   { path: '**', redirectTo: 'app' },

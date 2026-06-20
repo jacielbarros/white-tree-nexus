@@ -28,6 +28,8 @@ interface OrgOption {
           <a routerLink="stakeholders" routerLinkActive="active">Partes</a>
           <a routerLink="scope" routerLinkActive="active">Escopo</a>
           <a routerLink="context-overview" routerLinkActive="active">Visão</a>
+          <a routerLink="form-templates" routerLinkActive="active">Templates</a>
+          <a routerLink="form-assignments" routerLinkActive="active">Formulários</a>
         }
       </nav>
       <span class="spacer"></span>

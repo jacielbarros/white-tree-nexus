@@ -43,6 +43,55 @@ def test_create_and_accept_invitation(client, factory, db, outbox):
     assert {"USER_INVITE", "INVITE_ACCEPT"} <= ops
 
 
+def test_existing_user_accepts_without_password(client, factory, db, outbox):
+    """Usuário que JÁ tem conta é convidado: aceita sem redefinir a senha atual."""
+    _org, _admin_user, headers = _admin(client, factory)
+    # Conta já existente, sem vínculo nesta org (ex.: Super Admin ou Consultor de outra org).
+    factory.user(email="carol@elsewhere.com", full_name="Carol")
+
+    invited = client.post(
+        "/invitations", json={"email": "carol@elsewhere.com", "role": "manager"}, headers=headers
+    )
+    assert invited.status_code == 201
+    assert outbox[-1]["existing_user"] is True  # e-mail usa o template de usuário existente
+    token = outbox[-1]["token"]
+
+    # Aceita SEM enviar senha.
+    accepted = client.post("/invitations/accept", json={"token": token})
+    assert accepted.status_code == 200
+    assert accepted.json()["access_token"]
+
+    # A senha original continua válida (não foi sobrescrita).
+    assert (
+        client.post(
+            "/auth/login", json={"email": "carol@elsewhere.com", "password": DEFAULT_PASSWORD}
+        ).status_code
+        == 200
+    )
+
+
+def test_lookup_distinguishes_new_vs_existing(client, factory, outbox):
+    org, _admin_user, headers = _admin(client, factory)
+
+    # Novo e-mail (sem conta) → requires_password True
+    client.post("/invitations", json={"email": "dave@acme.com", "role": "manager"}, headers=headers)
+    look_new = client.get("/invitations/lookup", params={"token": outbox[-1]["token"]})
+    assert look_new.status_code == 200
+    assert look_new.json()["requires_password"] is True
+    assert look_new.json()["org_name"] == org.name
+
+    # E-mail já cadastrado → requires_password False
+    factory.user(email="erin@elsewhere.com", full_name="Erin")
+    client.post("/invitations", json={"email": "erin@elsewhere.com", "role": "manager"}, headers=headers)
+    look_existing = client.get("/invitations/lookup", params={"token": outbox[-1]["token"]})
+    assert look_existing.status_code == 200
+    assert look_existing.json()["requires_password"] is False
+
+
+def test_lookup_invalid_token_rejected(client):
+    assert client.get("/invitations/lookup", params={"token": "token-inexistente"}).status_code == 400
+
+
 def test_duplicate_pending_invite_conflicts(client, factory, outbox):
     _org, _admin_user, headers = _admin(client, factory)
     first = client.post("/invitations", json={"email": "bob@acme.com", "role": "manager"}, headers=headers)

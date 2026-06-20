@@ -23,6 +23,7 @@ from wtnapp.schemas.invitation_schema import (
     AcceptInviteRequest,
     InvitationCreate,
     InvitationResponse,
+    InviteLookupResponse,
 )
 from wtnapp.services import crypto_service, notification_service, token_service
 from wtnapp.services.audit_service import AuditService
@@ -103,7 +104,8 @@ def create_invitation(
 
     org = db.get(Organization, ctx.tenant_id)
     notification_service.send_invite_email(
-        to_email=email, token=raw_token, org_name=org.name if org else "", role=payload.role.value
+        to_email=email, token=raw_token, org_name=org.name if org else "",
+        role=payload.role.value, existing_user=existing_user is not None,
     )
 
     AuditService.log_from_request(
@@ -148,12 +150,14 @@ def accept_invitation(
         )
         raise _BAD_INVITE
 
-    if len(payload.password) < settings.PASSWORD_MIN_LENGTH:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Senha não atende à política mínima.")
-
     now = datetime.now(timezone.utc)
     user = db.query(User).filter(User.email == invite.email).first()
     if user is None:
+        # Usuário novo: nome e senha são obrigatórios (define a conta).
+        if not payload.full_name or not payload.full_name.strip():
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Nome completo é obrigatório.")
+        if not payload.password or len(payload.password) < settings.PASSWORD_MIN_LENGTH:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Senha não atende à política mínima.")
         user = User(
             email=invite.email, full_name=payload.full_name,
             password_hash=crypto_service.hash_password(payload.password),
@@ -162,11 +166,13 @@ def accept_invitation(
         db.add(user)
         db.flush()  # garante user.id
     else:
+        # Usuário já existente (ex.: Super Admin, Consultor multi-org): apenas vincula à
+        # organização. NÃO exige nem sobrescreve a senha atual (FR-020 ainda se aplica).
         _check_fr020(db, user, invite.role)
-        user.full_name = payload.full_name
-        user.password_hash = crypto_service.hash_password(payload.password)
-        user.status = UserStatus.active
-        user.password_changed_at = now
+        if payload.full_name and payload.full_name.strip():
+            user.full_name = payload.full_name
+        if user.status != UserStatus.active:
+            user.status = UserStatus.active
 
     db.add(
         Membership(
@@ -198,6 +204,28 @@ def accept_invitation(
         user_id=user.id, tenant_ids=active_tenant_ids, super_admin=user.is_platform_super_admin
     )
     return TokenResponse(access_token=access_token, expires_in=expires_in)
+
+
+@router.get("/lookup", response_model=InviteLookupResponse)
+def lookup_invitation(token: str, db: Session = Depends(get_db)) -> InviteLookupResponse:
+    """Resolve um convite por token (público). Indica se o convidado precisa definir senha."""
+    invite = (
+        db.query(Invitation)
+        .filter(Invitation.token_hash == crypto_service.hash_token(token))
+        .first()
+    )
+    if invite is None or invite.status != InviteStatus.pending:
+        raise _BAD_INVITE
+    if _aware(invite.expires_at) < datetime.now(timezone.utc):
+        raise _BAD_INVITE
+    existing = db.query(User).filter(User.email == invite.email).first()
+    org = db.get(Organization, invite.tenant_id)
+    return InviteLookupResponse(
+        org_name=org.name if org else "",
+        role=invite.role.value,
+        email=invite.email,
+        requires_password=existing is None,
+    )
 
 
 def _load_pending_in_context(db: Session, invitation_id: uuid.UUID, ctx: OrgContext) -> Invitation:
@@ -244,8 +272,10 @@ def resend_invitation(
     db.commit()
 
     org = db.get(Organization, ctx.tenant_id)
+    existing = db.query(User).filter(User.email == invite.email).first()
     notification_service.send_invite_email(
-        to_email=invite.email, token=raw_token, org_name=org.name if org else "", role=invite.role.value
+        to_email=invite.email, token=raw_token, org_name=org.name if org else "",
+        role=invite.role.value, existing_user=existing is not None,
     )
     AuditService.log_from_request(
         request=request, operation="USER_INVITE", outcome=AuditOutcome.success,

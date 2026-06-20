@@ -18,6 +18,10 @@ pela [constitution](../.specify/memory/constitution.md).
   os módulos. Definição canônica em
   [`iso27001-documento-controlado.md`](iso27001-documento-controlado.md). Os prompts dos módulos
   foram **enriquecidos a partir do estudo de caso real** em `material_de_contexto/`.
+- **Motor de Workflow de Preenchimento** (atribuível + assinável) — outra capacidade transversal:
+  template → atribuição → preenchimento → assinatura (avançada, Lei 14.063/2020) → snapshot imutável,
+  com trilha/wizard. Consumido pelo Diagnóstico e pelo Gap Analysis. Design + prompt em
+  [`feature-003-workflow-preenchimento.md`](feature-003-workflow-preenchimento.md).
 
 ## Fase MVP (nesta ordem)
 
@@ -30,10 +34,22 @@ pela [constitution](../.specify/memory/constitution.md).
 | 4 | Plano de Ação | [`04-plano-de-acao.md`](04-plano-de-acao.md) |
 | 5 | Gestão de Evidências | [`05-gestao-evidencias.md`](05-gestao-evidencias.md) |
 
+> **Feature 003 implementada** (backend) — Motor de Workflow de Preenchimento:
+> ([`specs/003-workflow-preenchimento/`](../specs/003-workflow-preenchimento/)) 37 testes passando;
+> frontend pendente (T014/T018/T024/T027/T030/T036). Numeração: 001 = Fundação ·
+> 002 = Diagnóstico/Contexto · **003 = Motor de Workflow (implementada)** · 004 = Gap Analysis · …
+>
+> **Próxima feature-branch: 004 — Gap Analysis** — consome o motor de workflow da 003.
+
 ## Evolução pós-MVP (prompts a criar quando chegar a vez)
 
 Gestão de Riscos · Auditoria Interna · Revisão pela Direção · Dashboard Executivo ·
 Recursos de IA (opt-in por organização).
+
+**Capacidade transversal mapeada:** **Central de Templates de Comunicação** (parametrizar
+convite/redefinição/atribuição/OTP/assinatura por organização, com padrões da plataforma) — design +
+prompt de specify em
+[`feature-templates-comunicacao-specify.md`](feature-templates-comunicacao-specify.md).
 
 ## Fluxo por feature
 

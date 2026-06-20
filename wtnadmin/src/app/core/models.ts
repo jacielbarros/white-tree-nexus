@@ -67,6 +67,13 @@ export interface Invitation {
   expires_at: string;
 }
 
+export interface InviteLookup {
+  org_name: string;
+  role: string;
+  email: string;
+  requires_password: boolean;
+}
+
 export type Level = 'alto' | 'medio' | 'baixo';
 export type Classification = 'publico' | 'uso_interno' | 'confidencial' | 'restrito';
 
@@ -141,4 +148,79 @@ export interface Suggestion {
   target: string;
   payload: Record<string, unknown>;
   reason: string;
+}
+
+// --- Motor de Workflow de Preenchimento (Feature 003) ---
+
+export type FormKind = 'diagnostic' | 'gap_analysis' | 'generic';
+export type TemplateStatus = 'draft' | 'active' | 'archived';
+export type AssignmentStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'submitted'
+  | 'signed'
+  | 'completed'
+  | 'cancelled';
+
+export interface FormField {
+  label: string;
+  key: string;
+  type: 'text' | 'textarea' | 'boolean' | 'number' | 'select';
+  required?: boolean;
+  options?: string[];
+  help_text?: string;
+  mask?: string;
+  section?: string;
+  order?: number;
+}
+
+export interface FormTemplate {
+  id: string;
+  kind: FormKind;
+  title: string;
+  schema: FormField[];
+  status: TemplateStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormAssignment {
+  id: string;
+  template_id: string;
+  kind: FormKind;
+  title: string;
+  fields_snapshot: FormField[];
+  status: AssignmentStatus;
+  respondent_user_id: string | null;
+  respondent_email: string | null;
+  deadline_at: string | null;
+  overdue: boolean;
+  answers: Record<string, unknown>;
+  current_version_id: string | null;
+  claimed_at: string | null;
+  submitted_at: string | null;
+  signed_at: string | null;
+  instructions: string | null;
+}
+
+export interface AssignmentEvent {
+  id: string;
+  event: string;
+  actor_label: string | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface FormSignature {
+  id: string;
+  signer_role: 'filler' | 'assigner';
+  signer_name: string;
+  signed_at: string;
+  content_hash: string;
+  level: string;
+  otp_verified: boolean;
+}
+
+export interface SignaturePolicy {
+  require_assigner_countersignature: boolean;
 }

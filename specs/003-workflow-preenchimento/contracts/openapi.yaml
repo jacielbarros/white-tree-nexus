@@ -1,0 +1,342 @@
+openapi: 3.0.3
+info:
+  title: White Tree Nexus - Motor de Workflow de Preenchimento (Feature 003)
+  version: 0.1.0
+  description: >-
+    Contrato do motor de formularios atribuiveis e assinaveis. Endpoints autenticados usam
+    bearerAuth + header X-Org-Context. As rotas /forms/respond/{token} sao publicas: o token e a
+    credencial e da acesso somente a 1 atribuicao.
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: form-templates
+  - name: form-assignments
+  - name: form-respond
+  - name: form-policy
+
+paths:
+  /forms/templates:
+    get:
+      tags: [form-templates]
+      summary: Lista templates da organizacao
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/FormTemplate" } } } } }
+    post:
+      tags: [form-templates]
+      summary: Cria template (assign_form)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FormTemplateCreate" } } } }
+      responses:
+        "201": { description: Criado, content: { application/json: { schema: { $ref: "#/components/schemas/FormTemplate" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /forms/templates/{templateId}:
+    parameters: [{ $ref: "#/components/parameters/templateId" }]
+    get:
+      tags: [form-templates]
+      summary: Detalhe do template
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/FormTemplate" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [form-templates]
+      summary: Edita template (assign_form) - nao afeta atribuicoes existentes
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FormTemplateCreate" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/FormTemplate" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [form-templates]
+      summary: Arquiva template (assign_form)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "204": { description: Sem conteudo }
+
+  /forms/assignments:
+    get:
+      tags: [form-assignments]
+      summary: Lista atribuicoes (filtros por status/kind)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      parameters:
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/AssignmentStatus" } }
+        - { name: kind, in: query, schema: { $ref: "#/components/schemas/FormKind" } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Assignment" } } } } }
+    post:
+      tags: [form-assignments]
+      summary: Cria e atribui (assign_form) - dispara e-mail
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AssignmentCreate" } } } }
+      responses:
+        "201": { description: Atribuido, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /forms/assignments/{assignmentId}:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    get:
+      tags: [form-assignments]
+      summary: Detalhe da atribuicao (view_form ou preenchedor designado)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /forms/assignments/{assignmentId}/claim:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Assumir o preenchimento (preenchedor designado) - pendente -> em_preenchimento
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /forms/assignments/{assignmentId}/answers:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    put:
+      tags: [form-assignments]
+      summary: Salvar respostas parcialmente (retomavel)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnswersUpdate" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+
+  /forms/assignments/{assignmentId}/submit:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Enviar (valida obrigatorios) - em_preenchimento -> preenchido
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+        "422": { description: Campos obrigatorios ausentes }
+
+  /forms/assignments/{assignmentId}/return:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Devolver para ajustes (assign_form) - preenchido -> em_preenchimento
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { reason: { type: string } } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+
+  /forms/assignments/{assignmentId}/cancel:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Cancelar (assign_form)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+
+  /forms/assignments/{assignmentId}/remind:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Reenviar lembrete por e-mail (assign_form, best-effort)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "202": { description: Lembrete enfileirado }
+
+  /forms/assignments/{assignmentId}/sign:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    post:
+      tags: [form-assignments]
+      summary: Assinar (membro) - preenchido -> assinado/concluido conforme politica
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "201": { description: Assinado, content: { application/json: { schema: { $ref: "#/components/schemas/Signature" } } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /forms/assignments/{assignmentId}/events:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    get:
+      tags: [form-assignments]
+      summary: Trilha/linha do tempo (wizard) - eventos, sem conteudo das respostas
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Event" } } } } }
+
+  /forms/assignments/{assignmentId}/verify:
+    parameters: [{ $ref: "#/components/parameters/assignmentId" }]
+    get:
+      tags: [form-assignments]
+      summary: Verifica integridade da versao assinada (recomputa o selo)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VerifyResult" } } } }
+
+  /forms/respond/{token}:
+    parameters: [{ $ref: "#/components/parameters/token" }]
+    get:
+      tags: [form-respond]
+      summary: Resolve a atribuicao pelo token (publico) - somente essa atribuicao
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "410": { description: Link expirado }
+
+  /forms/respond/{token}/answers:
+    parameters: [{ $ref: "#/components/parameters/token" }]
+    put:
+      tags: [form-respond]
+      summary: Salvar respostas parciais via token
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnswersUpdate" } } } }
+      responses:
+        "200": { description: OK }
+
+  /forms/respond/{token}/submit:
+    parameters: [{ $ref: "#/components/parameters/token" }]
+    post:
+      tags: [form-respond]
+      summary: Enviar via token (valida obrigatorios)
+      responses:
+        "200": { description: OK }
+        "422": { description: Campos obrigatorios ausentes }
+
+  /forms/respond/{token}/sign/request-otp:
+    parameters: [{ $ref: "#/components/parameters/token" }]
+    post:
+      tags: [form-respond]
+      summary: Solicita OTP de assinatura por e-mail (gate fail-closed)
+      responses:
+        "202": { description: OTP enviado }
+
+  /forms/respond/{token}/sign:
+    parameters: [{ $ref: "#/components/parameters/token" }]
+    post:
+      tags: [form-respond]
+      summary: Assina via token (exige OTP) - vincula identidade + selo
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExternalSignRequest" } } } }
+      responses:
+        "201": { description: Assinado, content: { application/json: { schema: { $ref: "#/components/schemas/Signature" } } } }
+        "401": { description: OTP invalido/expirado }
+
+  /forms/signature-policy:
+    get:
+      tags: [form-policy]
+      summary: Politica de assinatura da organizacao
+      security: [{ bearerAuth: [], orgContext: [] }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SignaturePolicy" } } } }
+    put:
+      tags: [form-policy]
+      summary: Define a politica (require_assigner_countersignature)
+      security: [{ bearerAuth: [], orgContext: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SignaturePolicy" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SignaturePolicy" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    orgContext: { type: apiKey, in: header, name: X-Org-Context }
+  parameters:
+    templateId: { name: templateId, in: path, required: true, schema: { type: string, format: uuid } }
+    assignmentId: { name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }
+    token: { name: token, in: path, required: true, schema: { type: string } }
+  responses:
+    Forbidden: { description: Sem permissao }
+    NotFound: { description: Recurso nao encontrado (inclui cross-tenant - sem revelar existencia) }
+    Conflict: { description: Transicao de estado invalida }
+  schemas:
+    FormKind: { type: string, enum: [diagnostic, gap_analysis, generic] }
+    FormFieldType: { type: string, enum: [text, textarea, boolean, number, select] }
+    AssignmentStatus: { type: string, enum: [draft, pending, in_progress, submitted, returned, signed, completed, cancelled] }
+    Field:
+      type: object
+      properties:
+        chave: { type: string }
+        rotulo: { type: string }
+        tipo: { $ref: "#/components/schemas/FormFieldType" }
+        obrigatorio: { type: boolean }
+        opcoes: { type: array, items: { type: string } }
+    Section:
+      type: object
+      properties:
+        secao: { type: string }
+        campos: { type: array, items: { $ref: "#/components/schemas/Field" } }
+    FormTemplateCreate:
+      type: object
+      required: [kind, title, schema]
+      properties:
+        kind: { $ref: "#/components/schemas/FormKind" }
+        title: { type: string }
+        schema: { type: array, items: { $ref: "#/components/schemas/Section" } }
+    FormTemplate:
+      allOf:
+        - $ref: "#/components/schemas/FormTemplateCreate"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            status: { type: string, enum: [draft, active, archived] }
+    AssignmentCreate:
+      type: object
+      required: [template_id]
+      properties:
+        template_id: { type: string, format: uuid }
+        respondent_user_id: { type: string, format: uuid, nullable: true, description: "membro (exclusivo com respondent_email)" }
+        respondent_email: { type: string, nullable: true, description: "externo (gera link tokenizado)" }
+        respondent_name: { type: string, nullable: true }
+        deadline_at: { type: string, format: date-time, nullable: true }
+        instructions: { type: string, nullable: true }
+    Assignment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        template_id: { type: string, format: uuid }
+        kind: { $ref: "#/components/schemas/FormKind" }
+        title: { type: string }
+        fields_snapshot: { type: array, items: { $ref: "#/components/schemas/Section" } }
+        status: { $ref: "#/components/schemas/AssignmentStatus" }
+        respondent_user_id: { type: string, format: uuid, nullable: true }
+        respondent_email: { type: string, nullable: true }
+        deadline_at: { type: string, format: date-time, nullable: true }
+        overdue: { type: boolean }
+        answers: { type: object, additionalProperties: true }
+        current_version_id: { type: string, format: uuid, nullable: true }
+        claimed_at: { type: string, format: date-time, nullable: true }
+        submitted_at: { type: string, format: date-time, nullable: true }
+        signed_at: { type: string, format: date-time, nullable: true }
+    AnswersUpdate:
+      type: object
+      properties:
+        answers: { type: object, additionalProperties: true }
+    Event:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        event: { type: string }
+        actor_user_id: { type: string, format: uuid, nullable: true }
+        actor_label: { type: string, nullable: true }
+        at: { type: string, format: date-time }
+        note: { type: string, nullable: true }
+    Signature:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        signer_role: { type: string, enum: [filler, assigner] }
+        signer_name: { type: string }
+        signed_at: { type: string, format: date-time }
+        content_hash: { type: string }
+        level: { type: string, example: advanced }
+    ExternalSignRequest:
+      type: object
+      required: [otp, signer_name]
+      properties:
+        otp: { type: string }
+        signer_name: { type: string }
+    VerifyResult:
+      type: object
+      properties:
+        valid: { type: boolean }
+        content_hash: { type: string }
+        signed_at: { type: string, format: date-time, nullable: true }
+    SignaturePolicy:
+      type: object
+      properties:
+        require_assigner_countersignature: { type: boolean }

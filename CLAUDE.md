@@ -65,6 +65,8 @@ TRUSTED_PROXY_COUNT=0
 CORS_ALLOWED_ORIGINS=http://localhost:4200,http://127.0.0.1:4200
 RATE_LIMIT_AUTH=5/minute
 RATE_LIMIT_PASSWORD_REQUEST=3/minute
+RATE_LIMIT_FORM_TOKEN=20/minute   # endpoints públicos do motor de workflow (token)
+RATE_LIMIT_FORM_OTP=5/minute      # OTP de assinatura eletrônica (mais restrito)
 MAX_LOGIN_ATTEMPTS=5
 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM
 CSP_ENABLED=true
@@ -144,7 +146,11 @@ Base de todos os módulos. Spec/plano em `specs/001-fundacao-multi-tenant/`.
   auditoria append-only. Routers: `bootstrap`, `auth`, `organizations`, `invitations`,
   `memberships`, `me`. Escopo de tenant central em `helpers/tenant_scope.py` (+ RLS no PostgreSQL);
   RBAC em `helpers/permissions.py` (`require_permission` / `require_super_admin`); auditoria em
-  `services/audit_service.py`. Contexto de organização via header `X-Org-Context`.
+  `services/audit_service.py`. Contexto de organização via header `X-Org-Context`. O aceite de
+  convite reaproveita usuário existente (ex.: Super Admin/Consultor multi-org): quem já tem conta
+  **confirma o vínculo sem redefinir a senha**; `GET /invitations/lookup` (público) informa à tela
+  se é usuário novo (pede senha) ou existente (só confirma). E-mail de convite leva link
+  `/accept?token=` e texto adequado a cada caso.
 - **Frontend** (`wtnadmin/`): core (AuthStore com Signals, interceptor, guards, `ApiService`) e
   telas login, senha (esqueci/redefinir), aceite de convite, shell c/ seletor de organização,
   organizações e usuários/convites.
@@ -176,6 +182,38 @@ Cláusula 4 do SGSI. Spec/plano em `specs/002-diagnostico-contexto/`. Segue o pa
 - **Migrations**: `wtnapp/alembic/versions/c3d4e5f6a702_context_module.py` (tabelas + RLS + gatilho
   append-only de `document_versions`); `alembic check` sem drift. **Pendente**: validação E2E
   manual no browser (T038) e contra PostgreSQL real.
+
+#### Motor de Workflow de Preenchimento (Feature 003 — implementada)
+Capacidade transversal. Spec/plano em `specs/003-workflow-preenchimento/`.
+- **Backend** (`wtnapp/`): `FormTemplate` (CRUD de template por org, kind/status, schema JSON) em
+  `routers/form_templates.py`; `FormAssignment` (ciclo de vida: pending→in_progress→submitted→signed
+  →completed + return + cancel) em `routers/form_assignments.py`; respondente externo via token
+  (apenas hash em `respondent_token_hash`) em `routers/form_respond.py`; assinatura eletrônica avançada
+  (Lei 14.063/2020) com SHA-256 canônico, DocumentVersion imutável e OTP por e-mail (fail-closed)
+  em `services/signature_service.py`; máquina de estados e snapshot do template em
+  `services/form_workflow_service.py`; integração com Diagnóstico em `services/diagnostic_intake.py`;
+  política de assinatura por org (única ou dupla) em `routers/form_signature_policy.py`.
+  Notificações de atribuição/lembrete/OTP em `services/notification_service.py` (best-effort).
+  Trilha append-only em `models/form_assignment_event_model.py` (SQLite+PG triggers).
+  Permissões: `assign_form`, `fill_form`, `sign_form`, `view_form`.
+- **Testes backend**: `pytest wtnapp/test/test_form_assignment_lifecycle.py` (ciclo de vida + devolução/cancelamento),
+  `test_form_respond_token.py` (token externo + OTP), `test_form_signature.py` (assinatura + integridade),
+  `test_tenant_isolation_forms.py` (isolamento), `test_diagnostic_intake.py` (US5). 37 testes, todos passando.
+- **Testes frontend**: `form-templates.spec.ts`, `form-assignments.spec.ts`, `form-respond.spec.ts`. 30 testes, todos passando.
+- **Migrations**: `wtnapp/alembic/versions/d6e7f8a9b005_workflow_module.py` (6 tabelas + RLS +
+  triggers append-only em `form_assignment_events` e `form_signatures`).
+- **Frontend** (`wtnadmin/`): `pages/form-templates/` (CRUD de template + auto-chave + arquivar/
+  desarquivar; campos com metadados ricos: `section`, `order`, `mask`, `help_text`, `options` —
+  persistidos no `schema` JSON, sem migration),
+  `pages/form-assignments/` (lista + criar/atribuir com **dropdown de membros** + wizard/linha do tempo
+  + assinar + devolver/cancelar/lembrar + **toggle de política de assinatura dupla**),
+  `pages/form-fill/` (assumir/preencher/salvar/enviar), `pages/form-respond/` (rota pública tokenizada
+  `/respond/:token` + OTP + assinatura avançada sem auth). Links no shell. A tela `pages/diagnostic/`
+  foi **repaginada**: deixou de ter form-builder inline — agora lista os **templates de diagnóstico**
+  (com ação Atribuir) e exibe o **diagnóstico vigente** (de `form_intake`). Permissões
+  (`assign_form`, `fill_form`, `sign_form`, `view_form`) espelhadas em `core/permissions.ts`.
+- **Testes manuais**: roteiro E2E em `docs/guia-de-testes-workflow.md` (membro, externo/token+OTP,
+  devolução, política dupla, consumo do diagnóstico, isolamento). Fluxo externo exige *catcher* SMTP local.
 
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
@@ -301,6 +339,18 @@ specify em `docs/README.md`).
 
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
+
+**Feature 003 — Motor de Workflow de Preenchimento (atribuível e assinável)** (`003-workflow-preenchimento`) — implementada (37 testes backend + 30 testes frontend, todos passando)
+- Plano: `specs/003-workflow-preenchimento/plan.md`
+- Spec: `specs/003-workflow-preenchimento/spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: capacidade **transversal** — template parametrizável → atribuição (membro ou link
+  tokenizado) → preenchimento (assumir/salvar/enviar) → **assinatura avançada** (Lei 14.063/2020) →
+  versão imutável, com trilha append-only/wizard. Diagnóstico é o 1º consumidor; Gap Analysis (004) usa.
+- Decisões-chave (clarify): snapshot do template na atribuição; política de assinatura configurável por
+  org (única padrão / contra-assinatura opcional); identidade do externo via vínculo + **OTP por
+  e-mail** (fail-closed); campos obrigatórios validados no envio. Reusa convite/token, Documento
+  Controlado/versões, auditoria, e-mail, RBAC e RLS.
 
 **Feature 002 — Diagnóstico e Contexto da Organização** (`002-diagnostico-contexto`) — implementada (ver seção do módulo acima); pendente E2E manual + PostgreSQL real
 - Plano: `specs/002-diagnostico-contexto/plan.md`

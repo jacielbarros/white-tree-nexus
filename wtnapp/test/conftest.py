@@ -111,8 +111,10 @@ def outbox(monkeypatch):
 
     captured: list[dict] = []
 
-    def _invite(*, to_email, token, org_name, role):
-        captured.append({"type": "invite", "to": to_email, "token": token})
+    def _invite(*, to_email, token, org_name, role, existing_user=False):
+        captured.append(
+            {"type": "invite", "to": to_email, "token": token, "existing_user": existing_user}
+        )
         return True
 
     def _reset(*, to_email, token):
@@ -157,3 +159,41 @@ def org_headers(login):
         return headers
 
     return _headers
+
+
+@pytest.fixture
+def form_seed(factory):
+    """Organizacao + usuarios para o motor de workflow de preenchimento (Feature 003)."""
+    org = factory.org("form-acme", "Form Acme")
+    admin = factory.user("admin@form-acme.com", full_name="Admin Form")
+    consultant = factory.user("consultant@form-acme.com", full_name="Consultant Form")
+    client_user = factory.user("client@form-acme.com", full_name="Client Form")
+    factory.membership(admin, org, Role.org_admin)
+    factory.membership(consultant, org, Role.consultant)
+    factory.membership(client_user, org, Role.client)
+    return {"org": org, "admin": admin, "consultant": consultant, "client": client_user}
+
+
+@pytest.fixture
+def form_outbox(monkeypatch):
+    """Captura emails do motor de formularios sem SMTP real."""
+    from wtnapp.services import notification_service
+
+    captured: list[dict] = []
+
+    def _assignment(*, to_email, assignment_title, token=None, app_link=None, **kw):
+        captured.append({"type": "assignment", "to": to_email, "token": token, "link": app_link})
+        return True
+
+    def _reminder(*, to_email, assignment_title, **kw):
+        captured.append({"type": "reminder", "to": to_email})
+        return True
+
+    def _otp(*, to_email, otp_code, **kw):
+        captured.append({"type": "otp", "to": to_email, "otp": otp_code})
+        return True
+
+    monkeypatch.setattr(notification_service, "send_form_assignment_email", _assignment)
+    monkeypatch.setattr(notification_service, "send_form_reminder_email", _reminder)
+    monkeypatch.setattr(notification_service, "send_signature_otp_email", _otp)
+    return captured
