@@ -11,15 +11,30 @@ from wtnapp.settings import AuditOutcome, Role
 
 # Matriz papel → permissões (ver data-model.md §Papéis & Permissões).
 PERMISSIONS: dict[Role, set[str]] = {
-    Role.super_admin: {"manage_organizations", "invite_users", "manage_memberships", "view_organization"},
-    Role.org_admin: {"invite_users", "manage_memberships", "view_organization"},
-    Role.consultant: {"invite_users", "view_organization"},
-    Role.client: {"view_organization"},
-    Role.manager: {"view_organization"},
-    Role.process_owner: {"view_organization"},
-    Role.control_owner: {"view_organization"},
-    Role.internal_auditor: {"view_organization"},
-    Role.guest_collaborator: {"view_organization"},
+    Role.super_admin: {
+        "manage_organizations",
+        "invite_users",
+        "manage_memberships",
+        "view_organization",
+        "view_context",
+        "manage_context",
+        "approve_context_document",
+    },
+    Role.org_admin: {
+        "invite_users",
+        "manage_memberships",
+        "view_organization",
+        "view_context",
+        "manage_context",
+        "approve_context_document",
+    },
+    Role.consultant: {"invite_users", "view_organization", "view_context", "manage_context"},
+    Role.client: {"view_organization", "view_context"},
+    Role.manager: {"view_organization", "view_context", "manage_context"},
+    Role.process_owner: {"view_organization", "view_context", "manage_context"},
+    Role.control_owner: {"view_organization", "view_context"},
+    Role.internal_auditor: {"view_organization", "view_context"},
+    Role.guest_collaborator: {"view_organization", "view_context"},
 }
 
 

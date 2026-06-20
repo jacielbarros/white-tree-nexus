@@ -7,7 +7,11 @@ Estendido em US2 (FR-005) e US3 (Consultor multi-org / FR-020).
 
 from wtnapp.helpers.tenant_scope import OrgContext, Principal, scoped_query
 from wtnapp.models.audit_log_model import AuditLog
+from wtnapp.models.context_analysis_model import ContextAnalysis
+from wtnapp.models.diagnostic_model import Diagnostic
 from wtnapp.models.membership_model import Membership
+from wtnapp.models.scope_model import ScopeStatement
+from wtnapp.models.stakeholder_model import StakeholderMap
 from wtnapp.settings import Role
 
 
@@ -103,6 +107,41 @@ def test_fr020_non_consultant_cannot_have_second_membership(client, factory, out
         "/invitations/accept", json={"token": token, "full_name": "Bob", "password": "N0vaSenhaForte!99"}
     )
     assert accepted.status_code == 409
+
+
+def test_context_module_data_is_scoped_to_active_tenant(client, factory, db):
+    org_a = factory.org(slug="ctx-a")
+    org_b = factory.org(slug="ctx-b")
+    user = factory.user(email="ctx@a.com")
+    factory.membership(user, org_a, role=Role.consultant)
+
+    db.add(Diagnostic(tenant_id=org_a.id, sections={"identificacao": {"nome": "A"}}))
+    db.add(Diagnostic(tenant_id=org_b.id, sections={"identificacao": {"nome": "B"}}))
+    db.add(ContextAnalysis(tenant_id=org_a.id, intended_outcomes="A"))
+    db.add(ContextAnalysis(tenant_id=org_b.id, intended_outcomes="B"))
+    db.add(StakeholderMap(tenant_id=org_a.id))
+    db.add(StakeholderMap(tenant_id=org_b.id))
+    db.add(ScopeStatement(tenant_id=org_a.id, interfaces_dependencies="A"))
+    db.add(ScopeStatement(tenant_id=org_b.id, interfaces_dependencies="B"))
+    db.commit()
+
+    login = client.post("/auth/login", json={"email": "ctx@a.com", "password": _pwd()})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}", "X-Org-Context": str(org_a.id)}
+
+    diagnostic = client.get("/context/diagnostic", headers=headers)
+    assert diagnostic.status_code == 200
+    assert diagnostic.json()["sections"]["identificacao"]["nome"] == "A"
+
+    analysis = client.get("/context/analysis", headers=headers)
+    assert analysis.status_code == 200
+    assert analysis.json()["intended_outcomes"] == "A"
+
+    scope = client.get("/context/scope", headers=headers)
+    assert scope.status_code == 200
+    assert scope.json()["interfaces_dependencies"] == "A"
+
+    foreign = client.get("/context/diagnostic", headers={**headers, "X-Org-Context": str(org_b.id)})
+    assert foreign.status_code == 404
 
 
 def _pwd() -> str:

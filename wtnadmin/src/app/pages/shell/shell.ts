@@ -23,6 +23,11 @@ interface OrgOption {
         <a routerLink="organizations" routerLinkActive="active">Organizações</a>
         @if (store.activeOrgId()) {
           <a routerLink="users" routerLinkActive="active">Usuários</a>
+          <a routerLink="diagnostic" routerLinkActive="active">Diagnóstico</a>
+          <a routerLink="context-analysis" routerLinkActive="active">Contexto</a>
+          <a routerLink="stakeholders" routerLinkActive="active">Partes</a>
+          <a routerLink="scope" routerLinkActive="active">Escopo</a>
+          <a routerLink="context-overview" routerLinkActive="active">Visão</a>
         }
       </nav>
       <span class="spacer"></span>

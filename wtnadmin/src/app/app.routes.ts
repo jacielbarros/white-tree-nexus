@@ -32,6 +32,33 @@ export const routes: Routes = [
         canActivate: [permissionGuard('view_organization')],
         loadComponent: () => import('@app/pages/users/users').then((m) => m.Users),
       },
+      {
+        path: 'diagnostic',
+        canActivate: [permissionGuard('view_context')],
+        loadComponent: () => import('@app/pages/diagnostic/diagnostic').then((m) => m.DiagnosticPage),
+      },
+      {
+        path: 'context-analysis',
+        canActivate: [permissionGuard('view_context')],
+        loadComponent: () =>
+          import('@app/pages/context-analysis/context-analysis').then((m) => m.ContextAnalysisPage),
+      },
+      {
+        path: 'stakeholders',
+        canActivate: [permissionGuard('view_context')],
+        loadComponent: () => import('@app/pages/stakeholders/stakeholders').then((m) => m.StakeholdersPage),
+      },
+      {
+        path: 'scope',
+        canActivate: [permissionGuard('view_context')],
+        loadComponent: () => import('@app/pages/scope/scope').then((m) => m.ScopePage),
+      },
+      {
+        path: 'context-overview',
+        canActivate: [permissionGuard('view_context')],
+        loadComponent: () =>
+          import('@app/pages/context-overview/context-overview').then((m) => m.ContextOverviewPage),
+      },
     ],
   },
   { path: '', pathMatch: 'full', redirectTo: 'app' },

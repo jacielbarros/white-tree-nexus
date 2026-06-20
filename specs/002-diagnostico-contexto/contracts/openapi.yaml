@@ -1,0 +1,240 @@
+openapi: 3.1.0
+info:
+  title: "White Tree Nexus — Diagnóstico e Contexto (ISO 27001 Cláusula 4)"
+  version: 0.1.0
+  description: >
+    Contratos da feature 002 (Cláusula 4): diagnóstico, análise de contexto (4.1), mapa de partes
+    interessadas (4.2), declaração de escopo (4.3), visão consolidada/sugestões e política de
+    classificação. Sobre a fundação multi-tenant. NÃO normativo de stack.
+servers:
+  - url: /
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: "Organização-alvo (obrigatório p/ Consultor multi-org e Super Admin)."
+  responses:
+    BadRequest: { description: "Requisição inválida / contexto ausente.", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unauthorized: { description: "Não autenticado.", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Forbidden: { description: "Sem permissão no próprio tenant.", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: "Recurso inexistente OU de outro tenant (genérico).", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Conflict: { description: "Conflito (ex.: transição de status inválida).", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unprocessable: { description: "Validação falhou.", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  schemas:
+    Error:
+      type: object
+      properties: { detail: { type: string } }
+      required: [detail]
+    DocStatus: { type: string, enum: [draft, in_review, in_force, obsolete] }
+    Classification: { type: string, enum: [publico, uso_interno, confidencial, restrito] }
+    Level: { type: string, enum: [alto, medio, baixo] }
+    EngagementStrategy: { type: string, enum: [manage_closely, keep_satisfied, keep_informed, monitor] }
+    Diagnostic:
+      type: object
+      properties:
+        status: { type: string, enum: [draft, completed] }
+        sections: { type: object, description: "Seções do questionário (identificacao, estrutura, negocio, tecnologia, dados, cadeia_suprimento, requisitos)." }
+    ContextIssue:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        origin: { type: string, enum: [internal, external] }
+        framework: { type: string, enum: [pestel, swot] }
+        category: { type: string }
+        description: { type: string }
+        impact: { $ref: '#/components/schemas/Level' }
+    Stakeholder:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [internal, external] }
+        power: { $ref: '#/components/schemas/Level' }
+        interest: { $ref: '#/components/schemas/Level' }
+        strategy: { $ref: '#/components/schemas/EngagementStrategy' }
+    ScopeItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [inclusion, exclusion] }
+        description: { type: string }
+        justification: { type: string }
+    DocumentVersion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        identifier: { type: string }
+        version_number: { type: integer }
+        status: { $ref: '#/components/schemas/DocStatus' }
+        classification: { $ref: '#/components/schemas/Classification' }
+        emitted_at: { type: string, format: date-time }
+        next_review_at: { type: string, format: date-time }
+        approved_by: { type: string, format: uuid }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /context/diagnostic:
+    get:
+      summary: "Diagnóstico atual (rascunho/concluído) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses:
+        '200': { description: "OK", content: { application/json: { schema: { $ref: '#/components/schemas/Diagnostic' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: "Salvar/atualizar seções do diagnóstico (auto-save de rascunho) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Diagnostic' } } } }
+      responses:
+        '200': { description: "Salvo", content: { application/json: { schema: { $ref: '#/components/schemas/Diagnostic' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /context/analysis:
+    get:
+      summary: "Análise de Contexto (4.1) — artefato + questões + versão em vigor (view_context)"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses:
+        '200': { description: "OK", content: { application/json: { schema: { type: object } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: "Editar resultados pretendidos/metodologia do rascunho — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { intended_outcomes: { type: string }, methodology: { type: string } } } } } }
+      responses:
+        '200': { description: "OK", content: { application/json: { schema: { type: object } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /context/analysis/issues:
+    post:
+      summary: "Adicionar questão (PESTEL/SWOT + impacto) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ContextIssue' } } } }
+      responses:
+        '201': { description: "Criada", content: { application/json: { schema: { $ref: '#/components/schemas/ContextIssue' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+  /context/analysis/issues/{issue_id}:
+    patch:
+      summary: "Editar questão — manage_context"
+      parameters: [{ name: issue_id, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ContextIssue' } } } }
+      responses: { '200': { description: "OK", content: { application/json: { schema: { $ref: '#/components/schemas/ContextIssue' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    delete:
+      summary: "Remover questão do rascunho — manage_context"
+      parameters: [{ name: issue_id, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/OrgContext' }]
+      responses: { '204': { description: "Removida" }, '404': { $ref: '#/components/responses/NotFound' } }
+
+  /context/analysis/submit-review:
+    post:
+      summary: "Enviar Análise de Contexto para revisão (draft → in_review) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "Em revisão", content: { application/json: { schema: { type: object } } } }, '409': { $ref: '#/components/responses/Conflict' } }
+  /context/analysis/approve:
+    post:
+      summary: "Aprovar/emitir versão da Análise de Contexto — approve_context_document"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { classification: { $ref: '#/components/schemas/Classification' }, next_review_at: { type: string, format: date-time }, change_nature: { type: string } } } } } }
+      responses:
+        '201': { description: "Versão emitida (in_force)", content: { application/json: { schema: { $ref: '#/components/schemas/DocumentVersion' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /context/analysis/versions:
+    get:
+      summary: "Histórico de versões da Análise de Contexto (append-only) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "OK", content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/DocumentVersion' } } } } } }
+
+  /context/stakeholders:
+    get:
+      summary: "Mapa de Partes Interessadas (4.2) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "OK", content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Stakeholder' } } } } } }
+    post:
+      summary: "Adicionar parte interessada (estratégia derivada de Poder×Interesse) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Stakeholder' } } } }
+      responses: { '201': { description: "Criada (com strategy derivada)", content: { application/json: { schema: { $ref: '#/components/schemas/Stakeholder' } } } }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /context/stakeholders/{stakeholder_id}:
+    patch:
+      summary: "Editar parte interessada (re-deriva strategy) — manage_context"
+      parameters: [{ name: stakeholder_id, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Stakeholder' } } } }
+      responses: { '200': { description: "OK", content: { application/json: { schema: { $ref: '#/components/schemas/Stakeholder' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    delete:
+      summary: "Remover parte interessada — manage_context"
+      parameters: [{ name: stakeholder_id, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: '#/components/parameters/OrgContext' }]
+      responses: { '204': { description: "Removida" }, '404': { $ref: '#/components/responses/NotFound' } }
+  /context/stakeholders/submit-review:
+    post:
+      summary: "Enviar Mapa para revisão — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "Em revisão", content: { application/json: { schema: { type: object } } } } }
+  /context/stakeholders/approve:
+    post:
+      summary: "Aprovar/emitir versão do Mapa — approve_context_document"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: "Versão emitida", content: { application/json: { schema: { $ref: '#/components/schemas/DocumentVersion' } } } }, '403': { $ref: '#/components/responses/Forbidden' } }
+
+  /context/scope:
+    get:
+      summary: "Declaração de Escopo (4.3) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "OK", content: { application/json: { schema: { type: object } } } } }
+    put:
+      summary: "Editar interfaces/dependências e referências de versão (4.3) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { interfaces_dependencies: { type: string }, context_version_ref: { type: string, format: uuid }, stakeholder_version_ref: { type: string, format: uuid } } } } } }
+      responses: { '200': { description: "OK", content: { application/json: { schema: { type: object } } } } }
+  /context/scope/items:
+    post:
+      summary: "Adicionar inclusão/exclusão de escopo (justificada) — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ScopeItem' } } } }
+      responses: { '201': { description: "Criado", content: { application/json: { schema: { $ref: '#/components/schemas/ScopeItem' } } } } }
+  /context/scope/approve:
+    post:
+      summary: "Aprovar/emitir versão da Declaração de Escopo — approve_context_document"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '201': { description: "Versão emitida", content: { application/json: { schema: { $ref: '#/components/schemas/DocumentVersion' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: "Conflito (ex.: referências de versão ausentes/obsoletas).", content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /context/overview:
+    get:
+      summary: "Visão consolidada da Cláusula 4 (versões em vigor ou rascunho marcado) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "OK", content: { application/json: { schema: { type: object } } } } }
+
+  /context/suggestions:
+    get:
+      summary: "Sugestões heurísticas a partir do diagnóstico (indicativas) — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "Lista de sugestões", content: { application/json: { schema: { type: array, items: { type: object } } } } } }
+  /context/suggestions/accept:
+    post:
+      summary: "Aplicar explicitamente uma sugestão ao artefato correspondente — manage_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { suggestion_id: { type: string } }, required: [suggestion_id] } } } }
+      responses: { '201': { description: "Sugestão aplicada (item criado)", content: { application/json: { schema: { type: object } } } }, '403': { $ref: '#/components/responses/Forbidden' } }
+
+  /context/classification-policy:
+    get:
+      summary: "Política de acesso por classificação da organização — view_context"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses: { '200': { description: "OK (vazio = RBAC-apenas)", content: { application/json: { schema: { type: object } } } } }
+    put:
+      summary: "Definir política classificação→papéis — approve_context_document"
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { rules: { type: object } } } } } }
+      responses: { '200': { description: "Salva", content: { application/json: { schema: { type: object } } } }, '403': { $ref: '#/components/responses/Forbidden' } }

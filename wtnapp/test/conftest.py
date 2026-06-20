@@ -134,3 +134,26 @@ def login(client):
         return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
     return _login
+
+
+@pytest.fixture
+def context_seed(factory):
+    """Organizacao + usuarios centrais do modulo de contexto."""
+    org = factory.org("ctx-acme", "CTX Acme")
+    admin = factory.user("admin@ctx-acme.com", full_name="Admin")
+    consultant = factory.user("consultant@ctx-acme.com", full_name="Consultant")
+    client = factory.user("client@ctx-acme.com", full_name="Client")
+    factory.membership(admin, org, Role.org_admin)
+    factory.membership(consultant, org, Role.consultant)
+    factory.membership(client, org, Role.client)
+    return {"org": org, "admin": admin, "consultant": consultant, "client": client}
+
+
+@pytest.fixture
+def org_headers(login):
+    def _headers(email, org_id):
+        headers = login(email)
+        headers["X-Org-Context"] = str(org_id)
+        return headers
+
+    return _headers

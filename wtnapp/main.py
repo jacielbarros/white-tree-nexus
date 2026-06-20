@@ -18,7 +18,19 @@ from wtnapp import settings
 from wtnapp.database.database import engine
 from wtnapp.limiter import limiter
 from wtnapp.models import Base
-from wtnapp.routers import auth, bootstrap, invitations, me, memberships, organizations
+from wtnapp.routers import (
+    auth,
+    bootstrap,
+    context_analysis,
+    context_overview,
+    diagnostic,
+    invitations,
+    me,
+    memberships,
+    organizations,
+    scope,
+    stakeholders,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -107,3 +119,8 @@ app.include_router(organizations.router)
 app.include_router(invitations.router)
 app.include_router(memberships.router)
 app.include_router(me.router)
+app.include_router(diagnostic.router)
+app.include_router(context_analysis.router)
+app.include_router(stakeholders.router)
+app.include_router(scope.router)
+app.include_router(context_overview.router)

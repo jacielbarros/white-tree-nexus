@@ -152,6 +152,31 @@ Base de todos os módulos. Spec/plano em `specs/001-fundacao-multi-tenant/`.
 - **Migrations**: `wtnapp/alembic/` (schema inicial + RLS/gatilho append-only). Ainda **não**
   validado contra PostgreSQL real (RLS é PG-only; testes rodam em SQLite).
 
+#### Módulo 1 — Diagnóstico e Contexto (Feature 002 — implementada)
+Cláusula 4 do SGSI. Spec/plano em `specs/002-diagnostico-contexto/`. Segue o padrão
+[Documento Controlado SGSI](docs/iso27001-documento-controlado.md).
+- **Backend** (`wtnapp/`): Diagnóstico inicial (`routers/diagnostic.py`), Análise de Contexto 4.1
+  (PESTEL/SWOT + impacto — `routers/context_analysis.py`), Mapa de Partes Interessadas 4.2
+  (Poder×Interesse/Mendelow — `routers/stakeholders.py`), Declaração de Escopo 4.3 com referências
+  de versão a Contexto/Partes (`routers/scope.py`), visão consolidada + sugestões heurísticas
+  (`routers/context_overview.py` + `services/suggestion_service.py`). Ciclo de vida do documento
+  controlado (rascunho→revisão→aprovação, identificador/versão/classificação/retenção) em
+  `services/controlled_document_service.py`. Versões imutáveis em `document_versions` (gatilho
+  append-only); "1 em vigor + rascunho paralelo" — a versão vigente é o ponteiro
+  `current_version_id` do artefato e a obsolescência de uma referência é **derivada por recência**
+  (`is_superseded`), nunca por mutação de status (preserva o append-only). Aprovação exige
+  `approve_context_document` (Admin da organização). Acesso por classificação configurável por org
+  (`helpers/classification_access.py` + `models/classification_policy_model.py`, default RBAC).
+  Um conjunto por organização (índice único em `tenant_id`).
+- **Frontend** (`wtnadmin/`): telas `diagnostic/`, `context-analysis/`, `stakeholders/`, `scope/`,
+  `context-overview/` (lazy, `permissionGuard('view_context')`), com histórico de versões e ações
+  enviar-para-revisão/aprovar; links no shell.
+- **Testes**: `pytest wtnapp/test` (diagnóstico, contexto, partes, escopo, versionamento/append-only,
+  classificação, sugestões + isolamento de tenant) e `npm test` em `wtnadmin/`.
+- **Migrations**: `wtnapp/alembic/versions/c3d4e5f6a702_context_module.py` (tabelas + RLS + gatilho
+  append-only de `document_versions`); `alembic check` sem drift. **Pendente**: validação E2E
+  manual no browser (T038) e contra PostgreSQL real.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -277,14 +302,21 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
-**Feature 001 — Fundação Multi-Tenant** (`001-fundacao-multi-tenant`)
-- Plano: `specs/001-fundacao-multi-tenant/plan.md`
-- Spec: `specs/001-fundacao-multi-tenant/spec.md` · Research: `.../research.md` ·
+**Feature 002 — Diagnóstico e Contexto da Organização** (`002-diagnostico-contexto`) — implementada (ver seção do módulo acima); pendente E2E manual + PostgreSQL real
+- Plano: `specs/002-diagnostico-contexto/plan.md`
+- Spec: `specs/002-diagnostico-contexto/spec.md` · Research: `.../research.md` ·
   Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml`
-- Decisões-chave: shared-DB + `tenant_id` com escopo central (`helpers/tenant_scope.py`) +
-  RLS (defesa em profundidade); JWT HS512 + `jti` em Redis (fail-open) +
-  `password_changed_at`; Argon2id; bloqueio com auto-expiração/desbloqueio manual/reset;
-  bootstrap guardado por `BOOTSTRAP_TOKEN`; contexto de org via header `X-Org-Context`;
+- Escopo: Cláusula 4 do SGSI — Análise de Contexto (4.1, PESTEL/SWOT + impacto), Mapa de Partes
+  Interessadas (4.2, Poder×Interesse/Mendelow) e Declaração de Escopo (4.3), como **documentos
+  controlados versionados** (1 em vigor + rascunho paralelo).
+- Decisões-chave: dados de trabalho relacionais + snapshot de versão imutável (append-only);
+  1 conjunto por organização; aprovação só pelo Admin da organização (`approve_context_document`);
+  classificação como rótulo + política de acesso por classificação configurável (RBAC-default);
+  sugestões heurísticas (sem IA); reusa `tenant_scope`/RBAC/auditoria da fundação.
+
+**Feature 001 — Fundação Multi-Tenant** (`001-fundacao-multi-tenant`) — implementada (ver seção do módulo acima)
+- shared-DB + `tenant_id` com escopo central (`helpers/tenant_scope.py`) + RLS; JWT HS512 + `jti`
+  em Redis (fail-open) + `password_changed_at`; Argon2id; contexto de org via `X-Org-Context`;
   cross-tenant ⇒ 404 genérico.
 <!-- SPECKIT END -->
 

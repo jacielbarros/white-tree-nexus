@@ -105,3 +105,66 @@ class InviteStatus(str, Enum):
 class AuditOutcome(str, Enum):
     success = "success"
     denied = "denied"
+
+
+class DiagnosticStatus(str, Enum):
+    draft = "draft"
+    completed = "completed"
+
+
+class DocStatus(str, Enum):
+    draft = "draft"
+    in_review = "in_review"
+    in_force = "in_force"
+    obsolete = "obsolete"
+
+
+class DocType(str, Enum):
+    context_analysis = "context_analysis"
+    stakeholder_map = "stakeholder_map"
+    scope_statement = "scope_statement"
+
+
+class IssueOrigin(str, Enum):
+    internal = "internal"
+    external = "external"
+
+
+class IssueFramework(str, Enum):
+    pestel = "pestel"
+    swot = "swot"
+
+
+class Level(str, Enum):
+    alto = "alto"
+    medio = "medio"
+    baixo = "baixo"
+
+
+ImpactLevel = Level
+
+
+class EngagementStrategy(str, Enum):
+    manage_closely = "manage_closely"
+    keep_satisfied = "keep_satisfied"
+    keep_informed = "keep_informed"
+    monitor = "monitor"
+
+
+class RequirementType(str, Enum):
+    legal = "legal"
+    regulatory = "regulatory"
+    contractual = "contractual"
+    expectation = "expectation"
+
+
+class ScopeItemKind(str, Enum):
+    inclusion = "inclusion"
+    exclusion = "exclusion"
+
+
+class Classification(str, Enum):
+    publico = "publico"
+    uso_interno = "uso_interno"
+    confidencial = "confidencial"
+    restrito = "restrito"
