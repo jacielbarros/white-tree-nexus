@@ -51,6 +51,11 @@ convite/redefinição/atribuição/OTP/assinatura por organização, com padrõe
 prompt de specify em
 [`feature-templates-comunicacao-specify.md`](feature-templates-comunicacao-specify.md).
 
+**Backlog do MVP — Revisão de UX / Design System** (transversal, todas as telas do `wtnadmin/`):
+redesenhar a interface (hoje crua, PrimeNG sem customização) com direção **enterprise sóbrio**,
+mantendo PrimeNG + tema customizado (claro + escuro). Brief + **prompt pronto para o Claude Design**
+em [`feature-ux-revamp.md`](feature-ux-revamp.md).
+
 ## Fluxo por feature
 
 ```

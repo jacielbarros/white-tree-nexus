@@ -78,6 +78,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('@app/pages/form-fill/form-fill').then((m) => m.FormFillPage),
       },
+      {
+        path: 'gap-analysis',
+        canActivate: [permissionGuard('view_gap')],
+        loadComponent: () =>
+          import('@app/pages/gap-analysis/gap-analysis').then((m) => m.GapAnalysisPage),
+      },
+      {
+        path: 'gap-dashboard',
+        canActivate: [permissionGuard('view_gap')],
+        loadComponent: () =>
+          import('@app/pages/gap-dashboard/gap-dashboard').then((m) => m.GapDashboardPage),
+      },
+      {
+        path: 'gap-catalog',
+        canActivate: [permissionGuard('view_gap')],
+        loadComponent: () =>
+          import('@app/pages/gap-catalog/gap-catalog').then((m) => m.GapCatalogPage),
+      },
+      {
+        path: 'gap-baselines',
+        canActivate: [permissionGuard('view_gap')],
+        loadComponent: () =>
+          import('@app/pages/gap-baselines/gap-baselines').then((m) => m.GapBaselinesPage),
+      },
     ],
   },
   {

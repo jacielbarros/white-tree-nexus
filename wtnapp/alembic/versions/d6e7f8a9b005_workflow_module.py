@@ -61,119 +61,131 @@ CREATE POLICY tenant_isolation ON {t}
 )
 
 
+def _table_exists(conn: sa.engine.Connection, name: str) -> bool:
+    return sa.inspect(conn).has_table(name)
+
+
 def upgrade() -> None:
+    conn = op.get_bind()
+
     # --- form_templates ---
-    op.create_table(
-        "form_templates",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("kind", sa.String(20), nullable=False),
-        sa.Column("title", sa.String(200), nullable=False),
-        sa.Column("schema", sa.JSON(), nullable=False),
-        sa.Column("status", sa.String(20), nullable=False, server_default="draft"),
-        sa.Column("created_by", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-    )
-    op.create_index("ix_form_templates_tenant_id", "form_templates", ["tenant_id"])
-    op.create_index("ix_form_templates_kind", "form_templates", ["kind"])
+    if not _table_exists(conn, "form_templates"):
+        op.create_table(
+            "form_templates",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
+            sa.Column("kind", sa.String(20), nullable=False),
+            sa.Column("title", sa.String(200), nullable=False),
+            sa.Column("schema", sa.JSON(), nullable=False),
+            sa.Column("status", sa.String(20), nullable=False, server_default="draft"),
+            sa.Column("created_by", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        )
+        op.create_index("ix_form_templates_tenant_id", "form_templates", ["tenant_id"])
+        op.create_index("ix_form_templates_kind", "form_templates", ["kind"])
 
     # --- form_assignments ---
-    op.create_table(
-        "form_assignments",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("template_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_templates.id"), nullable=False),
-        sa.Column("kind", sa.String(20), nullable=False),
-        sa.Column("title", sa.String(200), nullable=False),
-        sa.Column("fields_snapshot", sa.JSON(), nullable=False),
-        sa.Column("instructions", sa.Text(), nullable=True),
-        sa.Column("status", sa.String(30), nullable=False, server_default="pending"),
-        sa.Column("respondent_user_id", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("respondent_email", sa.String(320), nullable=True),
-        sa.Column("respondent_name", sa.String(200), nullable=True),
-        sa.Column("respondent_token_hash", sa.String(64), unique=True, nullable=True),
-        sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("deadline_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("answers", sa.JSON(), nullable=False),
-        sa.Column("content_hash", sa.String(64), nullable=True),
-        sa.Column("current_version_id", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("assigned_by", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("signed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint(
-            "(respondent_user_id IS NOT NULL AND respondent_token_hash IS NULL) OR "
-            "(respondent_user_id IS NULL AND respondent_token_hash IS NOT NULL)",
-            name="ck_form_assignments_respondent",
-        ),
-    )
-    op.create_index("ix_form_assignments_tenant_id", "form_assignments", ["tenant_id"])
-    op.create_index("ix_form_assignments_status", "form_assignments", ["status"])
-    op.create_index("ix_form_assignments_template_id", "form_assignments", ["template_id"])
-    op.create_index("ix_form_assignments_respondent_user_id", "form_assignments", ["respondent_user_id"])
-    op.create_index("ix_form_assignments_token_hash", "form_assignments", ["respondent_token_hash"])
+    if not _table_exists(conn, "form_assignments"):
+        op.create_table(
+            "form_assignments",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
+            sa.Column("template_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_templates.id"), nullable=False),
+            sa.Column("kind", sa.String(20), nullable=False),
+            sa.Column("title", sa.String(200), nullable=False),
+            sa.Column("fields_snapshot", sa.JSON(), nullable=False),
+            sa.Column("instructions", sa.Text(), nullable=True),
+            sa.Column("status", sa.String(30), nullable=False, server_default="pending"),
+            sa.Column("respondent_user_id", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("respondent_email", sa.String(320), nullable=True),
+            sa.Column("respondent_name", sa.String(200), nullable=True),
+            sa.Column("respondent_token_hash", sa.String(64), unique=True, nullable=True),
+            sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("deadline_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("answers", sa.JSON(), nullable=False),
+            sa.Column("content_hash", sa.String(64), nullable=True),
+            sa.Column("current_version_id", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("assigned_by", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("assigned_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("signed_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+            sa.CheckConstraint(
+                "(respondent_user_id IS NOT NULL AND respondent_token_hash IS NULL) OR "
+                "(respondent_user_id IS NULL AND respondent_token_hash IS NOT NULL)",
+                name="ck_form_assignments_respondent",
+            ),
+        )
+        op.create_index("ix_form_assignments_tenant_id", "form_assignments", ["tenant_id"])
+        op.create_index("ix_form_assignments_status", "form_assignments", ["status"])
+        op.create_index("ix_form_assignments_template_id", "form_assignments", ["template_id"])
+        op.create_index("ix_form_assignments_respondent_user_id", "form_assignments", ["respondent_user_id"])
+        op.create_index("ix_form_assignments_token_hash", "form_assignments", ["respondent_token_hash"])
 
     # --- form_assignment_events (append-only) ---
-    op.create_table(
-        "form_assignment_events",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False),
-        sa.Column("event", sa.String(30), nullable=False),
-        sa.Column("actor_user_id", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("actor_label", sa.String(200), nullable=True),
-        sa.Column("at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("note", sa.String(500), nullable=True),
-    )
-    op.create_index("ix_form_assignment_events_assignment_id", "form_assignment_events", ["assignment_id"])
-    op.create_index("ix_form_assignment_events_tenant_id", "form_assignment_events", ["tenant_id"])
+    if not _table_exists(conn, "form_assignment_events"):
+        op.create_table(
+            "form_assignment_events",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
+            sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False),
+            sa.Column("event", sa.String(30), nullable=False),
+            sa.Column("actor_user_id", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("actor_label", sa.String(200), nullable=True),
+            sa.Column("at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("note", sa.String(500), nullable=True),
+        )
+        op.create_index("ix_form_assignment_events_assignment_id", "form_assignment_events", ["assignment_id"])
+        op.create_index("ix_form_assignment_events_tenant_id", "form_assignment_events", ["tenant_id"])
 
     # --- form_signatures (append-only) ---
-    op.create_table(
-        "form_signatures",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False),
-        sa.Column("signer_user_id", sa.Uuid(as_uuid=True), nullable=True),
-        sa.Column("signer_role", sa.String(20), nullable=False),
-        sa.Column("signer_name", sa.String(200), nullable=False),
-        sa.Column("signer_email", sa.String(320), nullable=True),
-        sa.Column("signed_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("content_hash", sa.String(64), nullable=False),
-        sa.Column("algorithm", sa.String(20), nullable=False, server_default="sha256"),
-        sa.Column("level", sa.String(20), nullable=False, server_default="advanced"),
-        sa.Column("otp_verified", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("ip", sa.String(45), nullable=True),
-        sa.Column("user_agent", sa.String(500), nullable=True),
-    )
-    op.create_index("ix_form_signatures_tenant_id", "form_signatures", ["tenant_id"])
-    op.create_index("ix_form_signatures_assignment_id", "form_signatures", ["assignment_id"])
+    if not _table_exists(conn, "form_signatures"):
+        op.create_table(
+            "form_signatures",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False),
+            sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False),
+            sa.Column("signer_user_id", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("signer_role", sa.String(20), nullable=False),
+            sa.Column("signer_name", sa.String(200), nullable=False),
+            sa.Column("signer_email", sa.String(320), nullable=True),
+            sa.Column("signed_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("content_hash", sa.String(64), nullable=False),
+            sa.Column("algorithm", sa.String(20), nullable=False, server_default="sha256"),
+            sa.Column("level", sa.String(20), nullable=False, server_default="advanced"),
+            sa.Column("otp_verified", sa.Boolean(), nullable=False, server_default="false"),
+            sa.Column("ip", sa.String(45), nullable=True),
+            sa.Column("user_agent", sa.String(500), nullable=True),
+        )
+        op.create_index("ix_form_signatures_tenant_id", "form_signatures", ["tenant_id"])
+        op.create_index("ix_form_signatures_assignment_id", "form_signatures", ["assignment_id"])
 
     # --- form_signature_otps (transiente) ---
-    op.create_table(
-        "form_signature_otps",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False, unique=True),
-        sa.Column("code_hash", sa.String(64), nullable=False),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
-    )
-    op.create_index("ix_form_signature_otps_assignment_id", "form_signature_otps", ["assignment_id"])
+    if not _table_exists(conn, "form_signature_otps"):
+        op.create_table(
+            "form_signature_otps",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("assignment_id", sa.Uuid(as_uuid=True), sa.ForeignKey("form_assignments.id"), nullable=False, unique=True),
+            sa.Column("code_hash", sa.String(64), nullable=False),
+            sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
+        )
+        op.create_index("ix_form_signature_otps_assignment_id", "form_signature_otps", ["assignment_id"])
 
     # --- form_signature_policies (1 por org) ---
-    op.create_table(
-        "form_signature_policies",
-        sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
-        sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False, unique=True),
-        sa.Column("require_assigner_countersignature", sa.Boolean(), nullable=False, server_default="false"),
-    )
+    if not _table_exists(conn, "form_signature_policies"):
+        op.create_table(
+            "form_signature_policies",
+            sa.Column("id", sa.Uuid(as_uuid=True), primary_key=True),
+            sa.Column("tenant_id", sa.Uuid(as_uuid=True), sa.ForeignKey("organizations.id"), nullable=False, unique=True),
+            sa.Column("require_assigner_countersignature", sa.Boolean(), nullable=False, server_default="false"),
+        )
 
-    # --- Triggers append-only + RLS (PostgreSQL only) ---
+    # --- Triggers append-only + RLS (PostgreSQL only; idempotentes) ---
     dialect = op.get_context().dialect.name
     if dialect == "postgresql":
         op.execute(sa.text(_PG_APPEND_ONLY_EVENTS))

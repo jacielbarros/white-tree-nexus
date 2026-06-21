@@ -175,6 +175,33 @@ def form_seed(factory):
 
 
 @pytest.fixture
+def gap_seed(db):
+    """Carrega o seed 2022.1 no banco de testes e retorna a versão."""
+    from wtnapp.services.gap_seed_service import load_seed
+
+    version = load_seed(db)
+    db.commit()
+    return version
+
+
+@pytest.fixture
+def gap_seed_factory(db, factory):
+    """Org + admin/consultant/client com permissões de gap analysis."""
+
+    def _make(slug="gap-acme"):
+        org = factory.org(slug, f"GAP {slug.upper()}")
+        admin = factory.user(f"admin@{slug}.com", full_name=f"Admin {slug}")
+        consultant = factory.user(f"consultant@{slug}.com", full_name=f"Consultant {slug}")
+        client_user = factory.user(f"client@{slug}.com", full_name=f"Client {slug}")
+        factory.membership(admin, org, Role.org_admin)
+        factory.membership(consultant, org, Role.consultant)
+        factory.membership(client_user, org, Role.client)
+        return {"org": org, "admin": admin, "consultant": consultant, "client": client_user}
+
+    return _make
+
+
+@pytest.fixture
 def form_outbox(monkeypatch):
     """Captura emails do motor de formularios sem SMTP real."""
     from wtnapp.services import notification_service

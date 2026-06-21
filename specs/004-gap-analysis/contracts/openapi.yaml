@@ -1,0 +1,286 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Gap Analysis (Feature 004)
+  version: 0.1.0
+  description: >
+    Avaliação de aderência ISO/IEC 27001:2022 (Cláusulas 4–10 + 93 controles do Anexo A).
+    Todos os endpoints exigem JWT + X-Org-Context (exceto a rota pública tokenizada reusada do 003),
+    são escopados por tenant e auditados. Cross-tenant ⇒ 404 genérico.
+
+servers:
+  - url: /
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: gap-catalog
+  - name: gap-assessment
+  - name: gap-assignments
+
+paths:
+  /gap/catalog:
+    get:
+      tags: [gap-catalog]
+      summary: Lista o catálogo (cópia editável) da organização
+      parameters:
+        - { name: X-Org-Context, in: header, required: true, schema: { type: string } }
+        - { name: dimension, in: query, schema: { type: string, enum: [clause, annex_a] } }
+        - { name: theme, in: query, schema: { type: string, enum: [organizational, people, physical, technological] } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/CatalogItem" } } } } }
+
+  /gap/catalog/adopt:
+    post:
+      tags: [gap-catalog]
+      summary: Adota uma versão do seed (materializa/atualiza a cópia da org — aditivo, opt-in)
+      description: Permissão manage_gap. Itens novos entram como Não preenchido; personalizações/avaliações são preservadas; itens removidos viram descontinuados.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [seed_version], properties: { seed_version: { type: string, example: "2022.1" } } } } }
+      responses:
+        "200": { description: Catálogo adotado/atualizado }
+        "409": { description: Versão de seed inválida/indisponível }
+
+  /gap/catalog/items:
+    post:
+      tags: [gap-catalog]
+      summary: Adiciona um item próprio ao catálogo da organização (manage_gap)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogItemCreate" } } }
+      responses:
+        "201": { description: Criado, content: { application/json: { schema: { $ref: "#/components/schemas/CatalogItem" } } } }
+
+  /gap/catalog/items/{itemId}:
+    patch:
+      tags: [gap-catalog]
+      summary: Edita/renomeia um item do catálogo da org (manage_gap)
+      parameters: [ { name: itemId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        content: { application/json: { schema: { $ref: "#/components/schemas/CatalogItemUpdate" } } }
+      responses:
+        "200": { description: OK }
+        "404": { description: Não encontrado (incl. cross-tenant) }
+
+  /gap/assessment:
+    get:
+      tags: [gap-assessment]
+      summary: Retorna a avaliação (matriz) vigente da organização, com itens (view_gap)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Assessment" } } } }
+
+  /gap/assessment/items/{itemId}:
+    put:
+      tags: [gap-assessment]
+      summary: Atualiza a avaliação de um item da matriz (manage_gap)
+      description: status=not_applicable exige exclusion_justification (senão 422). Gera evento append-only + audit.
+      parameters: [ { name: itemId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AssessmentItemUpdate" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AssessmentItem" } } } }
+        "422": { description: not_applicable sem justificativa }
+        "404": { description: Não encontrado (incl. cross-tenant) }
+
+  /gap/assessment/dashboard:
+    get:
+      tags: [gap-assessment]
+      summary: Indicadores de aderência e distribuição por status (view_gap)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }
+
+  /gap/assessment/gaps:
+    get:
+      tags: [gap-assessment]
+      summary: Lista de lacunas (itens aplicáveis não conformes), ordenável por prioridade (view_gap)
+      parameters: [ { name: order_by, in: query, schema: { type: string, enum: [priority], default: priority } } ]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AssessmentItem" } } } } }
+
+  /gap/assessment/submit-review:
+    post:
+      tags: [gap-assessment]
+      summary: Envia a avaliação para aprovação de baseline (approve_gap_baseline)
+      responses:
+        "200": { description: Em revisão }
+        "409": { description: Já está em revisão }
+
+  /gap/assessment/approve:
+    post:
+      tags: [gap-assessment]
+      summary: Aprova e congela uma baseline imutável (approve_gap_baseline — Admin da organização)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, properties: { classification: { type: string }, change_nature: { type: string } } } } }
+      responses:
+        "200": { description: Baseline congelada, content: { application/json: { schema: { $ref: "#/components/schemas/Baseline" } } } }
+        "409": { description: Envie para revisão antes de aprovar }
+        "403": { description: Sem permissão de aprovação }
+
+  /gap/assessment/baselines:
+    get:
+      tags: [gap-assessment]
+      summary: Lista as baselines (versões) da avaliação (view_gap)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Baseline" } } } } }
+
+  /gap/assessment/baselines/compare:
+    get:
+      tags: [gap-assessment]
+      summary: Compara a aderência entre duas baselines (view_gap)
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: to, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BaselineComparison" } } } }
+
+  /gap/assignments:
+    post:
+      tags: [gap-assignments]
+      summary: Atribui a condução da avaliação a um preenchedor (assign_form)
+      description: Escopo whole (default) ou theme. Membro (respondent_user_id) OU externo (respondent_email). Reusa notificação/trilha do 003.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AssignmentCreate" } } }
+      responses:
+        "201": { description: Criada, content: { application/json: { schema: { $ref: "#/components/schemas/Assignment" } } } }
+    get:
+      tags: [gap-assignments]
+      summary: Lista as atribuições de condução (view_gap)
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Assignment" } } } } }
+
+  /gap/assignments/{id}/sign:
+    post:
+      tags: [gap-assignments]
+      summary: Assina a avaliação enviada e congela a baseline (sign_form)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        "200": { description: Assinada + baseline congelada }
+        "409": { description: Estado inválido para assinar }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    CatalogItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        dimension: { type: string, enum: [clause, annex_a] }
+        ref_code: { type: string, example: "A.5.1" }
+        name: { type: string }
+        theme: { type: string, enum: [organizational, people, physical, technological], nullable: true }
+        objective: { type: string }
+        order: { type: integer }
+        is_custom: { type: boolean }
+        is_discontinued: { type: boolean }
+        group_label: { type: string, nullable: true }
+    CatalogItemCreate:
+      type: object
+      required: [dimension, ref_code, name]
+      properties:
+        dimension: { type: string, enum: [clause, annex_a] }
+        ref_code: { type: string }
+        name: { type: string }
+        theme: { type: string, nullable: true }
+        objective: { type: string, nullable: true }
+        group_label: { type: string, nullable: true }
+    CatalogItemUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        objective: { type: string }
+        group_label: { type: string, nullable: true }
+        order: { type: integer }
+    Assessment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        seed_version: { type: string }
+        draft_status: { type: string, enum: [draft, in_review] }
+        current_version_id: { type: string, format: uuid, nullable: true }
+        items: { type: array, items: { $ref: "#/components/schemas/AssessmentItem" } }
+    AssessmentItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        catalog_item_id: { type: string, format: uuid }
+        ref_code: { type: string }
+        dimension: { type: string, enum: [clause, annex_a] }
+        theme: { type: string, nullable: true }
+        name: { type: string }
+        status: { type: string, enum: [not_filled, meets, partial, not_meet, not_applicable] }
+        findings: { type: string, nullable: true }
+        actions: { type: string, nullable: true }
+        priority: { type: string, enum: [critical, high, medium, low], nullable: true }
+        responsible: { type: string, nullable: true }
+        deadline: { type: string, format: date, nullable: true }
+        evidence_ref: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        exclusion_justification: { type: string, nullable: true }
+        maturity_level: { type: integer, nullable: true }
+        effort_estimate: { type: string, nullable: true }
+        soa_ref: { type: string, nullable: true }
+    AssessmentItemUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [not_filled, meets, partial, not_meet, not_applicable] }
+        findings: { type: string, nullable: true }
+        actions: { type: string, nullable: true }
+        priority: { type: string, enum: [critical, high, medium, low], nullable: true }
+        responsible: { type: string, nullable: true }
+        deadline: { type: string, format: date, nullable: true }
+        evidence_ref: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        exclusion_justification: { type: string, nullable: true }
+        maturity_level: { type: integer, nullable: true }
+        effort_estimate: { type: string, nullable: true }
+    Dashboard:
+      type: object
+      properties:
+        overall_adherence: { type: number, nullable: true, description: "0..1; null se sem itens aplicáveis" }
+        by_dimension: { type: object, additionalProperties: { type: number, nullable: true } }
+        by_clause: { type: object, additionalProperties: { type: number, nullable: true } }
+        by_theme: { type: object, additionalProperties: { type: number, nullable: true } }
+        status_distribution: { type: object, additionalProperties: { type: integer } }
+        completeness: { type: number, description: "% de itens preenchidos" }
+    Baseline:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version_number: { type: integer }
+        status: { type: string }
+        classification: { type: string }
+        emitted_at: { type: string, format: date-time }
+        overall_adherence: { type: number, nullable: true }
+    BaselineComparison:
+      type: object
+      properties:
+        from: { $ref: "#/components/schemas/Baseline" }
+        to: { $ref: "#/components/schemas/Baseline" }
+        overall_delta: { type: number, nullable: true }
+        by_dimension_delta: { type: object, additionalProperties: { type: number, nullable: true } }
+    AssignmentCreate:
+      type: object
+      properties:
+        scope: { type: string, enum: [whole, theme], default: whole }
+        scope_theme: { type: string, enum: [organizational, people, physical, technological], nullable: true }
+        respondent_user_id: { type: string, format: uuid, nullable: true }
+        respondent_email: { type: string, nullable: true }
+        deadline_at: { type: string, format: date-time, nullable: true }
+        instructions: { type: string, nullable: true }
+    Assignment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        assessment_id: { type: string, format: uuid }
+        scope: { type: string, enum: [whole, theme] }
+        scope_theme: { type: string, nullable: true }
+        status: { type: string, enum: [pending, in_progress, submitted, signed, completed, cancelled] }
+        respondent_user_id: { type: string, format: uuid, nullable: true }
+        respondent_email: { type: string, nullable: true }
+        deadline_at: { type: string, format: date-time, nullable: true }
+        overdue: { type: boolean }

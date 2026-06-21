@@ -24,6 +24,10 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
+        "manage_gap",
+        "approve_gap_baseline",
     },
     Role.org_admin: {
         "invite_users",
@@ -37,6 +41,10 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
+        "manage_gap",
+        "approve_gap_baseline",
     },
     Role.consultant: {
         "invite_users",
@@ -48,6 +56,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
+        "manage_gap",
     },
     Role.client: {
         "view_organization",
@@ -56,6 +67,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
     },
     Role.manager: {
         "view_organization",
@@ -64,6 +77,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
     },
     Role.process_owner: {
         "view_organization",
@@ -72,9 +87,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_form",
         "fill_form",
         "sign_form",
+        # Gap Analysis (Feature 004)
+        "view_gap",
     },
-    Role.control_owner: {"view_organization", "view_context", "view_form"},
-    Role.internal_auditor: {"view_organization", "view_context", "view_form"},
+    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap"},
+    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap"},
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 

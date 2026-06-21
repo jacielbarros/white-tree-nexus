@@ -258,6 +258,23 @@ export class ApiService {
     return this.http.put<SignaturePolicy>(`${this.base}/form-signature-policy`, payload);
   }
 
+  // --- Atalhos genéricos (para módulos sem métodos nomeados no service) ---
+  get<T>(path: string, params?: Record<string, string>): Observable<T> {
+    return this.http.get<T>(`${this.base}${path}`, params ? { params } : {});
+  }
+
+  post<T>(path: string, body: unknown): Observable<T> {
+    return this.http.post<T>(`${this.base}${path}`, body);
+  }
+
+  put<T>(path: string, body: unknown): Observable<T> {
+    return this.http.put<T>(`${this.base}${path}`, body);
+  }
+
+  patch<T>(path: string, body: unknown): Observable<T> {
+    return this.http.patch<T>(`${this.base}${path}`, body);
+  }
+
   // --- Respondente externo (sem auth) ---
   getFormByToken(token: string): Observable<FormAssignment> {
     return this.http.get<FormAssignment>(`${this.base}/forms/respond/${token}`);

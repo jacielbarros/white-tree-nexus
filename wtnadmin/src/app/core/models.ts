@@ -224,3 +224,98 @@ export interface FormSignature {
 export interface SignaturePolicy {
   require_assigner_countersignature: boolean;
 }
+
+// --- Gap Analysis (Feature 004) ---
+
+export type GapStatus =
+  | 'not_filled'
+  | 'meets'
+  | 'partial'
+  | 'not_meet'
+  | 'not_applicable';
+
+export type GapPriority = 'critical' | 'high' | 'medium' | 'low';
+export type GapDimension = 'clause' | 'annex_a';
+export type GapTheme = 'organizational' | 'people' | 'physical' | 'technological';
+
+export interface GapCatalogItem {
+  id: string;
+  dimension: GapDimension;
+  ref_code: string;
+  name: string;
+  theme: GapTheme | null;
+  objective: string | null;
+  order: number;
+  is_custom: boolean;
+  is_discontinued: boolean;
+}
+
+export interface GapAssessmentItem {
+  id: string;
+  catalog_item_id: string;
+  ref_code: string;
+  dimension: GapDimension;
+  theme: GapTheme | null;
+  name: string;
+  status: GapStatus;
+  findings: string | null;
+  actions: string | null;
+  priority: GapPriority | null;
+  responsible: string | null;
+  deadline: string | null;
+  evidence_ref: string | null;
+  notes: string | null;
+  exclusion_justification: string | null;
+  maturity_level: number | null;
+  effort_estimate: string | null;
+  soa_ref: string | null;
+}
+
+export interface GapAssessment {
+  id: string;
+  draft_status: string;
+  current_version_id: string | null;
+  items: GapAssessmentItem[];
+}
+
+export interface GapDashboard {
+  overall_adherence: number | null;
+  by_dimension: Record<string, number | null>;
+  by_clause: Record<string, number | null>;
+  by_theme: Record<string, number | null>;
+  status_distribution: Record<string, number>;
+  completeness: number;
+}
+
+export interface GapBaseline {
+  id: string;
+  version_number: number;
+  status: string;
+  classification: string;
+  emitted_at: string;
+  overall_adherence: number | null;
+}
+
+export interface GapBaselineComparison {
+  from_baseline: GapBaseline;
+  to_baseline: GapBaseline;
+  overall_delta: number | null;
+  by_dimension_delta: Record<string, number | null>;
+}
+
+export interface GapAssignmentItem {
+  id: string;
+  assessment_id: string;
+  scope: string;
+  scope_theme: string | null;
+  status: string;
+  respondent_user_id: string | null;
+  respondent_email: string | null;
+  deadline_at: string | null;
+  instructions: string | null;
+  claimed_at: string | null;
+  submitted_at: string | null;
+  signed_at: string | null;
+  created_at: string;
+  token?: string | null;
+}

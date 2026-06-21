@@ -11,6 +11,11 @@ from wtnapp.models.form_assignment_model import FormAssignment
 from wtnapp.models.form_signature_model import FormSignature, FormSignatureOTP
 from wtnapp.models.form_signature_policy_model import FormSignaturePolicy
 from wtnapp.models.form_template_model import FormTemplate
+# Gap Analysis (Feature 004)
+from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem, GapAssessmentItemEvent
+from wtnapp.models.gap_assignment_model import GapAssignment
+from wtnapp.models.gap_catalog_model import GapCatalogItem
+from wtnapp.models.gap_seed_model import GapSeedItem, GapSeedVersion
 from wtnapp.models.invitation_model import Invitation
 from wtnapp.models.membership_model import Membership
 from wtnapp.models.organization_model import Organization
@@ -33,6 +38,13 @@ __all__ = [
     "FormSignatureOTP",
     "FormSignaturePolicy",
     "FormTemplate",
+    "GapAssessment",
+    "GapAssessmentItem",
+    "GapAssessmentItemEvent",
+    "GapAssignment",
+    "GapCatalogItem",
+    "GapSeedItem",
+    "GapSeedVersion",
     "Invitation",
     "Membership",
     "Organization",

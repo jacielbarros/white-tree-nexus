@@ -30,6 +30,10 @@ interface OrgOption {
           <a routerLink="context-overview" routerLinkActive="active">Visão</a>
           <a routerLink="form-templates" routerLinkActive="active">Templates</a>
           <a routerLink="form-assignments" routerLinkActive="active">Formulários</a>
+          <a routerLink="gap-analysis" routerLinkActive="active">Gap Analysis</a>
+          <a routerLink="gap-dashboard" routerLinkActive="active">Dashboard Gap</a>
+          <a routerLink="gap-catalog" routerLinkActive="active">Catálogo Gap</a>
+          <a routerLink="gap-baselines" routerLinkActive="active">Baselines Gap</a>
         }
       </nav>
       <span class="spacer"></span>

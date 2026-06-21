@@ -126,6 +126,7 @@ class DocType(str, Enum):
     stakeholder_map = "stakeholder_map"
     scope_statement = "scope_statement"
     form_response = "form_response"
+    gap_baseline = "gap_baseline"
 
 
 class IssueOrigin(str, Enum):
@@ -228,3 +229,37 @@ class TemplateStatus(str, Enum):
     draft = "draft"
     active = "active"
     archived = "archived"
+
+
+# --- Gap Analysis (Feature 004) ---
+
+class GapStatus(str, Enum):
+    not_filled = "not_filled"
+    meets = "meets"
+    partial = "partial"
+    not_meet = "not_meet"
+    not_applicable = "not_applicable"
+
+
+class GapPriority(str, Enum):
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+
+
+class GapDimension(str, Enum):
+    clause = "clause"
+    annex_a = "annex_a"
+
+
+class GapTheme(str, Enum):
+    organizational = "organizational"
+    people = "people"
+    physical = "physical"
+    technological = "technological"
+
+
+class GapAssignmentScope(str, Enum):
+    whole = "whole"
+    theme = "theme"

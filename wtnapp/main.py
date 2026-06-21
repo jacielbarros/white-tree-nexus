@@ -28,6 +28,9 @@ from wtnapp.routers import (
     form_respond,
     form_signature_policy,
     form_templates,
+    gap_assignment,
+    gap_assessment,
+    gap_catalog,
     invitations,
     me,
     memberships,
@@ -132,3 +135,6 @@ app.include_router(form_templates.router)
 app.include_router(form_assignments.router)
 app.include_router(form_respond.router)
 app.include_router(form_signature_policy.router)
+app.include_router(gap_catalog.router)
+app.include_router(gap_assessment.router)
+app.include_router(gap_assignment.router)

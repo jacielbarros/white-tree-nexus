@@ -215,9 +215,49 @@ Capacidade transversal. Spec/plano em `specs/003-workflow-preenchimento/`.
 - **Testes manuais**: roteiro E2E em `docs/guia-de-testes-workflow.md` (membro, externo/token+OTP,
   devolução, política dupla, consumo do diagnóstico, isolamento). Fluxo externo exige *catcher* SMTP local.
 
+#### Módulo 2 — Gap Analysis ISO/IEC 27001:2022 (Feature 004 — implementada)
+Spec/plano em `specs/004-gap-analysis/`. Avalia aderência da organização às cláusulas 4–10 e os 93
+controles do Anexo A da norma.
+- **Arquitetura dois níveis**: catálogo compartilhado (`gap_seed_version`/`gap_seed_item`, sem `tenant_id`,
+  somente leitura) + cópia editável por org (`gap_catalog_item` com `tenant_id`+RLS). Adoção aditiva
+  e idempotente (novos itens como `not_filled`, personalizações preservadas, removidos marcados como
+  `is_discontinued`).
+- **Backend** (`wtnapp/`): seed ISO 27001:2022 em `data/iso27001_seed.py` (100 itens: 7 cláusulas + 93
+  controles A.5–A.8); `services/gap_seed_service.py` (`load_seed`/`adopt_seed`); `services/gap_metrics_service.py`
+  (aderência ponderada 1.0/0.5/0.0, N/A e not_filled excluídos; denominador zero ⇒ None); routers
+  `gap_catalog.py` (catálogo + adoção + CRUD custom), `gap_assessment.py` (matriz, itens, dashboard,
+  lacunas, submit-review/approve/baselines/compare), `gap_assignment.py` (atribuição de condução:
+  membro ou externo via token). Baseline reusa `controlled_document_service` com `DocType.gap_baseline`.
+  Trilha de item append-only em `gap_assessment_item_event` (SQLite + PG triggers). Permissões:
+  `view_gap`, `manage_gap`, `approve_gap_baseline`.
+- **Testes backend** (38 testes, todos passando): `test_gap_assessment.py` (9), `test_tenant_isolation_gap.py`
+  (5), `test_gap_metrics.py` (6), `test_gap_catalog.py` (4), `test_gap_baseline.py` (6), `test_gap_assignment.py` (8).
+- **Migration**: `wtnapp/alembic/versions/e7f8a9b0c106_gap_analysis_module.py` (7 tabelas + RLS + triggers
+  append-only). `down_revision="d6e7f8a9b005"`.
+- **Frontend** (`wtnadmin/`): 4 telas implementadas — `pages/gap-analysis/` (matriz + condução),
+  `pages/gap-dashboard/` (indicadores + lacunas), `pages/gap-catalog/` (catálogo + adoção), `pages/gap-baselines/`
+  (congelar/aprovar/listar/comparar). Rotas registradas em `app.routes.ts` com `permissionGuard('view_gap')`.
+  Links no shell. Métodos genéricos `get/post/put/patch` adicionados ao `ApiService`. 69 testes frontend passando.
+- **Pendente**: validação E2E manual, alembic upgrade no postgres real.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
+
+**Migrations DEVEM ser idempotentes** — `alembic upgrade head` precisa rodar com sucesso mesmo
+quando as tabelas **já existem** (porque o `create_all()` do startup pode tê-las criado antes da
+migration rodar). Regra obrigatória para toda migration nova:
+- `op.create_table(...)`/`op.create_index(...)`: envolver em `if not _table_exists(conn, "<tabela>")`
+  (helper `_table_exists(conn, name) -> sa.inspect(conn).has_table(name)`).
+- `op.add_column(...)` em tabela existente: guardar com checagem de coluna
+  (`name in [c["name"] for c in sa.inspect(conn).get_columns("<tabela>")]`), pois `create_all()` já
+  cria a coluna nova em DB zerado, mas **não** a adiciona em tabela preexistente.
+- Funções/triggers (PG): `CREATE OR REPLACE FUNCTION` + `DROP TRIGGER IF EXISTS` antes de `CREATE TRIGGER`.
+- RLS policies (PG): `DROP POLICY IF EXISTS ...` antes de `CREATE POLICY`; `ENABLE ROW LEVEL SECURITY`
+  é idempotente.
+- SQLite (testes): `CREATE TRIGGER IF NOT EXISTS`.
+- Seed/carga de dados: idempotente (rodar 2× não duplica).
+Referência: migrations `d6e7f8a9b005` (003) e `e7f8a9b0c106` (004) já seguem esse padrão.
 
 ## Backend Key Conventions
 
@@ -340,7 +380,27 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
-**Feature 003 — Motor de Workflow de Preenchimento (atribuível e assinável)** (`003-workflow-preenchimento`) — implementada (37 testes backend + 30 testes frontend, todos passando)
+**Backlog do MVP (transversal) — Revisão de UX / Design System** — planejado. A UI atual está crua
+(PrimeNG Material sem customização; topbar plana com 12+ links; sem tokens/identidade). Direção
+**enterprise sóbrio**, **manter PrimeNG + tema customizado**, **claro + escuro**, escopo **design
+system + telas-chave**. O design será feito no **Claude Design** (prompt pronto). Brief + inventário
+de telas + nova navegação (sidebar agrupada por módulo) em `docs/feature-ux-revamp.md`.
+
+**Feature 004 — Gap Analysis ISO/IEC 27001:2022** (`004-gap-analysis`) — planejada (specify + clarify + plan concluídos; próximo: `/speckit.tasks`)
+- Plano: `specs/004-gap-analysis/plan.md`
+- Spec: `specs/004-gap-analysis/spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: avaliação de aderência em 2 dimensões (Cláusulas 4–10 + 93 controles do Anexo A) →
+  indicadores/lacunas → **baseline versionada** (Documento Controlado) → condução atribuível/assinável
+  (reusa Motor 003). Insumo do SoA (Módulo 3) e Plano de Ação (Módulo 4).
+- Decisões-chave (clarify): aderência ponderada (Atende=100%/Parcial=50%/Não atende=0%, exclui N/A e
+  Não preenchido); atribuição inteira por padrão + opção por tema do Anexo A; seed **opt-in
+  versionado e aditivo**; baseline congelada por **aprovação do Admin** (assinatura opcional).
+- Decisão arquitetural: catálogo-base (`gap_seed_item`) é **compartilhado pela plataforma** (sem
+  `tenant_id`, somente leitura) + **cópia editável por org** (com `tenant_id`+RLS). Ver Complexity
+  Tracking no plano.
+
+**Feature 003 — Motor de Workflow de Preenchimento (atribuível e assinável)** (`003-workflow-preenchimento`) — implementada (37 testes backend + 40 testes frontend, todos passando)
 - Plano: `specs/003-workflow-preenchimento/plan.md`
 - Spec: `specs/003-workflow-preenchimento/spec.md` · Research: `.../research.md` ·
   Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
