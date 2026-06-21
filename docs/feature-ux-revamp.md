@@ -4,6 +4,10 @@
 > **Como executar:** o trabalho de design será feito no **Claude Design**, colando o prompt da
 > seção [Prompt para o Claude Design](#prompt-para-o-claude-design). A implementação no Angular/PrimeNG
 > entra depois, como feature própria (Spec Kit) ou como tarefa de refino contínuo.
+>
+> **Inclui o Dashboard de Conformidade** (home da organização) como **tela-âncora** desta revisão —
+> escopo funcional do dashboard e do motor de rastreabilidade/timeline em
+> [feature-dashboard-rastreabilidade.md](feature-dashboard-rastreabilidade.md).
 
 ## Problema
 
@@ -41,6 +45,7 @@ A interface atual está **crua**: usa o preset **PrimeNG Material sem nenhuma cu
 ### Dentro do shell (autenticadas)
 | Módulo | Tela | Componente |
 |---|---|---|
+| **Início** | **Dashboard de Conformidade (home da org)** — card por módulo c/ status, %, prazo, responsável, atalho p/ próxima ação | `pages/dashboard/` *(a criar — ver [feature-dashboard-rastreabilidade.md](feature-dashboard-rastreabilidade.md))* |
 | Administração | Organizações | `pages/organizations/` |
 | Administração | Usuários + convites | `pages/users/` |
 | Contexto (Cláusula 4) | Diagnóstico | `pages/diagnostic/` |
@@ -55,15 +60,19 @@ A interface atual está **crua**: usa o preset **PrimeNG Material sem nenhuma cu
 | Gap Analysis | Dashboard de aderência + lacunas | `pages/gap-dashboard/` |
 | Gap Analysis | Catálogo editável + adoção do seed | `pages/gap-catalog/` |
 | Gap Analysis | Baselines (congelar/aprovar/comparar) | `pages/gap-baselines/` |
+| SoA | Declaração de Aplicabilidade (matriz por tema, consolidar, divergência) | `pages/soa/` |
+| SoA | Versões da SoA (revisar/aprovar, exportar PDF) | `pages/soa-versions/` |
 
 ### Rearquitetura de navegação proposta (a maior melhoria de UX)
 Substituir a topbar plana por **sidebar agrupada por módulo** + topbar enxuta (marca, seletor de
 organização, usuário/logout, alternância de tema):
 
+- **Início** — Dashboard de Conformidade (home da organização; tela-âncora)
 - **Administração** — Organizações · Usuários
 - **Contexto (Cláusula 4)** — Diagnóstico · Análise de Contexto · Partes Interessadas · Escopo · Visão
 - **Workflow** — Templates · Formulários
 - **Gap Analysis** — Matriz · Dashboard · Catálogo · Baselines
+- **SoA** — Declaração de Aplicabilidade · Versões
 
 ---
 
@@ -130,17 +139,24 @@ Hoje a navegação é uma topbar plana com 12+ links numa linha — refazer.
 - **Topbar:** marca "White Tree Nexus", **seletor de organização** (multi-tenant — troca o contexto),
   identidade do usuário, sair, **alternância de tema claro/escuro**.
 - **Sidebar (grupos e itens, com ícones):**
+  - **Início:** Dashboard de Conformidade (home)
   - **Administração:** Organizações · Usuários
   - **Contexto (Cláusula 4):** Diagnóstico · Análise de Contexto · Partes Interessadas · Escopo · Visão
   - **Workflow:** Templates · Formulários
   - **Gap Analysis:** Matriz · Dashboard · Catálogo · Baselines
+  - **SoA:** Declaração de Aplicabilidade · Versões
 - Mostrar estado ativo, agrupamento colapsável e versão responsiva (sidebar colapsa em telas
   estreitas).
 
 ### Parte 3 — Mockups das telas-chave (claro + escuro)
 1. **Login** (tela pública, centrada, com a marca) — e por consistência indicar o padrão das demais
    telas de auth (esqueci senha, redefinir, aceite de convite).
-2. **Shell com a nova navegação** (sidebar + topbar) usando uma tela interna como conteúdo.
+2. **Shell + Dashboard de Conformidade (HOME — tela-âncora):** a nova navegação (sidebar + topbar)
+   tendo como conteúdo o **dashboard**: um **card por módulo** (Contexto, Gap Analysis, SoA; e,
+   futuramente, Plano de Ação e Evidências), cada card com **status** (rascunho/em revisão/aprovado),
+   **% de progresso/aderência**, **responsável**, **prazo** (com destaque para "revisão vencida") e um
+   **atalho para a próxima ação**. Pode incluir um indicador de **conformidade ao longo do tempo**
+   (mini-gráfico). É a primeira tela que o usuário vê ao entrar na organização.
 3. **Gap Analysis — Matriz:** grade de itens das duas dimensões (**Cláusulas 4–10** e **93 controles
    do Anexo A**, agrupados por tema: Organizacional/Pessoas/Físico/Tecnológico), cada item com código
    de referência (ex.: "A.8.12"), nome e **tag de status**. Dialog de edição do item (status,

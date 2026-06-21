@@ -413,6 +413,16 @@ specify em `docs/README.md`).
 system + telas-chave**. O design será feito no **Claude Design** (prompt pronto). Brief + inventário
 de telas + nova navegação (sidebar agrupada por módulo) em `docs/feature-ux-revamp.md`.
 
+**Backlog do MVP (transversais) — Dashboard de Conformidade + Motor de Rastreabilidade/Timeline** —
+planejados (sequência: Dashboard → Rastreabilidade → Plano de Ação #4 → Evidências #5). São **camada
+de leitura/agregação** sobre o que já existe (`gap_metrics_service`, summary da SoA, overview de
+contexto, `document_versions`, `audit_logs`, baselines do Gap) — sem novo modelo de domínio, salvo
+**uma peça nova**: endpoint de **leitura** de `audit_logs` (`GET /audit`, paginado, tenant-scoped,
+nova permissão `view_audit`). O **Dashboard** é a home da org e a **tela-âncora da Revisão de UX**.
+**Fora de escopo** do motor de timeline: upload de arquivos de evidência + tags (crítica/informativa/
+pendente) — isso é o **Módulo 5**, que depois aparece na mesma timeline. Escopo + prompts
+`/speckit.specify` prontos em `docs/feature-dashboard-rastreabilidade.md`.
+
 **Feature 005 — Statement of Applicability (SoA)** (`005-soa-declaracao-aplicabilidade`) — implementada e validada (24 testes backend + 81 frontend; migration validada no PG; E2E browser cenários A–F)
 - Plano: `specs/005-soa-declaracao-aplicabilidade/plan.md`
 - Spec: `specs/005-soa-declaracao-aplicabilidade/spec.md` · Research: `.../research.md` ·

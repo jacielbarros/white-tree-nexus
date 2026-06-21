@@ -22,7 +22,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('@app/pages/shell/shell').then((m) => m.Shell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'organizations' },
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('@app/pages/dashboard/dashboard').then((m) => m.DashboardPage),
+      },
       {
         path: 'organizations',
         loadComponent: () =>

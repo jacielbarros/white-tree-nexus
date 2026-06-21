@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .wtn-canvas {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    --wtn-r-sm: 4px; --wtn-r-md: 6px; --wtn-r-lg: 8px; --wtn-r-xl: 12px; --wtn-r-pill: 999px;
+    --wtn-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  [data-theme="light"] {
+    --wtn-bg:#EEF2F2; --wtn-surface:#FFFFFF; --wtn-surface-2:#F4F7F7; --wtn-card:#FFFFFF;
+    --wtn-border:#DCE3E4; --wtn-border-strong:#C4CFD0;
+    --wtn-text:#13201E; --wtn-text-2:#566A67; --wtn-muted:#879591;
+    --wtn-primary:#0E5C54; --wtn-primary-hover:#0A4842; --wtn-primary-contrast:#FFFFFF;
+    --wtn-primary-soft:#E2EFED; --wtn-focus:#2E9D90;
+    --wtn-success:#1B7A50; --wtn-success-soft:#E3F2EB;
+    --wtn-warning:#9A6700; --wtn-warning-soft:#F8EFD7;
+    --wtn-danger:#B23A2E;  --wtn-danger-soft:#F8E6E3;
+    --wtn-info:#1C6CA8;     --wtn-info-soft:#E2EEF7;
+    --wtn-neutral:#586A67;  --wtn-neutral-soft:#EAEFEE;
+    --wtn-prio-crit:#B23A2E; --wtn-prio-high:#B5610C; --wtn-prio-med:#9A6700; --wtn-prio-low:#586A67;
+    --wtn-e1:0 1px 2px rgba(16,24,22,.07); --wtn-e2:0 2px 10px rgba(16,24,22,.09); --wtn-e3:0 14px 34px rgba(16,24,22,.13);
+    --wtn-overlay:rgba(16,28,26,.42);
+  }
+  [data-theme="dark"] {
+    --wtn-bg:#0B1312; --wtn-surface:#101917; --wtn-surface-2:#16201E; --wtn-card:#15211F;
+    --wtn-border:#27332F; --wtn-border-strong:#37463F;
+    --wtn-text:#E7EDEB; --wtn-text-2:#9FAEAA; --wtn-muted:#6C7C78;
+    --wtn-primary:#2FA295; --wtn-primary-hover:#41B7A9; --wtn-primary-contrast:#04211D;
+    --wtn-primary-soft:#13302C; --wtn-focus:#41B7A9;
+    --wtn-success:#46B581; --wtn-success-soft:#13302A;
+    --wtn-warning:#D6A23A; --wtn-warning-soft:#322914;
+    --wtn-danger:#E07A6B;  --wtn-danger-soft:#36211D;
+    --wtn-info:#4FA0DC;     --wtn-info-soft:#13283A;
+    --wtn-neutral:#8FA09B;  --wtn-neutral-soft:#1E2A28;
+    --wtn-prio-crit:#E07A6B; --wtn-prio-high:#E0954A; --wtn-prio-med:#D6A23A; --wtn-prio-low:#8FA09B;
+    --wtn-e1:0 1px 2px rgba(0,0,0,.45); --wtn-e2:0 4px 16px rgba(0,0,0,.5); --wtn-e3:0 18px 44px rgba(0,0,0,.6);
+    --wtn-overlay:rgba(0,0,0,.6);
+  }
+  @keyframes wtn-shimmer { 0%{background-position:-360px 0} 100%{background-position:360px 0} }
+  @keyframes wtn-spin { to { transform: rotate(360deg); } }
+  @keyframes wtn-pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+</style>
+</helmet>
+
+<div class="wtn-canvas" style="min-width:100%; width:max-content; min-height:100vh; box-sizing:border-box; padding:56px; background:#E5E2DC; color:#13201E;">
+
+  <!-- ============ COVER ============ -->
+  <div style="display:flex; align-items:flex-end; gap:28px; max-width:1100px; margin-bottom:14px;">
+    <div style="width:52px; height:52px; border-radius:12px; background:#0E5C54; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 6px 18px rgba(14,92,84,.32);">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="#7FD8CC" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.6" fill="#7FD8CC"/></svg>
+    </div>
+    <div>
+      <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:#5E726E; margin-bottom:8px;">Design System · v1.0</div>
+      <h1 style="font-size:34px; font-weight:700; letter-spacing:-.02em; margin:0; line-height:1.05; white-space:nowrap;">White Tree Nexus</h1>
+    </div>
+  </div>
+  <p style="max-width:760px; margin:0 0 8px; font-size:15px; line-height:1.6; color:#3F524E;">Sistema de design <strong>enterprise</strong> para a plataforma de gestão de SGSI e compliance <strong>ISO/IEC&nbsp;27001:2022</strong>. Sobriedade, confiança e rigor — densidade de informação controlada. Tokens e telas-chave nos temas <strong>claro</strong> e <strong>escuro</strong>, implementáveis reestilizando o PrimeNG 21.</p>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; font-family:var(--wtn-mono); font-size:11.5px; color:#43564F; margin-bottom:40px;">
+    <span style="padding:5px 10px; background:#fff; border:1px solid #D4D0C7; border-radius:999px;">PrimeNG 21 · preset Material</span>
+    <span style="padding:5px 10px; background:#fff; border:1px solid #D4D0C7; border-radius:999px;">IBM Plex Sans / Mono</span>
+    <span style="padding:5px 10px; background:#fff; border:1px solid #D4D0C7; border-radius:999px;">WCAG AA</span>
+    <span style="padding:5px 10px; background:#fff; border:1px solid #D4D0C7; border-radius:999px;">PT-BR</span>
+  </div>
+
+  <!-- ============ SECTION LABEL: FOUNDATIONS ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:20px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">01</span> Fundamentos · Cores</div>
+
+  <!-- COLOR PANELS light + dark -->
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ colorPanels }}" as="panel" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ panel.label }}</div>
+        <div data-theme="{{ panel.theme }}" style="width:560px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:24px; box-shadow:var(--wtn-e1);">
+          <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:20px;">
+            <sc-for list="{{ panel.groups }}" as="grp" hint-placeholder-count="4">
+              <div>
+                <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:9px;">{{ grp.title }}</div>
+                <div style="display:flex; flex-direction:column; gap:7px;">
+                  <sc-for list="{{ grp.items }}" as="sw" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span style="width:26px; height:26px; border-radius:6px; flex:none; border:1px solid var(--wtn-border-strong); background:{{ sw.hex }};"></span>
+                      <div style="min-width:0; line-height:1.25;">
+                        <div style="font-size:12.5px; font-weight:500; color:var(--wtn-text);">{{ sw.name }}</div>
+                        <div style="font-family:var(--wtn-mono); font-size:10.5px; color:var(--wtn-muted);">{{ sw.hex }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ============ TYPOGRAPHY + SPACING ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:20px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">02</span> Fundamentos · Tipografia, espaço &amp; elevação</div>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px; flex-wrap:wrap;">
+    <!-- Type scale -->
+    <div data-theme="light" style="flex:none; width:680px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:26px 28px; box-shadow:var(--wtn-e1);">
+      <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:18px;">Escala tipográfica · IBM Plex Sans</div>
+      <div style="display:flex; flex-direction:column;">
+        <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="8">
+          <div style="display:flex; align-items:baseline; gap:20px; padding:11px 0; border-bottom:1px solid var(--wtn-surface-2);">
+            <div style="width:120px; flex:none; font-family:var(--wtn-mono); font-size:11px; color:var(--wtn-muted); line-height:1.4;">{{ t.spec }}</div>
+            <div style="color:var(--wtn-text); font-size:{{ t.size }}; font-weight:{{ t.weight }}; letter-spacing:{{ t.ls }}; line-height:1.1;">{{ t.sample }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- Spacing / radius / elevation -->
+    <div style="flex:none; width:440px; display:flex; flex-direction:column; gap:24px;">
+      <div data-theme="light" style="background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:24px; box-shadow:var(--wtn-e1);">
+        <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:16px;">Espaçamento · base 4 / 8</div>
+        <div style="display:flex; align-items:flex-end; gap:10px;">
+          <sc-for list="{{ spacing }}" as="s" hint-placeholder-count="7">
+            <div style="text-align:center;">
+              <div style="width:{{ s.px }}; height:{{ s.px }}; background:var(--wtn-primary-soft); border:1px solid var(--wtn-primary); border-radius:3px; margin:0 auto 6px;"></div>
+              <div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div data-theme="light" style="background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:24px; box-shadow:var(--wtn-e1);">
+        <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:16px;">Raio &amp; elevação</div>
+        <div style="display:flex; gap:14px; margin-bottom:18px;">
+          <div style="text-align:center;"><div style="width:54px; height:40px; background:var(--wtn-surface-2); border:1px solid var(--wtn-border-strong); border-radius:4px; margin-bottom:6px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">sm 4</div></div>
+          <div style="text-align:center;"><div style="width:54px; height:40px; background:var(--wtn-surface-2); border:1px solid var(--wtn-border-strong); border-radius:6px; margin-bottom:6px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">md 6</div></div>
+          <div style="text-align:center;"><div style="width:54px; height:40px; background:var(--wtn-surface-2); border:1px solid var(--wtn-border-strong); border-radius:8px; margin-bottom:6px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">lg 8</div></div>
+          <div style="text-align:center;"><div style="width:54px; height:40px; background:var(--wtn-surface-2); border:1px solid var(--wtn-border-strong); border-radius:999px; margin-bottom:6px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">pill</div></div>
+        </div>
+        <div style="display:flex; gap:18px;">
+          <div style="text-align:center;"><div style="width:64px; height:44px; background:var(--wtn-surface); border-radius:6px; box-shadow:var(--wtn-e1); margin-bottom:8px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">e1</div></div>
+          <div style="text-align:center;"><div style="width:64px; height:44px; background:var(--wtn-surface); border-radius:6px; box-shadow:var(--wtn-e2); margin-bottom:8px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">e2</div></div>
+          <div style="text-align:center;"><div style="width:64px; height:44px; background:var(--wtn-surface); border-radius:6px; box-shadow:var(--wtn-e3); margin-bottom:8px;"></div><div style="font-family:var(--wtn-mono); font-size:10px; color:var(--wtn-muted);">e3</div></div>
+        </div>
+      </div>
+    </div>
+  <!-- ============ STATUS SEMANTICS ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">03</span> Semântica de status do domínio</div>
+  <p style="max-width:720px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Mapeamento fixo de cores aos estados reais do produto. Sempre usar a mesma cor para o mesmo significado — em tabelas, cards, timeline e dashboard.</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:560px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:24px; box-shadow:var(--wtn-e1); display:flex; flex-direction:column; gap:20px;">
+
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:12px;">Avaliação de gap</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px; background:var(--wtn-success-soft); color:var(--wtn-success); border-radius:999px; font-size:12.5px; font-weight:500; line-height:1;"><span style="width:7px; height:7px; border-radius:50%; background:currentColor;"></span>Atende</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px; background:var(--wtn-warning-soft); color:var(--wtn-warning); border-radius:999px; font-size:12.5px; font-weight:500; line-height:1;"><span style="width:7px; height:7px; border-radius:50%; background:currentColor;"></span>Parcialmente atende</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px; background:var(--wtn-danger-soft); color:var(--wtn-danger); border-radius:999px; font-size:12.5px; font-weight:500; line-height:1;"><span style="width:7px; height:7px; border-radius:50%; background:currentColor;"></span>Não atende</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px; background:var(--wtn-info-soft); color:var(--wtn-info); border-radius:999px; font-size:12.5px; font-weight:500; line-height:1;"><span style="width:7px; height:7px; border-radius:50%; background:currentColor;"></span>N/A</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 9px; background:var(--wtn-neutral-soft); color:var(--wtn-neutral); border-radius:999px; font-size:12.5px; font-weight:500; line-height:1;"><span style="width:7px; height:7px; border-radius:50%; background:currentColor;"></span>Não avaliado</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:12px;">Prioridade de lacuna</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border:1px solid var(--wtn-prio-crit); color:var(--wtn-prio-crit); border-radius:6px; font-size:12.5px; font-weight:600; line-height:1;"><span style="width:8px; height:8px; border-radius:2px; background:currentColor;"></span>Crítico</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border:1px solid var(--wtn-prio-high); color:var(--wtn-prio-high); border-radius:6px; font-size:12.5px; font-weight:600; line-height:1;"><span style="width:8px; height:8px; border-radius:2px; background:currentColor;"></span>Alto</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border:1px solid var(--wtn-prio-med); color:var(--wtn-prio-med); border-radius:6px; font-size:12.5px; font-weight:600; line-height:1;"><span style="width:8px; height:8px; border-radius:2px; background:currentColor;"></span>Médio</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border:1px solid var(--wtn-prio-low); color:var(--wtn-prio-low); border-radius:6px; font-size:12.5px; font-weight:600; line-height:1;"><span style="width:8px; height:8px; border-radius:2px; background:currentColor;"></span>Baixo</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:12px;">Status de workflow</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-neutral-soft); color:var(--wtn-neutral); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Rascunho</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-info-soft); color:var(--wtn-info); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Pendente</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-primary-soft); color:var(--wtn-primary); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Em preenchimento</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-info-soft); color:var(--wtn-info); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Enviado</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-success-soft); color:var(--wtn-success); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Assinado</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-success); color:var(--wtn-primary-contrast); border-radius:999px; font-size:12px; font-weight:600; line-height:1;">Concluído</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-warning-soft); color:var(--wtn-warning); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Devolvido</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:var(--wtn-danger-soft); color:var(--wtn-danger); border-radius:999px; font-size:12px; font-weight:500; line-height:1;">Cancelado</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  <!-- ============ COMPONENTS ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">04</span> Componentes</div>
+  <p style="max-width:720px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Reestilização do PrimeNG via tokens. Estados default / hover / focus / disabled. Passe o mouse para ver hover e foco.</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:720px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:28px; box-shadow:var(--wtn-e1); display:flex; flex-direction:column; gap:26px;">
+
+          <!-- Buttons -->
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Botões</div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+              <button style="font-family:inherit; cursor:pointer; border:none; padding:9px 17px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast); transition:background .15s;" style-hover="background:var(--wtn-primary-hover);">Salvar avaliação</button>
+              <button style="font-family:inherit; cursor:pointer; padding:9px 17px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:var(--wtn-surface); color:var(--wtn-text); border:1px solid var(--wtn-border-strong); transition:background .15s;" style-hover="background:var(--wtn-surface-2);">Cancelar</button>
+              <button style="font-family:inherit; cursor:pointer; padding:9px 13px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:transparent; color:var(--wtn-primary); border:none; transition:background .15s;" style-hover="background:var(--wtn-primary-soft);">Ver detalhes</button>
+              <button style="font-family:inherit; cursor:pointer; border:none; padding:9px 17px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:var(--wtn-danger); color:#fff; transition:filter .15s;" style-hover="filter:brightness(.92);">Excluir</button>
+              <button disabled style="font-family:inherit; padding:9px 17px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast); border:none; opacity:.45; cursor:not-allowed;">Desabilitado</button>
+            </div>
+          </div>
+
+          <!-- Fields -->
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Campos de formulário</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div>
+                <label style="display:block; font-size:12.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Responsável</label>
+                <input value="Ana Moreira" style="font-family:inherit; width:100%; padding:9px 11px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; transition:border-color .15s, box-shadow .15s;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">
+              </div>
+              <div>
+                <label style="display:block; font-size:12.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Status da avaliação</label>
+                <div style="position:relative;">
+                  <div tabindex="0" style="font-family:inherit; width:100%; padding:9px 32px 9px 11px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; cursor:pointer;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">Parcialmente atende</div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="position:absolute; right:10px; top:11px; pointer-events:none;"><path d="M6 9l6 6 6-6" stroke="var(--wtn-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <div>
+                <label style="display:block; font-size:12.5px; font-weight:500; color:var(--wtn-danger); margin-bottom:6px;">Justificativa de N/A</label>
+                <input value="" placeholder="Obrigatório quando N/A" style="font-family:inherit; width:100%; padding:9px 11px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-danger); border-radius:var(--wtn-r-md); outline:none; box-shadow:0 0 0 3px var(--wtn-danger-soft);">
+                <div style="font-size:11.5px; color:var(--wtn-danger); margin-top:5px;">Campo obrigatório.</div>
+              </div>
+              <div>
+                <label style="display:block; font-size:12.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Constatações</label>
+                <textarea rows="2" style="font-family:inherit; width:100%; padding:9px 11px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; resize:none;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">Política existe, porém sem revisão anual registrada.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dense table -->
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Tabela densa</div>
+            <div style="border:1px solid var(--wtn-border); border-radius:var(--wtn-r-md); overflow:hidden;">
+              <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+                <thead>
+                  <tr style="background:var(--wtn-surface-2);">
+                    <th style="text-align:left; padding:9px 12px; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Ref.</th>
+                    <th style="text-align:left; padding:9px 12px; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Controle</th>
+                    <th style="text-align:left; padding:9px 12px; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Status</th>
+                    <th style="text-align:left; padding:9px 12px; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Prioridade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background:var(--wtn-surface);"><td style="padding:9px 12px; font-family:var(--wtn-mono); color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">A.5.1</td><td style="padding:9px 12px; color:var(--wtn-text); border-bottom:1px solid var(--wtn-surface-2);">Políticas de segurança</td><td style="padding:9px 12px; border-bottom:1px solid var(--wtn-surface-2);"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:var(--wtn-success-soft); color:var(--wtn-success); border-radius:999px; font-size:11.5px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>Atende</span></td><td style="padding:9px 12px; color:var(--wtn-prio-low); font-weight:600; border-bottom:1px solid var(--wtn-surface-2);">Baixo</td></tr>
+                  <tr style="background:var(--wtn-surface);"><td style="padding:9px 12px; font-family:var(--wtn-mono); color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">A.8.12</td><td style="padding:9px 12px; color:var(--wtn-text); border-bottom:1px solid var(--wtn-surface-2);">Prevenção de vazamento</td><td style="padding:9px 12px; border-bottom:1px solid var(--wtn-surface-2);"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:var(--wtn-warning-soft); color:var(--wtn-warning); border-radius:999px; font-size:11.5px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>Parcial</span></td><td style="padding:9px 12px; color:var(--wtn-prio-high); font-weight:600; border-bottom:1px solid var(--wtn-surface-2);">Alto</td></tr>
+                  <tr style="background:var(--wtn-surface);"><td style="padding:9px 12px; font-family:var(--wtn-mono); color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">A.8.24</td><td style="padding:9px 12px; color:var(--wtn-text); border-bottom:1px solid var(--wtn-surface-2);">Uso de criptografia</td><td style="padding:9px 12px; border-bottom:1px solid var(--wtn-surface-2);"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:var(--wtn-danger-soft); color:var(--wtn-danger); border-radius:999px; font-size:11.5px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>Não atende</span></td><td style="padding:9px 12px; color:var(--wtn-prio-crit); font-weight:600; border-bottom:1px solid var(--wtn-surface-2);">Crítico</td></tr>
+                  <tr style="background:var(--wtn-surface);"><td style="padding:9px 12px; font-family:var(--wtn-mono); color:var(--wtn-text-2);">A.6.3</td><td style="padding:9px 12px; color:var(--wtn-text);">Conscientização</td><td style="padding:9px 12px;"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:var(--wtn-neutral-soft); color:var(--wtn-neutral); border-radius:999px; font-size:11.5px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>Não avaliado</span></td><td style="padding:9px 12px; color:var(--wtn-muted); font-weight:600;">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px;">
+            <!-- Tabs + card -->
+            <div>
+              <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Tabs &amp; card</div>
+              <div style="display:flex; gap:2px; border-bottom:1px solid var(--wtn-border); margin-bottom:14px;">
+                <div style="padding:8px 12px; font-size:12.5px; font-weight:600; color:var(--wtn-primary); border-bottom:2px solid var(--wtn-primary); margin-bottom:-1px;">Avaliação</div>
+                <div style="padding:8px 12px; font-size:12.5px; font-weight:500; color:var(--wtn-text-2);">Evidências</div>
+                <div style="padding:8px 12px; font-size:12.5px; font-weight:500; color:var(--wtn-text-2);">Histórico</div>
+              </div>
+              <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-md); padding:16px; box-shadow:var(--wtn-e1);">
+                <div style="font-size:14px; font-weight:600; color:var(--wtn-text); margin-bottom:4px;">A.8.24 · Criptografia</div>
+                <div style="font-size:12.5px; color:var(--wtn-text-2); line-height:1.5;">Regras de uso de criptografia não documentadas. Definir política e gestão de chaves.</div>
+              </div>
+            </div>
+            <!-- Toasts -->
+            <div>
+              <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Toasts</div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-left:3px solid var(--wtn-success); border-radius:var(--wtn-r-md); box-shadow:var(--wtn-e1);"><span style="width:7px; height:7px; border-radius:50%; background:var(--wtn-success); flex:none;"></span><span style="font-size:12.5px; color:var(--wtn-text); flex:1;">Avaliação salva.</span></div>
+                <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-left:3px solid var(--wtn-danger); border-radius:var(--wtn-r-md); box-shadow:var(--wtn-e1);"><span style="width:7px; height:7px; border-radius:50%; background:var(--wtn-danger); flex:none;"></span><span style="font-size:12.5px; color:var(--wtn-text); flex:1;">Falha ao enviar.</span></div>
+                <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-left:3px solid var(--wtn-warning); border-radius:var(--wtn-r-md); box-shadow:var(--wtn-e1);"><span style="width:7px; height:7px; border-radius:50%; background:var(--wtn-warning); flex:none;"></span><span style="font-size:12.5px; color:var(--wtn-text); flex:1;">Revisão vencida.</span></div>
+                <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-left:3px solid var(--wtn-info); border-radius:var(--wtn-r-md); box-shadow:var(--wtn-e1);"><span style="width:7px; height:7px; border-radius:50%; background:var(--wtn-info); flex:none;"></span><span style="font-size:12.5px; color:var(--wtn-text); flex:1;">Nova versão da SoA.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Workflow timeline -->
+          <div>
+            <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:15px;">Timeline / wizard do workflow</div>
+            <div style="display:flex; align-items:flex-start;">
+              <div style="flex:1; text-align:center; position:relative;"><div style="width:22px; height:22px; border-radius:50%; background:var(--wtn-success); display:flex; align-items:center; justify-content:center; margin:0 auto 8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="position:absolute; top:11px; left:60%; right:-40%; height:2px; background:var(--wtn-success);"></div><div style="font-size:11px; color:var(--wtn-text); font-weight:600;">Pendente</div></div>
+              <div style="flex:1; text-align:center; position:relative;"><div style="width:22px; height:22px; border-radius:50%; background:var(--wtn-success); display:flex; align-items:center; justify-content:center; margin:0 auto 8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="position:absolute; top:11px; left:60%; right:-40%; height:2px; background:var(--wtn-primary);"></div><div style="font-size:11px; color:var(--wtn-text); font-weight:600;">Preenchimento</div></div>
+              <div style="flex:1; text-align:center; position:relative;"><div style="width:22px; height:22px; border-radius:50%; background:var(--wtn-primary); box-shadow:0 0 0 4px var(--wtn-primary-soft); margin:0 auto 8px;"></div><div style="position:absolute; top:11px; left:60%; right:-40%; height:2px; background:var(--wtn-border-strong);"></div><div style="font-size:11px; color:var(--wtn-primary); font-weight:700;">Enviado</div></div>
+              <div style="flex:1; text-align:center; position:relative;"><div style="width:22px; height:22px; border-radius:50%; background:var(--wtn-surface); border:2px solid var(--wtn-border-strong); margin:0 auto 8px;"></div><div style="position:absolute; top:11px; left:60%; right:-40%; height:2px; background:var(--wtn-border-strong);"></div><div style="font-size:11px; color:var(--wtn-muted); font-weight:500;">Assinado</div></div>
+              <div style="flex:1; text-align:center; position:relative;"><div style="width:22px; height:22px; border-radius:50%; background:var(--wtn-surface); border:2px solid var(--wtn-border-strong); margin:0 auto 8px;"></div><div style="font-size:11px; color:var(--wtn-muted); font-weight:500;">Concluído</div></div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:22px; align-items:start;">
+            <!-- Empty state -->
+            <div>
+              <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Estado vazio</div>
+              <div style="background:var(--wtn-surface); border:1px dashed var(--wtn-border-strong); border-radius:var(--wtn-r-md); padding:24px; text-align:center;">
+                <div style="width:40px; height:40px; border-radius:10px; background:var(--wtn-primary-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 12px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h9" stroke="var(--wtn-primary)" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+                <div style="font-size:13.5px; font-weight:600; color:var(--wtn-text); margin-bottom:4px;">Nenhuma lacuna registrada</div>
+                <div style="font-size:12px; color:var(--wtn-text-2); line-height:1.5; margin-bottom:14px;">Inicie a avaliação importando o catálogo do Anexo A.</div>
+                <button style="font-family:inherit; cursor:pointer; border:none; padding:7px 14px; border-radius:var(--wtn-r-md); font-size:12.5px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast);">Adotar seed</button>
+              </div>
+            </div>
+            <!-- Loading -->
+            <div>
+              <div style="font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:13px;">Carregamento</div>
+              <div style="background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-md); padding:16px;">
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
+                  <div style="width:24px; height:24px; border-radius:50%; border:3px solid var(--wtn-border); border-top-color:var(--wtn-primary); animation:wtn-spin .8s linear infinite;"></div>
+                  <span style="font-size:12.5px; color:var(--wtn-text-2);">Carregando matriz…</span>
+                </div>
+                <div style="height:11px; border-radius:4px; margin-bottom:8px; background:linear-gradient(90deg, var(--wtn-surface-2) 25%, var(--wtn-border) 37%, var(--wtn-surface-2) 63%); background-size:480px 100%; animation:wtn-shimmer 1.4s infinite linear;"></div>
+                <div style="height:11px; border-radius:4px; width:80%; margin-bottom:8px; background:linear-gradient(90deg, var(--wtn-surface-2) 25%, var(--wtn-border) 37%, var(--wtn-surface-2) 63%); background-size:480px 100%; animation:wtn-shimmer 1.4s infinite linear;"></div>
+                <div style="height:11px; border-radius:4px; width:60%; background:linear-gradient(90deg, var(--wtn-surface-2) 25%, var(--wtn-border) 37%, var(--wtn-surface-2) 63%); background-size:480px 100%; animation:wtn-shimmer 1.4s infinite linear;"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  <!-- ============ SHELL + DASHBOARD ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">05</span> Shell + Dashboard de Conformidade · tela-âncora</div>
+  <p style="max-width:760px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Sidebar agrupada por módulo + topbar enxuta (marca, seletor de organização, tema, usuário). Conteúdo: um card por módulo com status, progresso, responsável, prazo e atalho para a próxima ação.</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:1280px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); overflow:hidden; box-shadow:var(--wtn-e2); display:flex; flex-direction:column;">
+
+          <!-- TOPBAR -->
+          <div style="height:56px; flex:none; background:var(--wtn-surface); border-bottom:1px solid var(--wtn-border); display:flex; align-items:center; padding:0 18px; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px; width:230px;">
+              <div style="width:30px; height:30px; border-radius:8px; background:var(--wtn-primary); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="var(--wtn-primary-contrast)" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.5" fill="var(--wtn-primary-contrast)"/></svg></div>
+              <span style="font-size:14.5px; font-weight:700; letter-spacing:-.01em; color:var(--wtn-text);">White Tree Nexus</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); background:var(--wtn-surface); cursor:pointer;">
+              <span style="width:20px; height:20px; border-radius:5px; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;">A</span>
+              <span style="font-size:13px; font-weight:600; color:var(--wtn-text);">Aurora Tecnologia</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--wtn-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="flex:1;"></div>
+            <button style="width:34px; height:34px; border-radius:var(--wtn-r-md); border:1px solid var(--wtn-border); background:var(--wtn-surface); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="var(--wtn-text-2)" stroke-width="1.7"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke="var(--wtn-text-2)" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+            <button style="width:34px; height:34px; border-radius:var(--wtn-r-md); border:1px solid var(--wtn-border); background:var(--wtn-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0" stroke="var(--wtn-text-2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="position:absolute; top:7px; right:8px; width:6px; height:6px; border-radius:50%; background:var(--wtn-danger);"></span></button>
+            <div style="display:flex; align-items:center; gap:9px; padding-left:6px;">
+              <div style="width:32px; height:32px; border-radius:50%; background:var(--wtn-primary); color:var(--wtn-primary-contrast); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">AM</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:stretch;">
+            <!-- SIDEBAR -->
+            <nav style="width:230px; flex:none; background:var(--wtn-surface); border-right:1px solid var(--wtn-border); padding:14px 12px; display:flex; flex-direction:column; gap:16px;">
+              <div>
+                <div style="font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--wtn-muted); padding:0 8px; margin-bottom:6px;">Início</div>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); background:var(--wtn-primary-soft); color:var(--wtn-primary); font-size:13px; font-weight:600; text-decoration:none; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Dashboard de Conformidade</a>
+              </div>
+              <div>
+                <div style="font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--wtn-muted); padding:0 8px; margin-bottom:6px;">Administração</div>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 21V7l8-4 8 4v14M9 21v-6h6v6M9 9h.01M15 9h.01M9 12h.01M15 12h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Organizações</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M22 19v-1a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Usuários</a>
+              </div>
+              <div>
+                <div style="font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--wtn-muted); padding:0 8px; margin-bottom:6px;">Contexto · Cláusula 4</div>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Diagnóstico</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Análise de Contexto</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Partes Interessadas</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Declaração de Escopo</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>Visão Consolidada</a>
+              </div>
+              <div>
+                <div style="font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--wtn-muted); padding:0 8px; margin-bottom:6px;">Gap Analysis</div>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>Matriz</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18M7 14l3-3 3 3 5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Dashboard</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Catálogo</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 22V4a2 2 0 0 1 2-2h9l1 2h4v9h-5l-1-2H6a2 2 0 0 0-2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Baselines</a>
+              </div>
+              <div>
+                <div style="font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--wtn-muted); padding:0 8px; margin-bottom:6px;">SoA</div>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Aplicabilidade</a>
+                <a style="display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:var(--wtn-r-md); color:var(--wtn-text-2); font-size:13px; font-weight:500; text-decoration:none; cursor:pointer;" style-hover="background:var(--wtn-surface-2); color:var(--wtn-text);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Versões</a>
+              </div>
+            </nav>
+
+            <!-- MAIN -->
+            <main style="flex:1; min-width:0; padding:24px 28px 30px; background:var(--wtn-bg);">
+              <!-- Page header -->
+              <div style="display:flex; align-items:flex-start; gap:20px; margin-bottom:22px;">
+                <div style="flex:1;">
+                  <h2 style="font-size:22px; font-weight:700; letter-spacing:-.015em; color:var(--wtn-text); margin:0 0 4px;">Dashboard de Conformidade</h2>
+                  <p style="font-size:13.5px; color:var(--wtn-text-2); margin:0;">Aurora Tecnologia · jornada de implementação do SGSI conforme ISO/IEC 27001:2022.</p>
+                </div>
+                <button style="font-family:inherit; cursor:pointer; padding:9px 15px; border-radius:var(--wtn-r-md); font-size:13px; font-weight:600; background:var(--wtn-surface); color:var(--wtn-text); border:1px solid var(--wtn-border-strong);">Exportar relatório</button>
+                <button style="font-family:inherit; cursor:pointer; border:none; padding:9px 16px; border-radius:var(--wtn-r-md); font-size:13px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast);">Nova avaliação</button>
+              </div>
+
+              <!-- KPI row -->
+              <div style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:14px; margin-bottom:20px;">
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:18px; box-shadow:var(--wtn-e1); display:flex; align-items:center; gap:18px;">
+                  <div>
+                    <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:8px;">Conformidade geral</div>
+                    <div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:38px; font-weight:700; letter-spacing:-.02em; color:var(--wtn-text); line-height:1;">62%</span><span style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:var(--wtn-success);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 14l5-5 5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>+6%</span></div>
+                  </div>
+                  <div style="flex:1;"></div>
+                  <svg width="120" height="48" viewBox="0 0 120 48" fill="none" style="flex:none;"><polyline points="0,40 17,38 34,33 51,34 68,26 85,22 102,16 120,10" fill="none" stroke="var(--wtn-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="120" cy="10" r="2.6" fill="var(--wtn-primary)"/></svg>
+                </div>
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:18px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:8px;">Controles avaliados</div>
+                  <div style="font-size:26px; font-weight:700; color:var(--wtn-text); line-height:1;">71<span style="font-size:15px; color:var(--wtn-muted); font-weight:500;"> / 93</span></div>
+                </div>
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:18px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:8px;">Lacunas críticas</div>
+                  <div style="font-size:26px; font-weight:700; color:var(--wtn-danger); line-height:1;">5</div>
+                </div>
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:18px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:8px;">Próxima revisão</div>
+                  <div style="font-size:26px; font-weight:700; color:var(--wtn-text); line-height:1;">28/06</div>
+                </div>
+              </div>
+
+              <!-- Module cards -->
+              <div style="font-size:13px; font-weight:600; color:var(--wtn-text); margin-bottom:12px;">Módulos da jornada</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+                <sc-for list="{{ moduleCards }}" as="c" hint-placeholder-count="5">
+                  <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:16px; box-shadow:var(--wtn-e1); display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                      <div style="font-size:14px; font-weight:600; color:var(--wtn-text); line-height:1.3;">{{ c.mod }}</div>
+                      <span style="flex:none; padding:3px 9px; background:{{ c.bg }}; color:{{ c.fg }}; border-radius:999px; font-size:11px; font-weight:600; white-space:nowrap;">{{ c.status }}</span>
+                    </div>
+                    <div>
+                      <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--wtn-text-2); margin-bottom:5px;"><span>Progresso</span><span style="font-weight:600; color:var(--wtn-text);">{{ c.pct }}</span></div>
+                      <div style="height:6px; border-radius:999px; background:var(--wtn-surface-2); overflow:hidden;"><div style="height:100%; border-radius:999px; width:{{ c.pct }}; background:{{ c.fg }};"></div></div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="width:22px; height:22px; border-radius:50%; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700; flex:none;">{{ c.av }}</span>
+                      <span style="font-size:12px; color:var(--wtn-text-2);">{{ c.resp }}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--wtn-text-2);">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                      <sc-if value="{{ c.overdue }}" hint-placeholder-val="{{ false }}"><span style="color:var(--wtn-danger); font-weight:600;">{{ c.prazo }}</span></sc-if>
+                      <sc-if value="{{ c.notOverdue }}" hint-placeholder-val="{{ true }}"><span>{{ c.prazo }}</span></sc-if>
+                    </div>
+                    <a style="display:flex; align-items:center; justify-content:space-between; margin-top:2px; padding-top:11px; border-top:1px solid var(--wtn-surface-2); font-size:12.5px; font-weight:600; color:var(--wtn-primary); text-decoration:none; cursor:pointer;">{{ c.next }}<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+                  </div>
+                </sc-for>
+              </div>
+            </main>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  <!-- ============ GAP ANALYSIS — MATRIZ ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">06</span> Gap Analysis · Matriz <span style="color:#A7A294; font-weight:400; text-transform:none; letter-spacing:0;">— sidebar colapsada (responsivo) + dialog de edição</span></div>
+  <p style="max-width:760px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Grade das duas dimensões (Cláusulas 4–10 e 93 controles do Anexo A, agrupados por tema). Cada item: código, nome e tag de status. Painel de edição com condução atribuível.</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:1280px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); overflow:hidden; box-shadow:var(--wtn-e2); display:flex; flex-direction:column;">
+
+          <!-- TOPBAR -->
+          <div style="height:56px; flex:none; background:var(--wtn-surface); border-bottom:1px solid var(--wtn-border); display:flex; align-items:center; padding:0 18px; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:30px; height:30px; border-radius:8px; background:var(--wtn-primary); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="var(--wtn-primary-contrast)" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.5" fill="var(--wtn-primary-contrast)"/></svg></div>
+              <span style="font-size:14.5px; font-weight:700; letter-spacing:-.01em; color:var(--wtn-text);">White Tree Nexus</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); background:var(--wtn-surface); cursor:pointer;">
+              <span style="width:20px; height:20px; border-radius:5px; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;">A</span>
+              <span style="font-size:13px; font-weight:600; color:var(--wtn-text);">Aurora Tecnologia</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--wtn-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="flex:1;"></div>
+            <button style="width:34px; height:34px; border-radius:var(--wtn-r-md); border:1px solid var(--wtn-border); background:var(--wtn-surface); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="var(--wtn-text-2)" stroke-width="1.7"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke="var(--wtn-text-2)" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--wtn-primary); color:var(--wtn-primary-contrast); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">AM</div>
+          </div>
+
+          <div style="display:flex; align-items:stretch;">
+            <!-- COLLAPSED RAIL -->
+            <nav style="width:56px; flex:none; background:var(--wtn-surface); border-right:1px solid var(--wtn-border); padding:12px 0; display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; background:var(--wtn-primary-soft); color:var(--wtn-primary); cursor:pointer;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18M7 14l3-3 3 3 5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </nav>
+
+            <!-- MAIN -->
+            <main style="flex:1; min-width:0; background:var(--wtn-bg); display:flex; flex-direction:column;">
+              <div style="padding:22px 24px 16px; border-bottom:1px solid var(--wtn-border);">
+                <div style="display:flex; align-items:flex-start; gap:16px;">
+                  <div style="flex:1;">
+                    <h2 style="font-size:22px; font-weight:700; letter-spacing:-.015em; color:var(--wtn-text); margin:0 0 4px;">Gap Analysis — Matriz</h2>
+                    <p style="font-size:13.5px; color:var(--wtn-text-2); margin:0;">93 controles do Anexo A · 71 avaliados · aderência geral 62%</p>
+                  </div>
+                  <button style="font-family:inherit; cursor:pointer; padding:8px 13px; border-radius:var(--wtn-r-md); font-size:12.5px; font-weight:600; background:var(--wtn-surface); color:var(--wtn-text); border:1px solid var(--wtn-border-strong); display:flex; align-items:center; gap:7px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Filtros</button>
+                  <button style="font-family:inherit; cursor:pointer; border:none; padding:8px 14px; border-radius:var(--wtn-r-md); font-size:12.5px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast);">Atribuir condução</button>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:stretch; min-height:480px;">
+                <!-- Matrix table -->
+                <div style="flex:1; min-width:0; overflow:hidden;">
+                  <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+                    <thead><tr style="background:var(--wtn-surface-2);">
+                      <th style="text-align:left; padding:8px 16px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border); width:80px;">Ref.</th>
+                      <th style="text-align:left; padding:8px 12px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Controle</th>
+                      <th style="text-align:left; padding:8px 12px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border); width:160px;">Status</th>
+                      <th style="text-align:left; padding:8px 12px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border); width:90px;">Prioridade</th>
+                      <th style="text-align:left; padding:8px 16px; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border); width:64px;">Resp.</th>
+                    </tr></thead>
+                    <tbody>
+                      <sc-for list="{{ gapThemes }}" as="g" hint-placeholder-count="4">
+                        <tr style="background:var(--wtn-bg);"><td colspan="5" style="padding:9px 16px; border-bottom:1px solid var(--wtn-border);"><div style="display:flex; align-items:center; gap:9px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--wtn-text-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:12px; font-weight:700; color:var(--wtn-text);">{{ g.theme }}</span><span style="font-size:11px; color:var(--wtn-muted);">{{ g.count }}</span></div></td></tr>
+                        <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                          <tr style="background:{{ r.rowBg }}; cursor:pointer;">
+                            <td style="padding:10px 16px; font-family:var(--wtn-mono); font-size:11.5px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">{{ r.code }}</td>
+                            <td style="padding:10px 12px; color:var(--wtn-text); border-bottom:1px solid var(--wtn-surface-2);">{{ r.name }}</td>
+                            <td style="padding:10px 12px; border-bottom:1px solid var(--wtn-surface-2);"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:{{ r.bg }}; color:{{ r.fg }}; border-radius:999px; font-size:11.5px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>{{ r.status }}</span></td>
+                            <td style="padding:10px 12px; color:{{ r.prioColor }}; font-weight:600; border-bottom:1px solid var(--wtn-surface-2);">{{ r.prio }}</td>
+                            <td style="padding:10px 16px; border-bottom:1px solid var(--wtn-surface-2);"><span style="width:24px; height:24px; border-radius:50%; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:inline-flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:700;">{{ r.av }}</span></td>
+                          </tr>
+                        </sc-for>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Edit panel -->
+                <aside style="width:348px; flex:none; background:var(--wtn-surface); border-left:1px solid var(--wtn-border); padding:20px; display:flex; flex-direction:column; gap:16px;">
+                  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                    <div>
+                      <div style="font-family:var(--wtn-mono); font-size:12px; color:var(--wtn-primary); font-weight:600; margin-bottom:3px;">A.8.24</div>
+                      <div style="font-size:15px; font-weight:600; color:var(--wtn-text); line-height:1.3;">Uso de criptografia</div>
+                    </div>
+                    <button style="width:28px; height:28px; border:none; background:var(--wtn-surface-2); border-radius:var(--wtn-r-md); color:var(--wtn-text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; flex:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Status da avaliação</label>
+                    <div style="position:relative;"><div style="padding:8px 30px 8px 11px; font-size:13px; color:var(--wtn-danger); background:var(--wtn-danger-soft); border:1px solid var(--wtn-danger); border-radius:var(--wtn-r-md); font-weight:600;">Não atende</div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="position:absolute; right:10px; top:10px;"><path d="M6 9l6 6 6-6" stroke="var(--wtn-danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div><label style="display:block; font-size:11.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Prioridade</label><div style="padding:8px 11px; font-size:13px; color:var(--wtn-prio-crit); border:1px solid var(--wtn-prio-crit); border-radius:var(--wtn-r-md); font-weight:600;">Crítico</div></div>
+                    <div><label style="display:block; font-size:11.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Responsável</label><div style="padding:8px 11px; font-size:13px; color:var(--wtn-text); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); background:var(--wtn-surface);">R. Lima</div></div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">Constatações &amp; ações</label>
+                    <textarea rows="3" style="font-family:inherit; width:100%; padding:9px 11px; font-size:13px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; resize:none;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">Regras de uso de criptografia não documentadas. Definir política e gestão de chaves.</textarea>
+                  </div>
+                  <div>
+                    <div style="font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:12px;">Condução atribuível</div>
+                    <div style="display:flex; flex-direction:column; gap:0;">
+                      <div style="display:flex; gap:11px;"><div style="display:flex; flex-direction:column; align-items:center;"><div style="width:11px; height:11px; border-radius:50%; background:var(--wtn-success);"></div><div style="width:2px; flex:1; background:var(--wtn-border);"></div></div><div style="padding-bottom:14px;"><div style="font-size:12.5px; color:var(--wtn-text); font-weight:600;">Atribuído a R. Lima</div><div style="font-size:11px; color:var(--wtn-muted);">12/05 · por A. Moreira</div></div></div>
+                      <div style="display:flex; gap:11px;"><div style="display:flex; flex-direction:column; align-items:center;"><div style="width:11px; height:11px; border-radius:50%; background:var(--wtn-primary); box-shadow:0 0 0 3px var(--wtn-primary-soft);"></div></div><div><div style="font-size:12.5px; color:var(--wtn-text); font-weight:600;">Em avaliação</div><div style="font-size:11px; color:var(--wtn-muted);">desde 18/05</div></div></div>
+                    </div>
+                  </div>
+                  <div style="display:flex; gap:9px; margin-top:auto; padding-top:6px;">
+                    <button style="font-family:inherit; cursor:pointer; flex:1; padding:9px; border-radius:var(--wtn-r-md); font-size:13px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast); border:none;">Salvar</button>
+                    <button style="font-family:inherit; cursor:pointer; padding:9px 14px; border-radius:var(--wtn-r-md); font-size:13px; font-weight:600; background:var(--wtn-surface); color:var(--wtn-text); border:1px solid var(--wtn-border-strong);">Cancelar</button>
+                  </div>
+                </aside>
+              </div>
+            </main>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  <!-- ============ GAP ANALYSIS — DASHBOARD ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">07</span> Gap Analysis · Dashboard de aderência</div>
+  <p style="max-width:760px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Aderência geral, distribuição por status, aderência por dimensão e lista priorizada de lacunas (itens parcial + não atende).</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:1280px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); overflow:hidden; box-shadow:var(--wtn-e2); display:flex; flex-direction:column;">
+
+          <!-- TOPBAR -->
+          <div style="height:56px; flex:none; background:var(--wtn-surface); border-bottom:1px solid var(--wtn-border); display:flex; align-items:center; padding:0 18px; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:30px; height:30px; border-radius:8px; background:var(--wtn-primary); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="var(--wtn-primary-contrast)" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.5" fill="var(--wtn-primary-contrast)"/></svg></div>
+              <span style="font-size:14.5px; font-weight:700; letter-spacing:-.01em; color:var(--wtn-text);">White Tree Nexus</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); background:var(--wtn-surface); cursor:pointer;">
+              <span style="width:20px; height:20px; border-radius:5px; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;">A</span>
+              <span style="font-size:13px; font-weight:600; color:var(--wtn-text);">Aurora Tecnologia</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--wtn-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="flex:1;"></div>
+            <button style="width:34px; height:34px; border-radius:var(--wtn-r-md); border:1px solid var(--wtn-border); background:var(--wtn-surface); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="var(--wtn-text-2)" stroke-width="1.7"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke="var(--wtn-text-2)" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--wtn-primary); color:var(--wtn-primary-contrast); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">AM</div>
+          </div>
+
+          <div style="display:flex; align-items:stretch;">
+            <!-- COLLAPSED RAIL (Dashboard active) -->
+            <nav style="width:56px; flex:none; background:var(--wtn-surface); border-right:1px solid var(--wtn-border); padding:12px 0; display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7l10 5 10-5-10-5M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; background:var(--wtn-primary-soft); color:var(--wtn-primary); cursor:pointer;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18M7 14l3-3 3 3 5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </nav>
+
+            <!-- MAIN -->
+            <main style="flex:1; min-width:0; padding:24px 28px 30px; background:var(--wtn-bg);">
+              <div style="margin-bottom:20px;">
+                <h2 style="font-size:22px; font-weight:700; letter-spacing:-.015em; color:var(--wtn-text); margin:0 0 4px;">Gap Analysis — Dashboard</h2>
+                <p style="font-size:13.5px; color:var(--wtn-text-2); margin:0;">Aderência aos 93 controles do Anexo A · baseline v2 (18/05)</p>
+              </div>
+
+              <div style="display:grid; grid-template-columns:300px 1fr; gap:16px; margin-bottom:16px;">
+                <!-- Donut -->
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:22px; box-shadow:var(--wtn-e1); display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:14px; align-self:flex-start;">Aderência geral</div>
+                  <div style="position:relative; width:150px; height:150px;">
+                    <svg width="150" height="150" viewBox="0 0 150 150" style="transform:rotate(-90deg);"><circle cx="75" cy="75" r="60" fill="none" stroke="var(--wtn-surface-2)" stroke-width="14"/><circle cx="75" cy="75" r="60" fill="none" stroke="var(--wtn-primary)" stroke-width="14" stroke-linecap="round" stroke-dasharray="233.7 377" /></svg>
+                    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-size:34px; font-weight:700; color:var(--wtn-text); line-height:1;">62%</span><span style="font-size:11px; color:var(--wtn-text-2); margin-top:2px;">71 / 93</span></div>
+                  </div>
+                </div>
+                <!-- Status distribution -->
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:22px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:16px;">Distribuição por status</div>
+                  <div style="display:flex; height:18px; border-radius:6px; overflow:hidden; margin-bottom:18px;">
+                    <sc-for list="{{ statusDist }}" as="d" hint-placeholder-count="5">
+                      <div style="width:{{ d.w }}; background:{{ d.fg }};"></div>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px 18px;">
+                    <sc-for list="{{ statusDist }}" as="d" hint-placeholder-count="5">
+                      <div style="display:flex; align-items:center; gap:8px;"><span style="width:10px; height:10px; border-radius:3px; background:{{ d.fg }}; flex:none;"></span><span style="font-size:12px; color:var(--wtn-text-2); flex:1;">{{ d.label }}</span><span style="font-size:13px; font-weight:700; color:var(--wtn-text);">{{ d.n }}</span></div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:300px 1fr; gap:16px;">
+                <!-- Per dimension -->
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:22px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:18px;">Aderência por dimensão</div>
+                  <div style="display:flex; flex-direction:column; gap:16px;">
+                    <sc-for list="{{ dims }}" as="dim" hint-placeholder-count="4">
+                      <div>
+                        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;"><span style="color:var(--wtn-text);">{{ dim.name }}</span><span style="font-weight:700; color:var(--wtn-text);">{{ dim.pct }}</span></div>
+                        <div style="height:8px; border-radius:999px; background:var(--wtn-surface-2); overflow:hidden;"><div style="height:100%; border-radius:999px; width:{{ dim.pct }}; background:var(--wtn-primary);"></div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <!-- Prioritized gaps -->
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); box-shadow:var(--wtn-e1); overflow:hidden;">
+                  <div style="padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:600; color:var(--wtn-text);">Lacunas priorizadas</span><a style="font-size:12px; font-weight:600; color:var(--wtn-primary); text-decoration:none; cursor:pointer;">Ver todas (27)</a></div>
+                  <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+                    <tbody>
+                      <sc-for list="{{ prioList }}" as="r" hint-placeholder-count="5">
+                        <tr style="cursor:pointer;" style-hover="background:var(--wtn-surface-2);">
+                          <td style="padding:10px 20px; font-family:var(--wtn-mono); font-size:11.5px; color:var(--wtn-text-2); border-top:1px solid var(--wtn-surface-2); width:72px;">{{ r.code }}</td>
+                          <td style="padding:10px 8px; color:var(--wtn-text); border-top:1px solid var(--wtn-surface-2);">{{ r.name }}</td>
+                          <td style="padding:10px 8px; border-top:1px solid var(--wtn-surface-2); width:150px;"><span style="display:inline-flex; align-items:center; gap:6px; padding:3px 9px; background:{{ r.bg }}; color:{{ r.fg }}; border-radius:999px; font-size:11px; font-weight:500;"><span style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>{{ r.status }}</span></td>
+                          <td style="padding:10px 20px; color:{{ r.prioColor }}; font-weight:700; border-top:1px solid var(--wtn-surface-2); width:72px;">{{ r.prio }}</td>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </main>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  <!-- ============ LOGIN / AUTH ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">08</span> Telas públicas · Login</div>
+  <p style="max-width:760px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Padrão centrado e sóbrio com a marca. Mesmo layout serve para esqueci a senha, redefinir, aceite de convite e resposta de formulário por token (OTP).</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:44px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:624px; height:560px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); overflow:hidden; box-shadow:var(--wtn-e2); display:flex;">
+          <!-- Brand panel -->
+          <div style="width:240px; flex:none; background:var(--wtn-primary); padding:32px 28px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.5" fill="#fff"/></svg></div>
+              <span style="font-size:14px; font-weight:700; color:#fff;">White Tree Nexus</span>
+            </div>
+            <div>
+              <div style="font-size:19px; font-weight:600; color:#fff; line-height:1.35; letter-spacing:-.01em; margin-bottom:10px;">Gestão de SGSI e compliance ISO/IEC 27001.</div>
+              <div style="font-size:12.5px; color:rgba(255,255,255,.7); line-height:1.5;">Do diagnóstico de contexto à declaração de aplicabilidade, com rastreabilidade e evidências.</div>
+            </div>
+            <div style="font-family:var(--wtn-mono); font-size:10.5px; color:rgba(255,255,255,.55);">© 2026 · v1.0</div>
+          </div>
+          <!-- Form -->
+          <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:32px;">
+            <div style="width:100%; max-width:300px;">
+              <h2 style="font-size:21px; font-weight:700; color:var(--wtn-text); margin:0 0 5px; letter-spacing:-.01em;">Entrar na plataforma</h2>
+              <p style="font-size:13px; color:var(--wtn-text-2); margin:0 0 24px;">Acesse com seu e-mail corporativo.</p>
+              <label style="display:block; font-size:12.5px; font-weight:500; color:var(--wtn-text-2); margin-bottom:6px;">E-mail</label>
+              <input value="ana.moreira@aurora.com.br" style="font-family:inherit; width:100%; padding:10px 12px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; margin-bottom:16px;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><label style="font-size:12.5px; font-weight:500; color:var(--wtn-text-2);">Senha</label><a style="font-size:12px; font-weight:600; color:var(--wtn-primary); text-decoration:none; cursor:pointer;">Esqueci a senha</a></div>
+              <input type="password" value="placeholderpw" style="font-family:inherit; width:100%; padding:10px 12px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; margin-bottom:22px;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">
+              <button style="font-family:inherit; cursor:pointer; width:100%; padding:11px; border-radius:var(--wtn-r-md); font-size:14px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast); border:none; margin-bottom:16px;" style-hover="background:var(--wtn-primary-hover);">Entrar</button>
+              <div style="text-align:center; font-size:12.5px; color:var(--wtn-text-2);">Recebeu um convite? <a style="font-weight:600; color:var(--wtn-primary); text-decoration:none; cursor:pointer;">Ativar conta</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ============ FORMULÁRIO + ASSINATURA ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:6px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">09</span> Workflow · Formulário (preenchimento + assinatura)</div>
+  <p style="max-width:760px; margin:0 0 20px; font-size:13.5px; line-height:1.6; color:#3F524E;">Formulário de fase com campos por seção, wizard do ciclo de vida (pendente → em preenchimento → enviado → assinado → concluído) e etapa de assinatura eletrônica avançada (identidade + carimbo de tempo + selo de integridade).</p>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:24px;">
+    <sc-for list="{{ themePair }}" as="tp" hint-placeholder-count="2">
+      <div style="flex:none;">
+        <div style="font-family:var(--wtn-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7A8378; margin-bottom:10px;">{{ tp.label }}</div>
+        <div data-theme="{{ tp.theme }}" style="width:1280px; background:var(--wtn-bg); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); overflow:hidden; box-shadow:var(--wtn-e2); display:flex; flex-direction:column;">
+
+          <!-- TOPBAR -->
+          <div style="height:56px; flex:none; background:var(--wtn-surface); border-bottom:1px solid var(--wtn-border); display:flex; align-items:center; padding:0 18px; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:30px; height:30px; border-radius:8px; background:var(--wtn-primary); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3 L12 21 M12 8 L7 5.5 M12 8 L17 5.5 M12 13 L6.5 10 M12 13 L17.5 10" stroke="var(--wtn-primary-contrast)" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="3" r="1.5" fill="var(--wtn-primary-contrast)"/></svg></div>
+              <span style="font-size:14.5px; font-weight:700; letter-spacing:-.01em; color:var(--wtn-text);">White Tree Nexus</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 11px; border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); background:var(--wtn-surface); cursor:pointer;">
+              <span style="width:20px; height:20px; border-radius:5px; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700;">A</span>
+              <span style="font-size:13px; font-weight:600; color:var(--wtn-text);">Aurora Tecnologia</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="var(--wtn-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div style="flex:1;"></div>
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--wtn-primary); color:var(--wtn-primary-contrast); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">RL</div>
+          </div>
+
+          <div style="display:flex; align-items:stretch;">
+            <!-- COLLAPSED RAIL (Formulários active) -->
+            <nav style="width:56px; flex:none; background:var(--wtn-surface); border-right:1px solid var(--wtn-border); padding:12px 0; display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; background:var(--wtn-primary-soft); color:var(--wtn-primary); cursor:pointer;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div style="width:30px; height:1px; background:var(--wtn-border); margin:5px 0;"></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/></svg></div>
+              <div style="width:38px; height:38px; border-radius:var(--wtn-r-md); display:flex; align-items:center; justify-content:center; color:var(--wtn-text-2); cursor:pointer;" style-hover="background:var(--wtn-surface-2);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </nav>
+
+            <!-- MAIN -->
+            <main style="flex:1; min-width:0; padding:24px 28px 30px; background:var(--wtn-bg);">
+              <div style="display:flex; align-items:flex-start; gap:16px; margin-bottom:22px;">
+                <div style="flex:1;">
+                  <div style="display:flex; align-items:center; gap:9px; margin-bottom:5px;"><h2 style="font-size:21px; font-weight:700; letter-spacing:-.015em; color:var(--wtn-text); margin:0;">Diagnóstico de Contexto — Fase 1</h2><span style="padding:3px 10px; background:var(--wtn-primary-soft); color:var(--wtn-primary); border-radius:999px; font-size:11px; font-weight:600;">Em preenchimento</span></div>
+                  <p style="font-size:13px; color:var(--wtn-text-2); margin:0;">Atribuído a R. Lima · prazo 28/06 · respondente externo via token</p>
+                </div>
+                <button style="font-family:inherit; cursor:pointer; padding:9px 15px; border-radius:var(--wtn-r-md); font-size:13px; font-weight:600; background:var(--wtn-surface); color:var(--wtn-text); border:1px solid var(--wtn-border-strong);">Salvar rascunho</button>
+              </div>
+
+              <!-- Wizard -->
+              <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:18px 28px; box-shadow:var(--wtn-e1); margin-bottom:18px;">
+                <div style="display:flex; align-items:flex-start;">
+                  <div style="flex:1; text-align:center; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:var(--wtn-success); display:flex; align-items:center; justify-content:center; margin:0 auto 8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="position:absolute; top:12px; left:60%; right:-40%; height:2px; background:var(--wtn-success);"></div><div style="font-size:11.5px; color:var(--wtn-text); font-weight:600;">Pendente</div></div>
+                  <div style="flex:1; text-align:center; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:var(--wtn-primary); box-shadow:0 0 0 4px var(--wtn-primary-soft); margin:0 auto 8px;"></div><div style="position:absolute; top:12px; left:60%; right:-40%; height:2px; background:var(--wtn-border-strong);"></div><div style="font-size:11.5px; color:var(--wtn-primary); font-weight:700;">Em preenchimento</div></div>
+                  <div style="flex:1; text-align:center; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:var(--wtn-surface); border:2px solid var(--wtn-border-strong); margin:0 auto 8px;"></div><div style="position:absolute; top:12px; left:60%; right:-40%; height:2px; background:var(--wtn-border-strong);"></div><div style="font-size:11.5px; color:var(--wtn-muted); font-weight:500;">Enviado</div></div>
+                  <div style="flex:1; text-align:center; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:var(--wtn-surface); border:2px solid var(--wtn-border-strong); margin:0 auto 8px;"></div><div style="position:absolute; top:12px; left:60%; right:-40%; height:2px; background:var(--wtn-border-strong);"></div><div style="font-size:11.5px; color:var(--wtn-muted); font-weight:500;">Assinado</div></div>
+                  <div style="flex:1; text-align:center; position:relative;"><div style="width:24px; height:24px; border-radius:50%; background:var(--wtn-surface); border:2px solid var(--wtn-border-strong); margin:0 auto 8px;"></div><div style="font-size:11.5px; color:var(--wtn-muted); font-weight:500;">Concluído</div></div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 360px; gap:18px; align-items:start;">
+                <!-- Form sections -->
+                <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:24px; box-shadow:var(--wtn-e1);">
+                  <div style="font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--wtn-surface-2);">Seção 1 · Questões internas e externas</div>
+                  <div style="display:flex; flex-direction:column; gap:18px;">
+                    <div>
+                      <label style="display:block; font-size:13px; font-weight:500; color:var(--wtn-text); margin-bottom:7px;">Quais fatores externos afetam o SGSI?</label>
+                      <textarea rows="2" style="font-family:inherit; width:100%; padding:9px 12px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none; resize:none;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">Regulação LGPD, exigências contratuais de clientes do setor financeiro e cenário de ameaças cibernéticas crescente.</textarea>
+                    </div>
+                    <div>
+                      <label style="display:block; font-size:13px; font-weight:500; color:var(--wtn-text); margin-bottom:7px;">Nível de maturidade atual</label>
+                      <div style="display:flex; gap:8px;">
+                        <div style="flex:1; padding:9px; text-align:center; font-size:12.5px; color:var(--wtn-text-2); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); cursor:pointer;">Inicial</div>
+                        <div style="flex:1; padding:9px; text-align:center; font-size:12.5px; font-weight:600; color:var(--wtn-primary); border:1px solid var(--wtn-primary); background:var(--wtn-primary-soft); border-radius:var(--wtn-r-md); cursor:pointer;">Gerenciado</div>
+                        <div style="flex:1; padding:9px; text-align:center; font-size:12.5px; color:var(--wtn-text-2); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); cursor:pointer;">Definido</div>
+                        <div style="flex:1; padding:9px; text-align:center; font-size:12.5px; color:var(--wtn-text-2); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); cursor:pointer;">Otimizado</div>
+                      </div>
+                    </div>
+                    <div>
+                      <label style="display:block; font-size:13px; font-weight:500; color:var(--wtn-text); margin-bottom:7px;">Partes interessadas relevantes</label>
+                      <input value="Clientes, ANPD, alta direção, fornecedores de nuvem" style="font-family:inherit; width:100%; padding:9px 12px; font-size:13.5px; color:var(--wtn-text); background:var(--wtn-surface); border:1px solid var(--wtn-border-strong); border-radius:var(--wtn-r-md); outline:none;" style-focus="border-color:var(--wtn-focus); box-shadow:0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Signature step -->
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                  <div style="background:var(--wtn-card); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:20px; box-shadow:var(--wtn-e1);">
+                    <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;"><div style="width:30px; height:30px; border-radius:8px; background:var(--wtn-primary-soft); color:var(--wtn-primary); display:flex; align-items:center; justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="font-size:14px; font-weight:600; color:var(--wtn-text);">Assinatura eletrônica avançada</div></div>
+                    <div style="display:flex; flex-direction:column; gap:11px; margin-bottom:16px;">
+                      <div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; border-radius:50%; background:var(--wtn-success); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:12.5px; color:var(--wtn-text); font-weight:500;">Identidade verificada</div><div style="font-size:11px; color:var(--wtn-muted);">OTP confirmado · R. Lima</div></div></div>
+                      <div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; border-radius:50%; background:var(--wtn-success); display:flex; align-items:center; justify-content:center; flex:none;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:12.5px; color:var(--wtn-text); font-weight:500;">Carimbo de tempo</div><div style="font-size:11px; color:var(--wtn-muted); font-family:var(--wtn-mono);">21/06/2026 14:32 BRT</div></div></div>
+                      <div style="display:flex; align-items:center; gap:10px;"><div style="width:20px; height:20px; border-radius:50%; background:var(--wtn-primary); box-shadow:0 0 0 3px var(--wtn-primary-soft); flex:none;"></div><div><div style="font-size:12.5px; color:var(--wtn-text); font-weight:500;">Selo de integridade</div><div style="font-size:11px; color:var(--wtn-muted); font-family:var(--wtn-mono);">SHA-256 · aguardando</div></div></div>
+                    </div>
+                    <button style="font-family:inherit; cursor:pointer; width:100%; padding:11px; border-radius:var(--wtn-r-md); font-size:13.5px; font-weight:600; background:var(--wtn-primary); color:var(--wtn-primary-contrast); border:none;" style-hover="background:var(--wtn-primary-hover);">Assinar e enviar</button>
+                  </div>
+                  <div style="display:flex; align-items:flex-start; gap:9px; padding:13px 15px; background:var(--wtn-info-soft); border-radius:var(--wtn-r-md);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="9" stroke="var(--wtn-info)" stroke-width="1.8"/><path d="M12 8h.01M11 12h1v4h1" stroke="var(--wtn-info)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <div style="font-size:11.5px; color:var(--wtn-info); line-height:1.5;">Ao assinar, o formulário é selado e não pode mais ser editado. Uma trilha de auditoria é registrada.</div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ============ TOKEN MAPPING GUIDE ============ -->
+  <div style="font-family:var(--wtn-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#6B7A6F; border-top:1.5px solid #C9C5BB; padding-top:14px; margin-bottom:20px; display:flex; align-items:baseline; gap:12px;"><span style="color:#0E5C54; font-weight:600;">10</span> Guia de aplicação · tokens → PrimeNG</div>
+  <div style="display:flex; gap:32px; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap;">
+    <div data-theme="light" style="flex:none; width:700px; background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:26px; box-shadow:var(--wtn-e1);">
+      <p style="font-size:13px; color:var(--wtn-text-2); line-height:1.6; margin:0 0 18px;">Os tokens <code style="font-family:var(--wtn-mono); font-size:12px; background:var(--wtn-surface-2); padding:1px 5px; border-radius:4px;">--wtn-*</code> são definidos em <code style="font-family:var(--wtn-mono); font-size:12px; background:var(--wtn-surface-2); padding:1px 5px; border-radius:4px;">styles.scss</code> em dois escopos (<code style="font-family:var(--wtn-mono); font-size:12px;">:root</code> claro e <code style="font-family:var(--wtn-mono); font-size:12px;">.dark</code>) e mapeados para as CSS variables do PrimeNG.</p>
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px; font-family:var(--wtn-mono);">
+        <thead><tr style="background:var(--wtn-surface-2);"><th style="text-align:left; padding:9px 12px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Token PrimeNG</th><th style="text-align:left; padding:9px 12px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); border-bottom:1px solid var(--wtn-border);">Token WTN</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-primary-color</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-primary)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-content-background</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-card)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-content-border-color</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-border)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-text-color</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-text)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-text-muted-color</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-text-2)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info); border-bottom:1px solid var(--wtn-surface-2);">--p-border-radius</td><td style="padding:8px 12px; color:var(--wtn-text-2); border-bottom:1px solid var(--wtn-surface-2);">var(--wtn-r-md)</td></tr>
+          <tr><td style="padding:8px 12px; color:var(--wtn-info);">--p-focus-ring-color</td><td style="padding:8px 12px; color:var(--wtn-text-2);">var(--wtn-focus)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="flex:none; width:380px; display:flex; flex-direction:column; gap:14px;">
+      <div data-theme="light" style="background:var(--wtn-surface); border:1px solid var(--wtn-border); border-radius:var(--wtn-r-lg); padding:22px; box-shadow:var(--wtn-e1);">
+        <div style="font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--wtn-muted); margin-bottom:12px;">Acessibilidade</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--wtn-text-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="var(--wtn-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Contraste WCAG AA nos dois temas</div>
+          <div style="display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--wtn-text-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="var(--wtn-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Foco visível (anel 3px de --wtn-focus)</div>
+          <div style="display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--wtn-text-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="var(--wtn-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Alvo de toque ≥ 36px</div>
+          <div style="display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--wtn-text-2);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="var(--wtn-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Status nunca só por cor (ícone + rótulo)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const lightGroups = [
+      { title: 'Superfícies', items: [
+        { name: 'bg', hex: '#EEF2F2' }, { name: 'surface', hex: '#FFFFFF' },
+        { name: 'surface-2', hex: '#F4F7F7' }, { name: 'border', hex: '#DCE3E4' },
+        { name: 'border-strong', hex: '#C4CFD0' } ] },
+      { title: 'Texto', items: [
+        { name: 'text', hex: '#13201E' }, { name: 'text-2', hex: '#566A67' },
+        { name: 'muted', hex: '#879591' } ] },
+      { title: 'Marca', items: [
+        { name: 'primary', hex: '#0E5C54' }, { name: 'primary-hover', hex: '#0A4842' },
+        { name: 'primary-soft', hex: '#E2EFED' }, { name: 'focus', hex: '#2E9D90' } ] },
+      { title: 'Status', items: [
+        { name: 'success', hex: '#1B7A50' }, { name: 'warning', hex: '#9A6700' },
+        { name: 'danger', hex: '#B23A2E' }, { name: 'info', hex: '#1C6CA8' },
+        { name: 'neutral', hex: '#586A67' } ] },
+    ];
+    const darkGroups = [
+      { title: 'Superfícies', items: [
+        { name: 'bg', hex: '#0B1312' }, { name: 'surface', hex: '#101917' },
+        { name: 'surface-2', hex: '#16201E' }, { name: 'border', hex: '#27332F' },
+        { name: 'border-strong', hex: '#37463F' } ] },
+      { title: 'Texto', items: [
+        { name: 'text', hex: '#E7EDEB' }, { name: 'text-2', hex: '#9FAEAA' },
+        { name: 'muted', hex: '#6C7C78' } ] },
+      { title: 'Marca', items: [
+        { name: 'primary', hex: '#2FA295' }, { name: 'primary-hover', hex: '#41B7A9' },
+        { name: 'primary-soft', hex: '#13302C' }, { name: 'focus', hex: '#41B7A9' } ] },
+      { title: 'Status', items: [
+        { name: 'success', hex: '#46B581' }, { name: 'warning', hex: '#D6A23A' },
+        { name: 'danger', hex: '#E07A6B' }, { name: 'info', hex: '#4FA0DC' },
+        { name: 'neutral', hex: '#8FA09B' } ] },
+    ];
+    const typeScale = [
+      { spec: 'display · 32 / 700', size: '32px', weight: 700, ls: '-.02em', sample: 'Conformidade do SGSI' },
+      { spec: 'h1 · 26 / 700', size: '26px', weight: 700, ls: '-.018em', sample: 'Declaração de Aplicabilidade' },
+      { spec: 'h2 · 21 / 600', size: '21px', weight: 600, ls: '-.012em', sample: 'Gap Analysis — Matriz' },
+      { spec: 'h3 · 17 / 600', size: '17px', weight: 600, ls: '-.006em', sample: 'Controles do Anexo A' },
+      { spec: 'h4 · 15 / 600', size: '15px', weight: 600, ls: '0', sample: 'Responsável pelo controle' },
+      { spec: 'body · 14 / 400', size: '14px', weight: 400, ls: '0', sample: 'O controle atende parcialmente aos requisitos da cláusula.' },
+      { spec: 'small · 13 / 400', size: '13px', weight: 400, ls: '0', sample: 'Atualizado há 3 dias por A. Moreira' },
+      { spec: 'caption · 12 / 500', size: '12px', weight: 500, ls: '.04em', sample: 'PRAZO DE REVISÃO' },
+    ];
+    const spacing = [
+      { label: '4', px: '4px' }, { label: '8', px: '8px' }, { label: '12', px: '12px' },
+      { label: '16', px: '16px' }, { label: '24', px: '24px' }, { label: '32', px: '32px' }, { label: '48', px: '48px' },
+    ];
+    const themePair = [
+      { label: 'Tema claro', theme: 'light' },
+      { label: 'Tema escuro', theme: 'dark' },
+    ];
+    const moduleCards = [
+      { mod: 'Contexto (Cláusula 4)', status: 'Aprovado', fg: 'var(--wtn-success)', bg: 'var(--wtn-success-soft)', pct: '100%', resp: 'A. Moreira', av: 'AM', prazo: 'Revisado em 12/05', overdue: false, next: 'Ver visão consolidada' },
+      { mod: 'Gap Analysis', status: 'Em revisão', fg: 'var(--wtn-warning)', bg: 'var(--wtn-warning-soft)', pct: '68%', resp: 'C. Dias', av: 'CD', prazo: 'Revisão até 28/06', overdue: false, next: 'Avaliar 12 lacunas pendentes' },
+      { mod: 'Declaração de Aplicabilidade', status: 'Em revisão', fg: 'var(--wtn-info)', bg: 'var(--wtn-info-soft)', pct: '54%', resp: 'R. Lima', av: 'RL', prazo: 'Revisão vencida há 4 dias', overdue: true, next: 'Resolver 3 divergências' },
+      { mod: 'Plano de Ação', status: 'Rascunho', fg: 'var(--wtn-neutral)', bg: 'var(--wtn-neutral-soft)', pct: '20%', resp: 'Não atribuído', av: '·', prazo: 'Não iniciado', overdue: false, next: 'Definir responsáveis' },
+      { mod: 'Evidências', status: 'Rascunho', fg: 'var(--wtn-neutral)', bg: 'var(--wtn-neutral-soft)', pct: '8%', resp: 'Não atribuído', av: '·', prazo: 'Não iniciado', overdue: false, next: 'Anexar evidências' },
+    ];
+    moduleCards.forEach(c => { c.notOverdue = !c.overdue; });
+    const sk = { success:['var(--wtn-success)','var(--wtn-success-soft)'], warning:['var(--wtn-warning)','var(--wtn-warning-soft)'], danger:['var(--wtn-danger)','var(--wtn-danger-soft)'], info:['var(--wtn-info)','var(--wtn-info-soft)'], neutral:['var(--wtn-neutral)','var(--wtn-neutral-soft)'] };
+    const prioMap = { 'Crítico':'var(--wtn-prio-crit)', 'Alto':'var(--wtn-prio-high)', 'Médio':'var(--wtn-prio-med)', 'Baixo':'var(--wtn-prio-low)', '—':'var(--wtn-muted)' };
+    const gapThemes = [
+      { theme:'Organizacional', count:'37 controles', rows:[
+        { code:'A.5.1', name:'Políticas de segurança da informação', status:'Atende', s:'success', prio:'Baixo', av:'AM', sel:false },
+        { code:'A.5.7', name:'Inteligência de ameaças', status:'Parcialmente atende', s:'warning', prio:'Médio', av:'CD', sel:false },
+        { code:'A.5.23', name:'Segurança para uso de serviços em nuvem', status:'Não atende', s:'danger', prio:'Alto', av:'RL', sel:false } ] },
+      { theme:'Pessoas', count:'8 controles', rows:[
+        { code:'A.6.3', name:'Conscientização e treinamento', status:'Não avaliado', s:'neutral', prio:'—', av:'·', sel:false },
+        { code:'A.6.5', name:'Responsabilidades após o encerramento', status:'Atende', s:'success', prio:'Baixo', av:'AM', sel:false } ] },
+      { theme:'Físico', count:'14 controles', rows:[
+        { code:'A.7.4', name:'Monitoramento de segurança física', status:'Parcialmente atende', s:'warning', prio:'Médio', av:'CD', sel:false },
+        { code:'A.7.10', name:'Mídia de armazenamento', status:'N/A', s:'info', prio:'—', av:'RL', sel:false } ] },
+      { theme:'Tecnológico', count:'34 controles', rows:[
+        { code:'A.8.12', name:'Prevenção de vazamento de dados', status:'Parcialmente atende', s:'warning', prio:'Alto', av:'CD', sel:false },
+        { code:'A.8.24', name:'Uso de criptografia', status:'Não atende', s:'danger', prio:'Crítico', av:'RL', sel:true },
+        { code:'A.8.16', name:'Atividades de monitoramento', status:'Atende', s:'success', prio:'Baixo', av:'AM', sel:false } ] },
+    ];
+    gapThemes.forEach(g => g.rows.forEach(r => { r.fg = sk[r.s][0]; r.bg = sk[r.s][1]; r.prioColor = prioMap[r.prio]; r.notSel = !r.sel; r.rowBg = r.sel ? 'var(--wtn-primary-soft)' : 'var(--wtn-surface)'; }));
+    const statusDist = [
+      { label:'Atende', n:44, w:'47.3%', s:'success' },
+      { label:'Parcialmente', n:19, w:'20.4%', s:'warning' },
+      { label:'Não atende', n:8, w:'8.6%', s:'danger' },
+      { label:'N/A', n:5, w:'5.4%', s:'info' },
+      { label:'Não avaliado', n:17, w:'18.3%', s:'neutral' },
+    ];
+    statusDist.forEach(d => { d.fg = sk[d.s][0]; d.bg = sk[d.s][1]; });
+    const dims = [
+      { name:'Organizacional', pct:'64%' }, { name:'Pessoas', pct:'81%' },
+      { name:'Físico', pct:'72%' }, { name:'Tecnológico', pct:'48%' },
+    ];
+    const prioList = [
+      { code:'A.8.24', name:'Uso de criptografia', status:'Não atende', s:'danger', prio:'Crítico' },
+      { code:'A.5.23', name:'Segurança para serviços em nuvem', status:'Não atende', s:'danger', prio:'Alto' },
+      { code:'A.8.12', name:'Prevenção de vazamento de dados', status:'Parcialmente atende', s:'warning', prio:'Alto' },
+      { code:'A.5.7', name:'Inteligência de ameaças', status:'Parcialmente atende', s:'warning', prio:'Médio' },
+      { code:'A.7.4', name:'Monitoramento de segurança física', status:'Parcialmente atende', s:'warning', prio:'Médio' },
+    ];
+    prioList.forEach(r => { r.fg = sk[r.s][0]; r.bg = sk[r.s][1]; r.prioColor = prioMap[r.prio]; });
+    return {
+      statusDist, dims, prioList,
+      moduleCards, gapThemes,
+      typeScale, spacing, themePair,
+      colorPanels: [
+        { label: 'Tema claro', theme: 'light', groups: lightGroups },
+        { label: 'Tema escuro', theme: 'dark', groups: darkGroups },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

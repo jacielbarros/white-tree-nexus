@@ -56,6 +56,12 @@ redesenhar a interface (hoje crua, PrimeNG sem customização) com direção **e
 mantendo PrimeNG + tema customizado (claro + escuro). Brief + **prompt pronto para o Claude Design**
 em [`feature-ux-revamp.md`](feature-ux-revamp.md).
 
+**Backlog do MVP — Dashboard de Conformidade + Motor de Rastreabilidade/Timeline** (transversais):
+o **Dashboard** (home da organização; tela-âncora da Revisão de UX) e o **Motor de Rastreabilidade/
+Timeline** (linha do tempo de eventos via `audit_logs`, painel de versões, conformidade no tempo;
+**sem upload/tags — isso é o Módulo 5**). Escopo, reuso e **prompts `/speckit.specify` prontos** em
+[`feature-dashboard-rastreabilidade.md`](feature-dashboard-rastreabilidade.md).
+
 ## Fluxo por feature
 
 ```

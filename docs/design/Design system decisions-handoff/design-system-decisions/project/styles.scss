@@ -1,0 +1,242 @@
+/* =============================================================================
+   White Tree Nexus — Tema enterprise (PrimeNG 21 · preset Material)
+   -----------------------------------------------------------------------------
+   Implementação dos tokens do design system.
+   Ordem de carregamento sugerida em angular.json / styles:
+     1. preset Material do @primeuix/themes (importado no app config)
+     2. este arquivo (styles.scss)
+   Tema escuro: aplicar a classe `.wtn-dark` no <html> (alternância no topbar).
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   1. TOKENS WTN  ·  tema claro (padrão)
+   ---------------------------------------------------------------------------- */
+:root {
+  /* superfícies */
+  --wtn-bg: #EEF2F2;
+  --wtn-surface: #FFFFFF;
+  --wtn-surface-2: #F4F7F7;
+  --wtn-card: #FFFFFF;
+  --wtn-border: #DCE3E4;
+  --wtn-border-strong: #C4CFD0;
+
+  /* texto */
+  --wtn-text: #13201E;
+  --wtn-text-2: #566A67;
+  --wtn-muted: #879591;
+
+  /* marca */
+  --wtn-primary: #0E5C54;
+  --wtn-primary-hover: #0A4842;
+  --wtn-primary-contrast: #FFFFFF;
+  --wtn-primary-soft: #E2EFED;
+  --wtn-focus: #2E9D90;
+
+  /* status semântico */
+  --wtn-success: #1B7A50;  --wtn-success-soft: #E3F2EB;
+  --wtn-warning: #9A6700;  --wtn-warning-soft: #F8EFD7;
+  --wtn-danger:  #B23A2E;  --wtn-danger-soft:  #F8E6E3;
+  --wtn-info:    #1C6CA8;  --wtn-info-soft:    #E2EEF7;
+  --wtn-neutral: #586A67;  --wtn-neutral-soft: #EAEFEE;
+
+  /* prioridade de lacuna */
+  --wtn-prio-crit: #B23A2E;
+  --wtn-prio-high: #B5610C;
+  --wtn-prio-med:  #9A6700;
+  --wtn-prio-low:  #586A67;
+
+  /* raio */
+  --wtn-r-sm: 4px;
+  --wtn-r-md: 6px;
+  --wtn-r-lg: 8px;
+  --wtn-r-xl: 12px;
+  --wtn-r-pill: 999px;
+
+  /* elevação */
+  --wtn-e1: 0 1px 2px rgba(16, 24, 22, .07);
+  --wtn-e2: 0 2px 10px rgba(16, 24, 22, .09);
+  --wtn-e3: 0 14px 34px rgba(16, 24, 22, .13);
+
+  /* tipografia */
+  --wtn-font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --wtn-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* ----------------------------------------------------------------------------
+   2. TOKENS WTN  ·  tema escuro
+   ---------------------------------------------------------------------------- */
+.wtn-dark {
+  --wtn-bg: #0B1312;
+  --wtn-surface: #101917;
+  --wtn-surface-2: #16201E;
+  --wtn-card: #15211F;
+  --wtn-border: #27332F;
+  --wtn-border-strong: #37463F;
+
+  --wtn-text: #E7EDEB;
+  --wtn-text-2: #9FAEAA;
+  --wtn-muted: #6C7C78;
+
+  --wtn-primary: #2FA295;
+  --wtn-primary-hover: #41B7A9;
+  --wtn-primary-contrast: #04211D;
+  --wtn-primary-soft: #13302C;
+  --wtn-focus: #41B7A9;
+
+  --wtn-success: #46B581;  --wtn-success-soft: #13302A;
+  --wtn-warning: #D6A23A;  --wtn-warning-soft: #322914;
+  --wtn-danger:  #E07A6B;  --wtn-danger-soft:  #36211D;
+  --wtn-info:    #4FA0DC;  --wtn-info-soft:    #13283A;
+  --wtn-neutral: #8FA09B;  --wtn-neutral-soft: #1E2A28;
+
+  --wtn-prio-crit: #E07A6B;
+  --wtn-prio-high: #E0954A;
+  --wtn-prio-med:  #D6A23A;
+  --wtn-prio-low:  #8FA09B;
+
+  --wtn-e1: 0 1px 2px rgba(0, 0, 0, .45);
+  --wtn-e2: 0 4px 16px rgba(0, 0, 0, .5);
+  --wtn-e3: 0 18px 44px rgba(0, 0, 0, .6);
+}
+
+/* ----------------------------------------------------------------------------
+   3. PONTE WTN → PrimeNG  (sobrescrita das CSS variables --p-*)
+   Vale para os dois temas porque referencia os tokens --wtn-* já resolvidos.
+   Ajuste os nomes conforme a versão do preset; estes cobrem o núcleo do Material.
+   ---------------------------------------------------------------------------- */
+:root,
+.wtn-dark {
+  /* primário / marca */
+  --p-primary-color: var(--wtn-primary);
+  --p-primary-contrast-color: var(--wtn-primary-contrast);
+  --p-primary-hover-color: var(--wtn-primary-hover);
+  --p-primary-active-color: var(--wtn-primary-hover);
+
+  /* superfícies e conteúdo */
+  --p-content-background: var(--wtn-card);
+  --p-content-border-color: var(--wtn-border);
+  --p-content-hover-background: var(--wtn-surface-2);
+  --p-overlay-modal-background: var(--wtn-surface);
+
+  /* texto */
+  --p-text-color: var(--wtn-text);
+  --p-text-muted-color: var(--wtn-text-2);
+
+  /* formulários */
+  --p-form-field-background: var(--wtn-surface);
+  --p-form-field-border-color: var(--wtn-border-strong);
+  --p-form-field-hover-border-color: var(--wtn-border-strong);
+  --p-form-field-focus-border-color: var(--wtn-focus);
+  --p-form-field-color: var(--wtn-text);
+  --p-form-field-placeholder-color: var(--wtn-muted);
+  --p-form-field-invalid-border-color: var(--wtn-danger);
+
+  /* foco */
+  --p-focus-ring-width: 3px;
+  --p-focus-ring-color: color-mix(in srgb, var(--wtn-focus) 40%, transparent);
+  --p-focus-ring-offset: 0;
+
+  /* raio */
+  --p-border-radius-sm: var(--wtn-r-sm);
+  --p-border-radius-md: var(--wtn-r-md);
+  --p-border-radius-lg: var(--wtn-r-lg);
+
+  /* severidades (tag / message / toast) */
+  --p-green-500: var(--wtn-success);
+  --p-yellow-500: var(--wtn-warning);
+  --p-red-500: var(--wtn-danger);
+  --p-blue-500: var(--wtn-info);
+}
+
+/* ----------------------------------------------------------------------------
+   4. RESET / BASE
+   ---------------------------------------------------------------------------- */
+html, body {
+  margin: 0;
+  font-family: var(--wtn-font-sans);
+  background: var(--wtn-bg);
+  color: var(--wtn-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Escala tipográfica utilitária (mapear aos seus componentes de página) */
+.wtn-display { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.wtn-h1 { font-size: 26px; font-weight: 700; letter-spacing: -.018em; line-height: 1.15; }
+.wtn-h2 { font-size: 21px; font-weight: 600; letter-spacing: -.012em; line-height: 1.2; }
+.wtn-h3 { font-size: 17px; font-weight: 600; letter-spacing: -.006em; }
+.wtn-h4 { font-size: 15px; font-weight: 600; }
+.wtn-body { font-size: 14px; font-weight: 400; }
+.wtn-small { font-size: 13px; font-weight: 400; }
+.wtn-caption { font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+.wtn-mono { font-family: var(--wtn-font-mono); }
+
+/* ----------------------------------------------------------------------------
+   5. PADRÃO DE CABEÇALHO DE PÁGINA  (reutilizar em todas as telas)
+   <header class="wtn-page-header">
+     <div><h1 class="wtn-page-title">…</h1><p class="wtn-page-desc">…</p></div>
+     <div class="wtn-page-actions">…</div>
+   </header>
+   ---------------------------------------------------------------------------- */
+.wtn-page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.wtn-page-header > :first-child { flex: 1; min-width: 0; }
+.wtn-page-title { font-size: 22px; font-weight: 700; letter-spacing: -.015em; color: var(--wtn-text); margin: 0 0 4px; }
+.wtn-page-desc { font-size: 13.5px; color: var(--wtn-text-2); margin: 0; }
+.wtn-page-actions { display: flex; gap: 10px; align-items: center; }
+
+/* ----------------------------------------------------------------------------
+   6. TAG / BADGE DE STATUS DO DOMÍNIO
+   Uso: <p-tag styleClass="wtn-tag wtn-tag--success"> ou aplicar direto.
+   Mantém a regra "nunca só por cor" — incluir rótulo textual sempre.
+   ---------------------------------------------------------------------------- */
+.wtn-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--wtn-r-pill);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+.wtn-tag::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.wtn-tag--success { background: var(--wtn-success-soft); color: var(--wtn-success); }  /* Atende */
+.wtn-tag--warning { background: var(--wtn-warning-soft); color: var(--wtn-warning); }  /* Parcialmente atende */
+.wtn-tag--danger  { background: var(--wtn-danger-soft);  color: var(--wtn-danger);  }  /* Não atende */
+.wtn-tag--info    { background: var(--wtn-info-soft);    color: var(--wtn-info);    }  /* N/A */
+.wtn-tag--neutral { background: var(--wtn-neutral-soft); color: var(--wtn-neutral); }  /* Não avaliado */
+
+/* prioridade (variante contornada) */
+.wtn-prio { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: var(--wtn-r-md); font-size: 12px; font-weight: 600; line-height: 1; border: 1px solid currentColor; }
+.wtn-prio--crit { color: var(--wtn-prio-crit); }
+.wtn-prio--high { color: var(--wtn-prio-high); }
+.wtn-prio--med  { color: var(--wtn-prio-med); }
+.wtn-prio--low  { color: var(--wtn-prio-low); }
+
+/* ----------------------------------------------------------------------------
+   7. AJUSTES FINOS DE COMPONENTES PrimeNG
+   ---------------------------------------------------------------------------- */
+.p-card { box-shadow: var(--wtn-e1); border: 1px solid var(--wtn-border); }
+.p-button { font-weight: 600; }
+.p-datatable .p-datatable-thead > tr > th {
+  background: var(--wtn-surface-2);
+  color: var(--wtn-muted);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--wtn-border);
+}
+.p-datatable .p-datatable-tbody > tr > td { border-bottom: 1px solid var(--wtn-surface-2); font-size: 12.5px; }
+.p-dialog { border-radius: var(--wtn-r-lg); box-shadow: var(--wtn-e3); }
+.p-toast .p-toast-message { border-radius: var(--wtn-r-md); box-shadow: var(--wtn-e2); border-left-width: 3px; }
