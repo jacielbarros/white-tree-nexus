@@ -21,6 +21,8 @@ from wtnapp.models.membership_model import Membership
 from wtnapp.models.organization_model import Organization
 from wtnapp.models.password_reset_model import PasswordResetToken
 from wtnapp.models.scope_model import ScopeItem, ScopeStatement
+# SoA (Feature 005)
+from wtnapp.models.soa_model import Soa, SoaItem, SoaItemEvent
 from wtnapp.models.stakeholder_model import Stakeholder, StakeholderMap, StakeholderRequirement
 from wtnapp.models.user_model import User
 
@@ -51,6 +53,9 @@ __all__ = [
     "PasswordResetToken",
     "ScopeItem",
     "ScopeStatement",
+    "Soa",
+    "SoaItem",
+    "SoaItemEvent",
     "Stakeholder",
     "StakeholderMap",
     "StakeholderRequirement",

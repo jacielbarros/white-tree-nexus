@@ -102,6 +102,17 @@ export const routes: Routes = [
         loadComponent: () =>
           import('@app/pages/gap-baselines/gap-baselines').then((m) => m.GapBaselinesPage),
       },
+      {
+        path: 'soa',
+        canActivate: [permissionGuard('view_soa')],
+        loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),
+      },
+      {
+        path: 'soa-versions',
+        canActivate: [permissionGuard('view_soa')],
+        loadComponent: () =>
+          import('@app/pages/soa-versions/soa-versions').then((m) => m.SoaVersionsPage),
+      },
     ],
   },
   {

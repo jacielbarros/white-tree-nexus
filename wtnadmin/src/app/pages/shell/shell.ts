@@ -34,6 +34,8 @@ interface OrgOption {
           <a routerLink="gap-dashboard" routerLinkActive="active">Dashboard Gap</a>
           <a routerLink="gap-catalog" routerLinkActive="active">Catálogo Gap</a>
           <a routerLink="gap-baselines" routerLinkActive="active">Baselines Gap</a>
+          <a routerLink="soa" routerLinkActive="active">SoA</a>
+          <a routerLink="soa-versions" routerLinkActive="active">Versões SoA</a>
         }
       </nav>
       <span class="spacer"></span>

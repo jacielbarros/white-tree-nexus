@@ -202,6 +202,66 @@ def gap_seed_factory(db, factory):
 
 
 @pytest.fixture
+def soa_seed(db, factory, gap_seed):
+    """Org + usuários + Gap Analysis adotado e avaliado (controles do Anexo A) — base da SoA."""
+    from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
+    from wtnapp.models.gap_catalog_model import GapCatalogItem
+    from wtnapp.services.gap_seed_service import adopt_seed
+    from wtnapp.settings import GapDimension, GapStatus
+
+    def _make(slug="soa-acme"):
+        org = factory.org(slug, f"SOA {slug.upper()}")
+        admin = factory.user(f"admin@{slug}.com", full_name=f"Admin {slug}")
+        consultant = factory.user(f"consultant@{slug}.com", full_name=f"Consultant {slug}")
+        client_user = factory.user(f"client@{slug}.com", full_name=f"Client {slug}")
+        factory.membership(admin, org, Role.org_admin)
+        factory.membership(consultant, org, Role.consultant)
+        factory.membership(client_user, org, Role.client)
+
+        adopt_seed(db, org.id, "2022.1")
+        assessment = db.query(GapAssessment).filter_by(tenant_id=org.id).first()
+        annex_items = (
+            db.query(GapAssessmentItem)
+            .join(GapCatalogItem, GapAssessmentItem.catalog_item_id == GapCatalogItem.id)
+            .filter(
+                GapAssessmentItem.assessment_id == assessment.id,
+                GapCatalogItem.dimension == GapDimension.annex_a,
+            )
+            .order_by(GapCatalogItem.order)
+            .all()
+        )
+        if len(annex_items) >= 3:
+            annex_items[0].status = GapStatus.meets
+            annex_items[1].status = GapStatus.partial
+            annex_items[2].status = GapStatus.not_applicable
+            annex_items[2].exclusion_justification = "Não há desenvolvimento de software interno."
+        db.commit()
+        return {
+            "org": org, "admin": admin, "consultant": consultant, "client": client_user,
+            "assessment": assessment, "annex_items": annex_items,
+        }
+
+    return _make
+
+
+@pytest.fixture
+def complete_soa(db):
+    """Preenche todos os controles da SoA (razão de inclusão / justificativa) p/ habilitar aprovação."""
+    from wtnapp.models.soa_model import SoaItem
+
+    def _complete(tenant_id):
+        db.rollback()
+        for it in db.query(SoaItem).filter_by(tenant_id=tenant_id).all():
+            if it.applicable and not it.inclusion_reasons:
+                it.inclusion_reasons = ["best_practice"]
+            if not it.applicable and not (it.exclusion_justification or "").strip():
+                it.exclusion_justification = "Não aplicável ao escopo."
+        db.commit()
+
+    return _complete
+
+
+@pytest.fixture
 def form_outbox(monkeypatch):
     """Captura emails do motor de formularios sem SMTP real."""
     from wtnapp.services import notification_service

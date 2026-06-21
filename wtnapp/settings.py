@@ -127,6 +127,7 @@ class DocType(str, Enum):
     scope_statement = "scope_statement"
     form_response = "form_response"
     gap_baseline = "gap_baseline"
+    soa = "soa"
 
 
 class IssueOrigin(str, Enum):
@@ -263,3 +264,31 @@ class GapTheme(str, Enum):
 class GapAssignmentScope(str, Enum):
     whole = "whole"
     theme = "theme"
+
+
+# --- Statement of Applicability / SoA (Feature 005) ---
+
+class SoaImplementationStatus(str, Enum):
+    implemented = "implemented"
+    in_progress = "in_progress"
+    planned = "planned"
+    not_started = "not_started"
+    not_applicable = "not_applicable"
+
+
+class SoaInclusionReason(str, Enum):
+    risk_treatment = "risk_treatment"      # resultado do tratamento de riscos
+    legal = "legal"                        # requisito legal/regulatório
+    contractual = "contractual"            # requisito contratual
+    best_practice = "best_practice"        # melhor prática / requisito de negócio
+
+
+# Mapeamento de status Gap Analysis → status de implementação da SoA (consolidação).
+# `not_filled` ⇒ None (não inventa valor; usuário define).
+GAP_TO_SOA_STATUS: dict[GapStatus, "SoaImplementationStatus | None"] = {
+    GapStatus.meets: SoaImplementationStatus.implemented,
+    GapStatus.partial: SoaImplementationStatus.in_progress,
+    GapStatus.not_meet: SoaImplementationStatus.not_started,
+    GapStatus.not_applicable: SoaImplementationStatus.not_applicable,
+    GapStatus.not_filled: None,
+}

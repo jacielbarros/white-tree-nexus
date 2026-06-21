@@ -275,6 +275,11 @@ export class ApiService {
     return this.http.patch<T>(`${this.base}${path}`, body);
   }
 
+  /** Download binário (ex.: exportação de PDF). */
+  getBlob(path: string): Observable<Blob> {
+    return this.http.get(`${this.base}${path}`, { responseType: 'blob' });
+  }
+
   // --- Respondente externo (sem auth) ---
   getFormByToken(token: string): Observable<FormAssignment> {
     return this.http.get<FormAssignment>(`${this.base}/forms/respond/${token}`);

@@ -36,6 +36,7 @@ from wtnapp.routers import (
     memberships,
     organizations,
     scope,
+    soa,
     stakeholders,
 )
 
@@ -138,3 +139,4 @@ app.include_router(form_signature_policy.router)
 app.include_router(gap_catalog.router)
 app.include_router(gap_assessment.router)
 app.include_router(gap_assignment.router)
+app.include_router(soa.router)

@@ -15,3 +15,4 @@ psycopg[binary]        # PostgreSQL driver (produção)
 # --- dev / test ---
 pytest
 httpx                  # FastAPI TestClient
+reportlab>=4.0

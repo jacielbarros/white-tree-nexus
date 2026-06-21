@@ -30,7 +30,7 @@ pela [constitution](../.specify/memory/constitution.md).
 | 0 | Fundação multi-tenant | [`00-fundacao-multi-tenant.md`](00-fundacao-multi-tenant.md) |
 | 1 | Diagnóstico e Contexto da Organização | [`01-diagnostico-contexto.md`](01-diagnostico-contexto.md) |
 | 2 | Gap Analysis ISO 27001:2022 (+ seed do Anexo A) | [`02-gap-analysis.md`](02-gap-analysis.md) |
-| 3 | Statement of Applicability (SoA) | [`03-soa.md`](03-soa.md) |
+| 3 | Statement of Applicability (SoA) — **implementada** ([`specs/005-soa-declaracao-aplicabilidade/`](../specs/005-soa-declaracao-aplicabilidade/)) | [`03-soa.md`](03-soa.md) |
 | 4 | Plano de Ação | [`04-plano-de-acao.md`](04-plano-de-acao.md) |
 | 5 | Gestão de Evidências | [`05-gestao-evidencias.md`](05-gestao-evidencias.md) |
 

@@ -319,3 +319,70 @@ export interface GapAssignmentItem {
   created_at: string;
   token?: string | null;
 }
+
+// --- Statement of Applicability / SoA (Feature 005) ---
+
+export type SoaImplementationStatus =
+  | 'implemented'
+  | 'in_progress'
+  | 'planned'
+  | 'not_started'
+  | 'not_applicable';
+
+export type SoaInclusionReason = 'risk_treatment' | 'legal' | 'contractual' | 'best_practice';
+
+export interface SoaDivergenceField {
+  field: string;
+  soa_value: unknown;
+  gap_value: unknown;
+}
+
+export interface SoaItem {
+  id: string;
+  ref_code: string;
+  theme: GapTheme | null;
+  name: string;
+  applicable: boolean;
+  inclusion_reasons: SoaInclusionReason[];
+  inclusion_note: string | null;
+  exclusion_justification: string | null;
+  implementation_status: SoaImplementationStatus | null;
+  responsible: string | null;
+  deadline: string | null;
+  risks_treated: string | null;
+  expected_evidence: string | null;
+  evidence_refs: string | null;
+  observations: string | null;
+  gap_assessment_item_id: string | null;
+  divergence: SoaDivergenceField[];
+}
+
+export interface SoaSummary {
+  total: number;
+  applicable: number;
+  not_applicable: number;
+  divergent: number;
+}
+
+export interface Soa {
+  id: string;
+  draft_status: string;
+  current_version_id: string | null;
+  gap_assessment_id: string | null;
+  items: SoaItem[];
+  summary: SoaSummary;
+}
+
+export interface SoaVersion {
+  id: string;
+  identifier: string;
+  version_number: number;
+  status: string;
+  classification: string;
+  next_review_at: string | null;
+  change_nature: string;
+  approved_by: string | null;
+  is_superseded: boolean;
+  signed: boolean;
+  created_at: string;
+}

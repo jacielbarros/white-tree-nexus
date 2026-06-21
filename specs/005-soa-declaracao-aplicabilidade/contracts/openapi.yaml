@@ -1,0 +1,286 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — SoA (Statement of Applicability) API
+  version: 0.1.0
+  description: >
+    Declaração de Aplicabilidade (cláusula 6.1.3 d). Endpoints sob /soa. Todo acesso é escopado por
+    tenant (header X-Org-Context quando aplicável) + RBAC. Cross-tenant ⇒ 404/403 + auditoria.
+
+tags:
+  - name: soa
+    description: SoA — matriz, consolidação, divergência, versões e exportação.
+
+paths:
+  /soa:
+    get:
+      tags: [soa]
+      summary: Retorna a SoA da organização (itens + divergências derivadas)
+      description: Requer `view_soa`. 404 se a SoA ainda não foi consolidada.
+      responses:
+        "200":
+          description: SoA consolidada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaResponse" }
+        "404": { description: SoA inexistente (consolide primeiro) }
+        "403": { description: Sem permissão / classificação }
+
+  /soa/consolidate:
+    post:
+      tags: [soa]
+      summary: Gera/atualiza a SoA a partir da avaliação corrente do Gap Analysis
+      description: >
+        Requer `manage_soa`. Aditivo e idempotente: cria itens ausentes (pré-preenchidos via
+        mapeamento de status) e **preserva** itens editados manualmente (divergência é derivada).
+      responses:
+        "200":
+          description: SoA consolidada/atualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaResponse" }
+        "409": { description: Gap Analysis ausente/sem avaliação (não há insumo) }
+        "403": { description: Sem permissão }
+
+  /soa/items/{item_id}:
+    put:
+      tags: [soa]
+      summary: Edita um controle da SoA
+      description: >
+        Requer `manage_soa`. Validações: aplicável ⇒ ≥1 razão de inclusão tipada; não aplicável ⇒
+        justificativa de exclusão. Gera SoaItemEvent + auditoria.
+      parameters:
+        - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SoaItemUpdate" }
+      responses:
+        "200":
+          description: Item atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaItem" }
+        "422": { description: Validação (inclusão sem razão / exclusão sem justificativa) }
+        "404": { description: Item inexistente ou de outro tenant }
+        "403": { description: Sem permissão }
+
+  /soa/items/{item_id}/reconcile:
+    post:
+      tags: [soa]
+      summary: Reconcilia campos divergentes com o valor vivo do Gap Analysis
+      description: Requer `manage_soa`. Aplica o valor atual do Gap aos campos indicados (ação explícita).
+      parameters:
+        - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  description: campos a reconciliar; vazio/omisso ⇒ todos os divergentes
+                  items:
+                    type: string
+                    enum: [applicable, exclusion_justification, implementation_status, responsible, deadline]
+      responses:
+        "200":
+          description: Item reconciliado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaItem" }
+        "404": { description: Item inexistente ou de outro tenant }
+        "403": { description: Sem permissão }
+
+  /soa/divergences:
+    get:
+      tags: [soa]
+      summary: Lista os controles divergentes do Gap Analysis de origem
+      description: Requer `view_soa`.
+      responses:
+        "200":
+          description: Lista de itens com divergência
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SoaItem" }
+
+  /soa/submit-review:
+    post:
+      tags: [soa]
+      summary: Envia a SoA para revisão (draft → in_review)
+      description: Requer `manage_soa`.
+      responses:
+        "200":
+          description: SoA em revisão
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaResponse" }
+        "409": { description: Já em revisão }
+        "403": { description: Sem permissão }
+
+  /soa/approve:
+    post:
+      tags: [soa]
+      summary: Aprova e emite uma versão imutável da SoA
+      description: >
+        Requer `approve_soa` (Admin da organização). Valida completude (aplicáveis com razão de
+        inclusão; N/A com justificativa). Assinatura avançada opcional (Motor 003).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                classification:
+                  type: string
+                  enum: [publico, uso_interno, confidencial, restrito]
+                next_review_at: { type: string, format: date-time, nullable: true }
+                change_nature: { type: string, example: "Emissão inicial" }
+                sign:
+                  type: boolean
+                  default: false
+                  description: se true, dispara a assinatura avançada opcional da versão (Motor 003)
+      responses:
+        "201":
+          description: Versão emitida
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaVersion" }
+        "409": { description: SoA não está em revisão }
+        "422":
+          description: SoA incompleta (lista de ref_codes pendentes)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail: { type: string }
+                  incomplete: { type: array, items: { type: string } }
+        "403": { description: Sem permissão de aprovação }
+
+  /soa/versions:
+    get:
+      tags: [soa]
+      summary: Lista as versões emitidas da SoA
+      description: Requer `view_soa`.
+      responses:
+        "200":
+          description: Versões (mais recente primeiro)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SoaVersion" }
+
+  /soa/versions/{version_id}/export:
+    get:
+      tags: [soa]
+      summary: Exporta a SoA (PDF) refletindo exatamente a versão selecionada
+      description: Requer `view_soa`. Gera o PDF a partir do content_snapshot imutável da versão. Auditado.
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Documento PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "404": { description: Versão inexistente ou de outro tenant }
+        "403": { description: Sem permissão }
+
+components:
+  schemas:
+    InclusionReason:
+      type: string
+      enum: [risk_treatment, legal, contractual, best_practice]
+    ImplementationStatus:
+      type: string
+      enum: [implemented, in_progress, planned, not_started, not_applicable]
+      nullable: true
+
+    SoaItemUpdate:
+      type: object
+      properties:
+        applicable: { type: boolean }
+        inclusion_reasons:
+          type: array
+          items: { $ref: "#/components/schemas/InclusionReason" }
+        inclusion_note: { type: string, nullable: true }
+        exclusion_justification: { type: string, nullable: true }
+        implementation_status: { $ref: "#/components/schemas/ImplementationStatus" }
+        responsible: { type: string, nullable: true }
+        deadline: { type: string, format: date, nullable: true }
+        risks_treated: { type: string, nullable: true }
+        expected_evidence: { type: string, nullable: true }
+        evidence_refs: { type: string, nullable: true }
+        observations: { type: string, nullable: true }
+
+    DivergenceField:
+      type: object
+      properties:
+        field: { type: string }
+        soa_value: { nullable: true }
+        gap_value: { nullable: true }
+
+    SoaItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ref_code: { type: string, example: "A.5.1" }
+        theme: { type: string, nullable: true }
+        name: { type: string }
+        applicable: { type: boolean }
+        inclusion_reasons:
+          type: array
+          items: { $ref: "#/components/schemas/InclusionReason" }
+        inclusion_note: { type: string, nullable: true }
+        exclusion_justification: { type: string, nullable: true }
+        implementation_status: { $ref: "#/components/schemas/ImplementationStatus" }
+        responsible: { type: string, nullable: true }
+        deadline: { type: string, format: date, nullable: true }
+        risks_treated: { type: string, nullable: true }
+        expected_evidence: { type: string, nullable: true }
+        evidence_refs: { type: string, nullable: true }
+        observations: { type: string, nullable: true }
+        gap_assessment_item_id: { type: string, format: uuid, nullable: true }
+        divergence:
+          type: array
+          items: { $ref: "#/components/schemas/DivergenceField" }
+
+    SoaResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        draft_status: { type: string, enum: [draft, in_review, in_force, obsolete] }
+        current_version_id: { type: string, format: uuid, nullable: true }
+        gap_assessment_id: { type: string, format: uuid, nullable: true }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SoaItem" }
+        summary:
+          type: object
+          properties:
+            total: { type: integer }
+            applicable: { type: integer }
+            not_applicable: { type: integer }
+            divergent: { type: integer }
+
+    SoaVersion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        identifier: { type: string, example: "SGSI-DOC-SOA" }
+        version_number: { type: integer }
+        status: { type: string, enum: [in_force, obsolete] }
+        classification: { type: string }
+        next_review_at: { type: string, format: date-time, nullable: true }
+        change_nature: { type: string }
+        approved_by: { type: string, format: uuid, nullable: true }
+        is_superseded: { type: boolean }
+        signed: { type: boolean, description: se a versão recebeu assinatura avançada opcional }
+        created_at: { type: string, format: date-time }

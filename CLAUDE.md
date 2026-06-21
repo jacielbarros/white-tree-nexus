@@ -240,6 +240,33 @@ controles do Anexo A da norma.
   Links no shell. Métodos genéricos `get/post/put/patch` adicionados ao `ApiService`. 69 testes frontend passando.
 - **Pendente**: validação E2E manual, alembic upgrade no postgres real.
 
+#### Módulo 3 — Statement of Applicability / SoA (Feature 005 — implementada)
+Cláusula 6.1.3 d). Spec/plano em `specs/005-soa-declaracao-aplicabilidade/`. Declaração de
+Aplicabilidade dos 93 controles do Anexo A, **consolidando a avaliação corrente do Gap Analysis**
+(Módulo 2) num **Documento Controlado** versionado e exportável em PDF.
+- **Backend** (`wtnapp/`): `models/soa_model.py` (`Soa` único por org, `SoaItem`, `SoaItemEvent`
+  append-only; todos `tenant_id`+RLS); `services/soa_consolidation_service.py` (consolidação aditiva/
+  idempotente da avaliação corrente do Gap + `compute_divergence` por valor vivo); `services/
+  soa_export_service.py` (PDF via **reportlab** a partir do `content_snapshot` da versão); router
+  `soa.py` (`GET /soa`, `consolidate`, `PUT items/{id}`, `items/{id}/reconcile`, `divergences`,
+  `submit-review`, `approve`, `versions`, `versions/{id}/export`). Versão imutável reusa
+  `controlled_document_service` + `document_versions` (novo `DocType.soa`); assinatura avançada
+  **opcional** na aprovação (selo SHA-256 no snapshot). Mapeamento de status Gap→SoA e enums
+  (`SoaImplementationStatus`, `SoaInclusionReason`, `GAP_TO_SOA_STATUS`) em `settings.py`. Permissões
+  `view_soa`/`manage_soa`/`approve_soa`. Acesso por classificação aplicado na exportação.
+- **Testes backend** (24 testes, todos passando): `test_soa.py`, `test_soa_consolidation.py`,
+  `test_soa_divergence.py`, `test_soa_version.py`, `test_soa_export.py`, `test_tenant_isolation_soa.py`.
+- **Migration**: `wtnapp/alembic/versions/f8a9b0c1d207_soa_module.py` (3 tabelas + RLS + gatilho
+  append-only; **idempotente**). `down_revision="e7f8a9b0c106"`. Validada no PostgreSQL real
+  (upgrade/downgrade/roundtrip + idempotência com `create_all`).
+- **Frontend** (`wtnadmin/`): `pages/soa/` (matriz dos 93 controles por tema, editar, consolidar,
+  divergência + reconciliar) e `pages/soa-versions/` (revisar/aprovar + assinatura opcional, listar
+  versões, exportar PDF). Rotas com `permissionGuard('view_soa')`, links no shell, `getBlob` no
+  `ApiService`. 81 testes frontend passando (todo o admin).
+- **E2E validado** (browser, Postgres real): consolidar→matriz, edição/validação, divergência/
+  reconciliação, gate de incompletude, aprovação assinada e exportação de PDF. Seed de cenário em
+  `scripts/seed_soa_demo.py`; serviços via `.claude/launch.json` (backend :8000 + frontend :4200).
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -386,7 +413,23 @@ specify em `docs/README.md`).
 system + telas-chave**. O design será feito no **Claude Design** (prompt pronto). Brief + inventário
 de telas + nova navegação (sidebar agrupada por módulo) em `docs/feature-ux-revamp.md`.
 
-**Feature 004 — Gap Analysis ISO/IEC 27001:2022** (`004-gap-analysis`) — planejada (specify + clarify + plan concluídos; próximo: `/speckit.tasks`)
+**Feature 005 — Statement of Applicability (SoA)** (`005-soa-declaracao-aplicabilidade`) — implementada e validada (24 testes backend + 81 frontend; migration validada no PG; E2E browser cenários A–F)
+- Plano: `specs/005-soa-declaracao-aplicabilidade/plan.md`
+- Spec: `specs/005-soa-declaracao-aplicabilidade/spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo (Módulo 3, cláusula 6.1.3 d): Declaração de Aplicabilidade dos 93 controles do Anexo A —
+  aplicabilidade + justificativa de inclusão tipada/exclusão + riscos tratados + status de
+  implementação, **consolidando a avaliação corrente do Gap Analysis** num **Documento Controlado**
+  versionado e **exportável em PDF**. Insumo do Plano de Ação (Módulo 4).
+- Decisões-chave (clarify): insumo = avaliação **corrente** do Gap (não baseline); mapeamento de
+  status Gap→SoA (Atende→Implementado · Parcial→Em andamento · Não atende→Não iniciado · N/A→Não
+  aplicável · Não avaliado→vazio); divergência derivada do **valor vivo** do Gap (sem snapshot),
+  reconciliação explícita; aprovação do Admin com **assinatura avançada opcional** (reusa Motor 003).
+- Reuso: `controlled_document_service`+`document_versions` (novo `DocType.soa`), `signature_service`
+  (003), `tenant_scope`+RLS, RBAC (`view_soa`/`manage_soa`/`approve_soa`), auditoria, classificação
+  (Módulo 1). Nova dependência: `reportlab` (PDF server-side, pure-Python). Ver plano.
+
+**Feature 004 — Gap Analysis ISO/IEC 27001:2022** (`004-gap-analysis`) — implementada (38 testes backend + 69 frontend; commit `3939a15`)
 - Plano: `specs/004-gap-analysis/plan.md`
 - Spec: `specs/004-gap-analysis/spec.md` · Research: `.../research.md` ·
   Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
