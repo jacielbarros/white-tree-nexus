@@ -112,6 +112,13 @@ PERMISSIONS: dict[Role, set[str]] = {
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 
+# Dashboard de Conformidade (Feature 006) — home agregada de leitura. Concedida a todos os papéis
+# vinculados à organização, EXCETO Colaborador convidado (default da SEC-002; elevação por tenant
+# para o convidado fica deferida — não há override de permissão por org no MVP).
+for _role, _perms in PERMISSIONS.items():
+    if _role is not Role.guest_collaborator:
+        _perms.add("view_dashboard")
+
 
 def has_permission(role: Role, permission: str) -> bool:
     return permission in PERMISSIONS.get(role, set())

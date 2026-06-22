@@ -23,6 +23,7 @@ from wtnapp.routers import (
     bootstrap,
     context_analysis,
     context_overview,
+    dashboard,
     diagnostic,
     form_assignments,
     form_respond,
@@ -140,3 +141,4 @@ app.include_router(gap_catalog.router)
 app.include_router(gap_assessment.router)
 app.include_router(gap_assignment.router)
 app.include_router(soa.router)
+app.include_router(dashboard.router)

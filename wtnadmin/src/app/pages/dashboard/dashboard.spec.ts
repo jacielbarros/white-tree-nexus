@@ -7,9 +7,75 @@ import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { DashboardPage } from './dashboard';
 
-const mockApi = {
-  get: vi.fn(),
+const DASHBOARD = {
+  organization_id: 't1',
+  organization_name: 'Org',
+  kpis: {
+    overall_adherence: 0.62,
+    controls_evaluated: 30,
+    controls_total: 93,
+    critical_gaps: 5,
+    modules_approved: 1,
+    modules_total: 3,
+  },
+  cards: [
+    {
+      id: 'context',
+      title: 'Contexto · Cláusula 4',
+      status: 'in_force',
+      progress_pct: 100,
+      responsible: null,
+      deadline: null,
+      overdue: false,
+      next_action: { label: 'Ver visão consolidada', route: 'context-overview', fragment: null },
+      not_started: false,
+      placeholder: false,
+    },
+    {
+      id: 'gap',
+      title: 'Gap Analysis · Anexo A',
+      status: 'draft',
+      progress_pct: 32,
+      responsible: 'Ana',
+      deadline: '2026-08-01',
+      overdue: false,
+      next_action: { label: 'Avaliar controles', route: 'gap-analysis', fragment: null },
+      not_started: false,
+      placeholder: false,
+    },
+    {
+      id: 'soa',
+      title: 'Declaração de Aplicabilidade',
+      status: 'not_started',
+      progress_pct: null,
+      responsible: null,
+      deadline: null,
+      overdue: false,
+      next_action: { label: 'Consolidar do Gap', route: 'soa', fragment: null },
+      not_started: true,
+      placeholder: false,
+    },
+    {
+      id: 'action_plan',
+      title: 'Plano de Ação',
+      status: 'not_started',
+      progress_pct: null,
+      responsible: null,
+      deadline: null,
+      overdue: false,
+      next_action: { label: 'Em breve · Módulo 4', route: 'dashboard', fragment: null },
+      not_started: true,
+      placeholder: true,
+    },
+  ],
+  adherence_trend: [
+    { date: '2026-01-01', adherence: 0.45, version: 1 },
+    { date: '2026-04-01', adherence: 0.62, version: 2 },
+  ],
+  generated_at: '2026-06-21T00:00:00Z',
 };
+
+const mockApi = { get: vi.fn(() => of(DASHBOARD)) };
 const mockStore = {
   me: vi.fn(() => ({ email: 'a@b.com', memberships: [{ tenant_id: 't1', org_name: 'Org' }] })),
   activeOrgId: vi.fn(() => 't1'),
@@ -17,16 +83,7 @@ const mockStore = {
 
 describe('DashboardPage', () => {
   beforeEach(async () => {
-    mockApi.get.mockImplementation((path: string) => {
-      if (path.includes('gap-assessment/dashboard'))
-        return of({ overall_adherence: 0.62, completeness: 0.76, status_distribution: { meets: 45, partial: 20, not_meet: 5, not_applicable: 1, not_filled: 22 } });
-      if (path.includes('/soa'))
-        return of({ draft_status: 'draft', current_version_id: null, items: [] });
-      if (path.includes('/context/overview'))
-        return of({ scope: { draft_status: 'approved', current_version_id: 'v1' }, analysis: { draft_status: 'approved' } });
-      return of(null);
-    });
-
+    mockApi.get.mockClear();
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
@@ -42,37 +99,42 @@ describe('DashboardPage', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render gap adherence from API', async () => {
+  it('calls the single /dashboard endpoint', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('62%');
+    expect(mockApi.get).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('should render 3 active module cards', async () => {
+  it('renders overall adherence KPI', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
-    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('62%');
+  });
+
+  it('renders 3 non-placeholder module cards', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
     const cards = fixture.nativeElement.querySelectorAll('.wtn-module-card:not(.wtn-module-card--future)');
     expect(cards.length).toBe(3);
   });
 
-  it('should show org name', async () => {
+  it('renders the placeholder card as future', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Org');
+    const future = fixture.nativeElement.querySelectorAll('.wtn-module-card--future');
+    expect(future.length).toBe(1);
   });
 
-  it('should render critical gap count', async () => {
+  it('shows org name and critical gap count', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Org');
     expect(fixture.nativeElement.textContent).toContain('5');
+  });
+
+  it('renders the adherence sparkline when trend present', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.wtn-sparkline')).toBeTruthy();
   });
 });

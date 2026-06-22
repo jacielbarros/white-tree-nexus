@@ -267,6 +267,30 @@ Aplicabilidade dos 93 controles do Anexo A, **consolidando a avaliação corrent
   reconciliação, gate de incompletude, aprovação assinada e exportação de PDF. Seed de cenário em
   `scripts/seed_soa_demo.py`; serviços via `.claude/launch.json` (backend :8000 + frontend :4200).
 
+#### Dashboard de Conformidade (Feature 006 — implementada)
+Home da organização — capacidade **transversal de leitura/agregação**. Spec/plano em
+`specs/006-compliance-dashboard/`. **Sem novo modelo de domínio, sem migration.**
+- **Backend** (`wtnapp/`): endpoint único `GET /dashboard` (`routers/dashboard.py`) que compõe, via
+  `services/dashboard_service.py`, os módulos existentes — Contexto (Cláusula 4), Gap Analysis e SoA
+  — em KPIs + cards (status normalizado, progresso, responsável/prazo do item de menor prazo futuro,
+  alerta de revisão vencida, atalho de próxima ação). Reusa `gap_metrics_service`,
+  `controlled_document_service.review_overdue` + baselines, modelos de contexto/gap/soa,
+  `document_versions`. DTOs em `schemas/dashboard_schema.py` (`DashboardCardStatus`:
+  `not_started`/`draft`/`in_review`/`in_force`/`needs_review`/`error`). Nova permissão
+  `view_dashboard` (todos os papéis exceto Colaborador convidado). **Gating de card** por permissão
+  de módulo (`view_context`/`view_gap`/`view_soa`); **fail-open por card** (falha em um módulo não
+  derruba os demais); isolamento de tenant fail-closed via `get_org_context`. **Auditoria**: sucesso
+  não loga (home); tentativas não autorizadas já logadas pelas dependencies centrais. KPI de Anexo A
+  conta os **93 controles** (dimensão `annex_a`); `critical_gaps` = gaps com `priority == critical`.
+  Série de aderência (P2) derivada das baselines aprovadas do Gap (≥2). Registrado em `main.py`.
+- **Frontend** (`wtnadmin/`): `pages/dashboard/` é a home (`/app` → `dashboard`); **uma** chamada a
+  `GET /dashboard` (substitui o `forkJoin` de 3 endpoints), KPIs + cards + sparkline de evolução;
+  `view_dashboard` espelhado em `core/permissions.ts`. Parte da Revisão de UX (design do Claude
+  Design em `docs/design/`).
+- **Testes**: `wtnapp/test/test_dashboard.py` (agregação/KPIs/estados/RBAC/gating/fail-open/overdue/
+  série) + `test_tenant_isolation_dashboard.py` (11 no total) e `dashboard.spec.ts` (frontend, 88 no
+  admin). **Pendente**: E2E manual no browser (login + Postgres real).
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -406,6 +430,29 @@ specify em `docs/README.md`).
 
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
+
+**Feature 006 — Dashboard de Conformidade** (`006-compliance-dashboard`) — **implementada**
+(11 testes backend dedicados + suíte completa verde; 88 testes frontend; E2E browser pendente —
+roda no fluxo Postgres do usuário). Endpoint `GET /dashboard`, sem migration.
+- Plano: `specs/006-compliance-dashboard/plan.md`
+- Spec: `specs/006-compliance-dashboard/spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: home da organização — **camada de leitura/agregação** sobre Contexto (002), Gap (004) e
+  SoA (005), com cards (status, progresso, responsável, prazo, alerta de revisão vencida, atalho de
+  próxima ação). **Sem novo modelo de domínio, sem migration.** Tela-âncora da Revisão de UX (design
+  já implementado em `wtnadmin/` a partir do handoff do Claude Design em `docs/design/`).
+- Decisões-chave (clarify 2026-06-21): (1) agregação via **endpoint único `GET /dashboard`** no
+  backend (não composição no frontend) — habilita `view_dashboard` server-side + teste único de
+  isolamento; (2) atalho de próxima ação navega para a **rota do módulo + seção em foco** (sem
+  reescrever rotas internas); (3) audit log **apenas** de tentativas não autorizadas (leituras da
+  home não são logadas). Nova peça de RBAC: permissão `view_dashboard` (todos os papéis exceto
+  Colaborador convidado; elevação por tenant deferida — não há override de permissão por org).
+- Reuso: `gap_metrics_service`, `soa`/consolidação, `context/overview`, `document_versions`
+  (`review_overdue` + baselines p/ série P2), `form_assignments`, `tenant_scope`+RLS, RBAC,
+  auditoria central. Novos arquivos: `routers/dashboard.py`, `services/dashboard_service.py`,
+  `schemas/dashboard_schema.py` (+ registro em `main.py`). **Nota**: a home atual (composição no
+  frontend) tinha 2 bugs latentes que o endpoint corrige — path `/gap-assessment/` (real é
+  `/gap/assessment/`) e rótulos de status `under_review`/`approved` (backend usa `in_review`/`in_force`).
 
 **Backlog do MVP (transversal) — Revisão de UX / Design System** — planejado. A UI atual está crua
 (PrimeNG Material sem customização; topbar plana com 12+ links; sem tokens/identidade). Direção

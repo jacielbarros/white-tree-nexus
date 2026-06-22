@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Dashboard de Conformidade (Feature 006)
+  version: 1.0.0
+  description: >
+    Endpoint de leitura que agrega o estado de conformidade ISO/IEC 27001:2022 da organização
+    ativa. Read-only, tenant-scoped. Sem novo modelo de domínio. Decisões de clarificação:
+    agregação no backend; atalho de próxima ação = rota do módulo + seção; audit log apenas de
+    tentativas não autorizadas (não loga leituras bem-sucedidas).
+
+servers:
+  - url: /
+
+paths:
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Visão consolidada de conformidade da organização ativa
+      description: >
+        Agrega Contexto (Cláusula 4), Gap Analysis e SoA (e placeholders de módulos futuros) em
+        KPIs + cards. Requer permissão `view_dashboard`. Cards de módulo só aparecem se o papel
+        tiver a permissão de visão correspondente. Contexto de organização via header
+        `X-Org-Context` (igual aos demais módulos).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+      responses:
+        '200':
+          description: Dashboard agregado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          description: Não autenticado (token ausente/inválido/revogado).
+        '403':
+          description: >
+            Sem permissão `view_dashboard`, ou organização suspensa. Tentativa é auditada
+            (`PERMISSION_DENIED`) pelas dependencies centrais.
+        '404':
+          description: >
+            Contexto de organização inexistente para o usuário (cross-tenant). 404 genérico — não
+            revela existência; auditado como `CROSS_TENANT_DENIED`.
+        '400':
+          description: Header `X-Org-Context` obrigatório/ inválido (usuário multi-org ou Super Admin).
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: false
+      description: >
+        UUID da organização-alvo. Obrigatório para Super Admin e usuários multi-org; opcional para
+        usuário de organização única.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DashboardResponse:
+      type: object
+      required: [organization_id, organization_name, kpis, cards, generated_at]
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        kpis:
+          $ref: '#/components/schemas/DashboardKpis'
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleCard'
+        adherence_trend:
+          description: P2 — série de aderência por baseline; null se < 2 baselines aprovadas.
+          type: [array, "null"]
+          items:
+            $ref: '#/components/schemas/AdherencePoint'
+        generated_at:
+          type: string
+          format: date-time
+
+    DashboardKpis:
+      type: object
+      required: [controls_evaluated, controls_total, critical_gaps, modules_approved, modules_total]
+      properties:
+        overall_adherence:
+          description: Aderência ponderada do Gap (0–1). Null se sem itens aplicáveis.
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+        controls_evaluated:
+          type: integer
+        controls_total:
+          description: Nº de itens do assessment; se não houver assessment, 93 (Anexo A).
+          type: integer
+        critical_gaps:
+          description: >
+            Nº de gaps aplicáveis (partial/not_meet) com priority == critical. NÃO é a contagem
+            de not_meet.
+          type: integer
+        modules_approved:
+          type: integer
+        modules_total:
+          type: integer
+
+    ModuleCard:
+      type: object
+      required: [id, title, status, overdue, next_action, not_started, placeholder]
+      properties:
+        id:
+          $ref: '#/components/schemas/DashboardModuleId'
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/DashboardCardStatus'
+        progress_pct:
+          description: 0–100; null quando não aplicável.
+          type: [number, "null"]
+          minimum: 0
+          maximum: 100
+        responsible:
+          description: Responsável do item de menor prazo futuro; null se ausente.
+          type: [string, "null"]
+        deadline:
+          description: Menor deadline futuro entre os itens/atribuições do módulo (date); null se ausente.
+          type: [string, "null"]
+          format: date
+        overdue:
+          type: boolean
+        next_action:
+          $ref: '#/components/schemas/NextAction'
+        not_started:
+          type: boolean
+        placeholder:
+          description: true para módulos futuros (Plano de Ação / Evidências).
+          type: boolean
+
+    NextAction:
+      type: object
+      required: [label, route]
+      properties:
+        label:
+          type: string
+        route:
+          description: Rota de entrada do módulo (sem barra inicial), ex. "soa", "gap-analysis".
+          type: string
+        fragment:
+          description: Âncora/seção dentro do módulo; null quando a rota não oferece deep-link.
+          type: [string, "null"]
+
+    AdherencePoint:
+      type: object
+      required: [date, adherence, version]
+      properties:
+        date:
+          type: string
+          format: date
+        adherence:
+          type: number
+          minimum: 0
+          maximum: 1
+        version:
+          type: integer
+
+    DashboardModuleId:
+      type: string
+      enum: [context, gap, soa, action_plan, evidence]
+
+    DashboardCardStatus:
+      type: string
+      enum: [not_started, draft, in_review, in_force, needs_review, error]
