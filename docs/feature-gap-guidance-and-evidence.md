@@ -58,6 +58,25 @@ próprias em PT-BR (inspiradas na aba Introdução).
   seção "Orientação de avaliação" acima dos campos. **Deixar o painel preparado** para receber, em
   seguida, a seção de **Evidências** (Feature B).
 
+### Edição administrativa da orientação (nível de plataforma)
+A orientação é **conteúdo canônico da plataforma**, mas **editável** por um papel de permissão
+elevada — não fica "congelada" no código.
+- **Quem:** o **Super Admin da plataforma** (único papel cross-tenant; suas ações já são
+  especialmente auditadas). Operação de **plataforma**, sem `X-Org-Context` → usa `require_super_admin`
+  (não `require_permission`, que é escopado por org). Uma permissão dedicada de "editor de conteúdo"
+  pode ser criada depois, se quiser separar do Super Admin.
+- **O quê:** os campos de orientação dos `gap_seed_item` (`referencia`, `objetivo`, `como_avaliar`,
+  `evidencias_esperadas`, `nota`) e, opcionalmente, os textos da legenda global de status/prioridade.
+- **Como (recomendado):** edição **in-place** dos campos de orientação no seed + **trilha
+  append-only** das alterações (quem/quando/antes→depois) + **audit log**. Evita re-versionar o seed
+  inteiro a cada ajuste de texto. (Alternativa: gerar nova versão de seed por edição — mais pesado,
+  reservado para mudanças estruturais do catálogo, não para tweaks de texto.)
+- **Propagação:** como a orientação mora no seed e é exibida por vínculo (catálogo da org → seed),
+  a edição **reflete imediatamente em todas as organizações**. É o efeito desejado de conteúdo de
+  sistema. Para a org continua **somente leitura**.
+- **Escopo:** edição é **só de plataforma**. **Override por organização fica deferido** (futuro: um
+  admin da org sobrescrever a orientação só para a sua org — exigiria cópia/override por tenant).
+
 ### Sinergias
 - `evidencias_esperadas` (esperado) ↔ **evidências anexadas** (Feature B): permite, no futuro,
   mostrar "X de Y evidências esperadas anexadas".
@@ -75,22 +94,28 @@ próprias em PT-BR (inspiradas na aba Introdução).
 > Média / Baixa) com definições objetivas — uma única vez, não por item. Campo opcional **nota** por
 > item para observações (ex.: referência cruzada a outra norma).
 >
-> **Requisitos observáveis:** a orientação aparece ao selecionar o item na matriz (somente leitura),
-> sem alterar o fluxo de avaliação; cobre todos os 93 controles e as 7 cláusulas; é conteúdo padrão
-> da plataforma (não editável por organização neste escopo); o painel da matriz deve ser desenhado
-> para acomodar, em feature seguinte, uma seção de evidências por item.
+> **Requisitos observáveis:** para a organização, a orientação aparece ao selecionar o item na
+> matriz (**somente leitura**), sem alterar o fluxo de avaliação; cobre todos os 93 controles e as 7
+> cláusulas; o painel da matriz deve ser desenhado para acomodar, em feature seguinte, uma seção de
+> evidências por item. A orientação é **conteúdo de plataforma editável por um administrador da
+> plataforma** (papel de permissão elevada / Super Admin): há uma área administrativa para **editar**
+> os textos de orientação (e a legenda global), cada edição gera **audit log** e fica numa **trilha
+> append-only** (quem/quando/antes→depois); a alteração **reflete em todas as organizações**
+> (conteúdo canônico). Organização **não** edita a orientação neste escopo.
 >
 > **Restrição legal (obrigatória):** todos os textos são **originais em português** — proibido
 > reproduzir o texto normativo da ISO/IEC 27001 ou a guidance da ISO/IEC 27002 (direito autoral);
 > permitido apenas códigos e títulos curtos dos controles.
 >
-> **Fora de escopo:** edição da orientação por organização; geração automática de questionário;
-> sugestão automática de status; anexação de evidências (é a feature seguinte) — apenas distinguir
-> "evidência existente" (input da org, já existe) de "evidências esperadas" (orientação).
+> **Fora de escopo:** override/edição da orientação **por organização** (só plataforma neste escopo);
+> geração automática de questionário; sugestão automática de status; anexação de evidências (é a
+> feature seguinte) — apenas distinguir "evidência existente" (input da org, já existe) de
+> "evidências esperadas" (orientação).
 >
 > **NÃO especificar stack.** No /plan: orientação no catálogo compartilhado (`gap_seed_item`),
-> exibida via vínculo do catálogo da org ao seed; prever migration de colunas + seed aditivo/
-> idempotente.
+> exibida via vínculo do catálogo da org ao seed (leitura) e editável por administrador da plataforma
+> (`require_super_admin`, sem contexto de org) com trilha append-only + audit; prever migration de
+> colunas (orientação + trilha) + seed aditivo/idempotente.
 
 ---
 
