@@ -9,27 +9,53 @@ Adoção é **aditiva e idempotente**:
 import uuid
 from sqlalchemy.orm import Session
 
-from wtnapp.data.iso27001_seed import SEED_DESCRIPTION, SEED_VERSION, build_seed_items
+from wtnapp.data.iso27001_seed import LEGEND_DEFS, SEED_DESCRIPTION, SEED_VERSION, build_seed_items
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
 from wtnapp.models.gap_catalog_model import GapCatalogItem
+from wtnapp.models.gap_legend_model import GapLegendEntry
 from wtnapp.models.gap_seed_model import GapSeedItem, GapSeedVersion
 from wtnapp.settings import GapStatus
 
 
 def load_seed(db: Session) -> GapSeedVersion:
-    """Carrega o seed 2022.1 no banco (idempotente — não duplica se já existe)."""
+    """Carrega o seed 2022.1 no banco (idempotente).
+
+    Itens novos entram completos. Para itens existentes, a **orientação** (Feature 007) é preenchida
+    **somente quando vazia** — nunca sobrescreve edições feitas pelo Super Admin. A legenda global é
+    semeada idempotentemente por (kind, code).
+    """
     version = db.query(GapSeedVersion).filter_by(version=SEED_VERSION).first()
     if version is None:
         version = GapSeedVersion(version=SEED_VERSION, description=SEED_DESCRIPTION)
         db.add(version)
         db.flush()
 
-    existing_refs = {
-        r for (r,) in db.query(GapSeedItem.ref_code).filter_by(seed_version_id=version.id).all()
-    }
+    existing = db.query(GapSeedItem).filter_by(seed_version_id=version.id).all()
+    existing_by_ref = {s.ref_code: s for s in existing}
+
     for item_dict in build_seed_items():
-        if item_dict["ref_code"] not in existing_refs:
+        ref = item_dict["ref_code"]
+        current = existing_by_ref.get(ref)
+        if current is None:
             db.add(GapSeedItem(seed_version_id=version.id, **item_dict))
+            continue
+        # Preenche orientação SÓ quando vazia (preserva edição do admin).
+        if not (current.referencia or "").strip():
+            current.referencia = item_dict["referencia"]
+        if not current.como_avaliar:
+            current.como_avaliar = item_dict["como_avaliar"]
+        if not current.evidencias_esperadas:
+            current.evidencias_esperadas = item_dict["evidencias_esperadas"]
+        if not (current.nota or "").strip() and item_dict.get("nota"):
+            current.nota = item_dict["nota"]
+        if not (current.objective or "").strip():
+            current.objective = item_dict["objective"]
+
+    # Legenda global (idempotente por kind+code).
+    existing_legend = {(e.kind, e.code) for e in db.query(GapLegendEntry).all()}
+    for entry in LEGEND_DEFS:
+        if (entry["kind"], entry["code"]) not in existing_legend:
+            db.add(GapLegendEntry(**entry))
 
     db.flush()
     return version

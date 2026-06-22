@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, permissionGuard } from '@app/core/guards';
+import { authGuard, permissionGuard, superAdminGuard } from '@app/core/guards';
 
 
 export const routes: Routes = [
@@ -105,6 +105,12 @@ export const routes: Routes = [
         canActivate: [permissionGuard('view_gap')],
         loadComponent: () =>
           import('@app/pages/gap-baselines/gap-baselines').then((m) => m.GapBaselinesPage),
+      },
+      {
+        path: 'gap-guidance-admin',
+        canActivate: [superAdminGuard],
+        loadComponent: () =>
+          import('@app/pages/gap-guidance-admin/gap-guidance-admin').then((m) => m.GapGuidanceAdminPage),
       },
       {
         path: 'soa',

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum as SAEnum, Index, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import DateTime, Enum as SAEnum, Index, Integer, JSON, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from wtnapp.models.base import Base
@@ -45,4 +45,9 @@ class GapSeedItem(Base):
         SAEnum(GapTheme, native_enum=False, length=20), nullable=True
     )
     objective: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Orientação de avaliação (Feature 007) — conteúdo de plataforma, PT-BR original.
+    referencia: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    como_avaliar: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    evidencias_esperadas: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    nota: Mapped[str | None] = mapped_column(Text, nullable=True)
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

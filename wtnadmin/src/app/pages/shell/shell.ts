@@ -211,6 +211,16 @@ interface OrgOption { label: string; value: string; }
                 </svg>
                 @if (!collapsed()) { <span>Baselines</span> }
               </a>
+              @if (store.isSuperAdmin()) {
+                <a class="wtn-nav-item" routerLink="gap-guidance-admin" routerLinkActive="active" [title]="collapsed() ? 'Orientação (admin)' : ''">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.5-6.5-1.5 1.5M6 18l1.5-1.5m11 1.5L17 16.5M6 6l1.5 1.5"
+                          stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+                  </svg>
+                  @if (!collapsed()) { <span>Orientação (admin)</span> }
+                </a>
+              }
             </div>
 
             <!-- SoA -->

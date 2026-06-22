@@ -22,3 +22,13 @@ export function permissionGuard(permission: string): CanActivateFn {
     return hasPermission(store.currentRole(), permission) ? true : router.createUrlTree(['/app']);
   };
 }
+
+/** Exige Super Admin da plataforma (conteúdo de plataforma, ex.: orientação do Gap). */
+export const superAdminGuard: CanActivateFn = () => {
+  const store = inject(AuthStore);
+  const router = inject(Router);
+  if (!store.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+  return store.isSuperAdmin() ? true : router.createUrlTree(['/app']);
+};

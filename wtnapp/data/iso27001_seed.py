@@ -216,56 +216,759 @@ A8_CONTROLS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Orientação de avaliação por item (Feature 007) — PT-BR ORIGINAL.
+# IMPORTANTE: textos próprios; NÃO reproduzir o texto normativo da ISO/IEC 27001/27002.
+# `referencia` é derivada do código; aqui ficam apenas `como_avaliar` e `evidencias_esperadas`
+# (+ `nota` opcional). Itens sem entrada herdam listas vazias (orientação a curar depois).
+# ---------------------------------------------------------------------------
+
+GUIDANCE: dict[str, dict] = {
+    # ---- Cláusulas 4–10 ----
+    "4": {
+        "como_avaliar": [
+            "Há um documento que descreve o contexto interno e externo da organização?",
+            "As questões relevantes para o SGSI são revisadas periodicamente?",
+            "As partes interessadas e seus requisitos estão mapeados e o escopo do SGSI definido?",
+        ],
+        "evidencias_esperadas": [
+            "Documento de análise de contexto (fatores internos/externos)",
+            "Mapa de partes interessadas e requisitos",
+            "Declaração de escopo do SGSI aprovada",
+        ],
+    },
+    "5": {
+        "como_avaliar": [
+            "A alta direção demonstra comprometimento formal com o SGSI?",
+            "Existe política de segurança da informação aprovada e comunicada?",
+            "Papéis, responsabilidades e autoridades de SI estão definidos e atribuídos?",
+        ],
+        "evidencias_esperadas": [
+            "Política de segurança da informação aprovada",
+            "Ata/registro de comprometimento da direção",
+            "Matriz de papéis e responsabilidades (ex.: RACI)",
+        ],
+    },
+    "6": {
+        "como_avaliar": [
+            "Há metodologia documentada de avaliação e tratamento de riscos?",
+            "Os objetivos de segurança da informação são mensuráveis e têm responsáveis/prazos?",
+            "Mudanças no SGSI são planejadas de forma controlada?",
+        ],
+        "evidencias_esperadas": [
+            "Metodologia de gestão de riscos e critérios de aceitação",
+            "Plano de tratamento de riscos",
+            "Objetivos de SI com métricas, metas e prazos",
+        ],
+    },
+    "7": {
+        "como_avaliar": [
+            "Os recursos necessários ao SGSI estão providos?",
+            "Há programa de competência, conscientização e treinamento?",
+            "A informação documentada é controlada (versão, aprovação, distribuição)?",
+        ],
+        "evidencias_esperadas": [
+            "Plano/registros de treinamento e conscientização",
+            "Matriz de competências",
+            "Procedimento de controle de documentos e registros",
+        ],
+    },
+    "8": {
+        "como_avaliar": [
+            "Os processos operacionais do SGSI são planejados e controlados?",
+            "A avaliação de riscos é executada e mantida atualizada?",
+            "O tratamento de riscos é implementado conforme o plano?",
+        ],
+        "evidencias_esperadas": [
+            "Resultado da avaliação de riscos",
+            "Registros de execução do plano de tratamento",
+            "Procedimentos operacionais documentados",
+        ],
+    },
+    "9": {
+        "como_avaliar": [
+            "Há indicadores e medição do desempenho do SGSI?",
+            "Auditorias internas são planejadas e executadas com independência?",
+            "A direção realiza análise crítica do SGSI em intervalos planejados?",
+        ],
+        "evidencias_esperadas": [
+            "Programa e relatórios de auditoria interna",
+            "Atas de análise crítica pela direção",
+            "Painel de indicadores/métricas de SI",
+        ],
+    },
+    "10": {
+        "como_avaliar": [
+            "Não conformidades são registradas e tratadas com ações corretivas?",
+            "A eficácia das ações corretivas é verificada?",
+            "Há evidência de melhoria contínua do SGSI?",
+        ],
+        "evidencias_esperadas": [
+            "Registro de não conformidades e ações corretivas",
+            "Verificação de eficácia das ações",
+            "Histórico de melhorias do SGSI",
+        ],
+    },
+    # ---- A.5 Organizacional ----
+    "A.5.1": {
+        "como_avaliar": [
+            "Existe política de SI e políticas específicas por tema, aprovadas pela direção?",
+            "As políticas são comunicadas e há registro de ciência dos colaboradores?",
+            "Há revisão em intervalos planejados ou após mudanças significativas?",
+        ],
+        "evidencias_esperadas": [
+            "Política de SI e políticas temáticas aprovadas",
+            "Registros de comunicação/ciência",
+            "Histórico de revisão das políticas",
+        ],
+    },
+    "A.5.2": {
+        "como_avaliar": [
+            "Papéis e responsabilidades de SI estão definidos e documentados?",
+            "Há designação formal (ex.: coordenador/responsável pelo SGSI)?",
+        ],
+        "evidencias_esperadas": [
+            "Documento de papéis e responsabilidades",
+            "Designações formais / descrições de cargo com responsabilidades de SI",
+        ],
+    },
+    "A.5.3": {
+        "como_avaliar": [
+            "Funções conflitantes foram identificadas e segregadas?",
+            "Quando a segregação não é viável, há controles compensatórios?",
+        ],
+        "evidencias_esperadas": [
+            "Matriz de segregação de funções",
+            "Registros de controles compensatórios aprovados",
+        ],
+    },
+    "A.5.4": {
+        "como_avaliar": [
+            "A direção exige e acompanha o cumprimento das responsabilidades de SI?",
+        ],
+        "evidencias_esperadas": [
+            "Comunicações/atas em que a direção cobra adesão à SI",
+        ],
+    },
+    "A.5.5": {
+        "como_avaliar": [
+            "Há contatos formais com autoridades relevantes (ex.: ANPD, CERT)?",
+        ],
+        "evidencias_esperadas": [
+            "Lista de contatos com autoridades e procedimento de acionamento",
+        ],
+    },
+    "A.5.6": {
+        "como_avaliar": [
+            "A organização participa de grupos/fóruns especializados de SI?",
+        ],
+        "evidencias_esperadas": [
+            "Registros de participação em grupos de interesse/fóruns",
+        ],
+    },
+    "A.5.7": {
+        "como_avaliar": [
+            "Há coleta e análise de informações sobre ameaças (threat intelligence)?",
+            "A inteligência de ameaças alimenta decisões de segurança?",
+        ],
+        "evidencias_esperadas": [
+            "Fontes/feeds de inteligência de ameaças",
+            "Relatórios e ações derivadas da análise de ameaças",
+        ],
+    },
+    "A.5.8": {
+        "como_avaliar": [
+            "Requisitos de SI são incorporados na gestão de projetos?",
+        ],
+        "evidencias_esperadas": [
+            "Checklist/critérios de SI no fluxo de projetos",
+        ],
+    },
+    "A.5.9": {
+        "como_avaliar": [
+            "Existe inventário de informações e ativos associados, com proprietários?",
+            "O inventário é mantido atualizado?",
+        ],
+        "evidencias_esperadas": [
+            "Inventário de ativos com proprietário e classificação",
+            "Registro de atualização/revisão do inventário",
+        ],
+    },
+    "A.5.10": {
+        "como_avaliar": [
+            "Há regras de uso aceitável de informações e ativos, comunicadas aos usuários?",
+        ],
+        "evidencias_esperadas": [
+            "Política de uso aceitável e registro de ciência",
+        ],
+    },
+    "A.5.11": {
+        "como_avaliar": [
+            "Há processo de devolução de ativos no desligamento/fim de contrato?",
+        ],
+        "evidencias_esperadas": [
+            "Termo/checklist de devolução de ativos",
+        ],
+    },
+    "A.5.12": {
+        "como_avaliar": [
+            "Existe esquema de classificação da informação (C/I/D)?",
+            "As informações são classificadas conforme o esquema?",
+        ],
+        "evidencias_esperadas": [
+            "Esquema de classificação documentado",
+            "Exemplos de informações classificadas",
+        ],
+    },
+    "A.5.13": {
+        "como_avaliar": [
+            "Há procedimento de rotulagem conforme a classificação?",
+        ],
+        "evidencias_esperadas": [
+            "Procedimento de rotulagem e exemplos de rótulos aplicados",
+        ],
+    },
+    "A.5.14": {
+        "como_avaliar": [
+            "Transferências de informação seguem regras/acordos (interno e externo)?",
+            "Há proteção adequada durante a transferência?",
+        ],
+        "evidencias_esperadas": [
+            "Política/acordos de transferência de informação",
+            "Configurações de canais seguros (ex.: e-mail seguro, SFTP)",
+        ],
+    },
+    "A.5.15": {
+        "como_avaliar": [
+            "Existe política de controle de acesso (físico e lógico)?",
+            "As regras de acesso seguem o princípio do menor privilégio?",
+        ],
+        "evidencias_esperadas": [
+            "Política de controle de acesso",
+            "Matriz de perfis/permissões",
+        ],
+    },
+    "A.5.16": {
+        "como_avaliar": [
+            "O ciclo de vida das identidades é gerenciado (criação→remoção)?",
+        ],
+        "evidencias_esperadas": [
+            "Procedimento de gestão de identidades e registros de provisionamento",
+        ],
+    },
+    "A.5.17": {
+        "como_avaliar": [
+            "Informações de autenticação (senhas/segredos) são alocadas e geridas com segurança?",
+        ],
+        "evidencias_esperadas": [
+            "Política de senhas/segredos e uso de cofre de segredos",
+        ],
+    },
+    "A.5.18": {
+        "como_avaliar": [
+            "Direitos de acesso são provisionados, revisados e revogados periodicamente?",
+        ],
+        "evidencias_esperadas": [
+            "Registros de concessão/revogação e revisões periódicas de acesso",
+        ],
+    },
+    "A.5.19": {
+        "como_avaliar": [
+            "Riscos de SI no uso de fornecedores são identificados e tratados?",
+        ],
+        "evidencias_esperadas": [
+            "Processo de gestão de risco de fornecedores e avaliações realizadas",
+        ],
+    },
+    "A.5.20": {
+        "como_avaliar": [
+            "Os contratos com fornecedores incluem requisitos de SI?",
+        ],
+        "evidencias_esperadas": [
+            "Cláusulas de SI em contratos/acordos com fornecedores",
+        ],
+    },
+    "A.5.21": {
+        "como_avaliar": [
+            "Riscos de SI na cadeia de suprimentos de TIC são gerenciados?",
+        ],
+        "evidencias_esperadas": [
+            "Requisitos de SI para produtos/serviços de TIC e seu acompanhamento",
+        ],
+    },
+    "A.5.22": {
+        "como_avaliar": [
+            "O desempenho e as mudanças de fornecedores são monitorados regularmente?",
+        ],
+        "evidencias_esperadas": [
+            "Relatórios de monitoramento/SLA e atas de revisão de fornecedores",
+        ],
+    },
+    "A.5.23": {
+        "como_avaliar": [
+            "Há processo para aquisição, uso e saída de serviços em nuvem com requisitos de SI?",
+        ],
+        "evidencias_esperadas": [
+            "Política de uso de nuvem e avaliações de provedores (ex.: AWS)",
+        ],
+    },
+    "A.5.24": {
+        "como_avaliar": [
+            "Existe plano de gestão de incidentes com papéis e responsabilidades?",
+        ],
+        "evidencias_esperadas": [
+            "Plano/procedimento de gestão de incidentes",
+        ],
+    },
+    "A.5.25": {
+        "como_avaliar": [
+            "Eventos de SI são avaliados e classificados como incidente quando aplicável?",
+        ],
+        "evidencias_esperadas": [
+            "Critérios de classificação e registros de triagem de eventos",
+        ],
+    },
+    "A.5.26": {
+        "como_avaliar": [
+            "A resposta a incidentes segue procedimentos definidos?",
+        ],
+        "evidencias_esperadas": [
+            "Registros de tratamento de incidentes",
+        ],
+    },
+    "A.5.27": {
+        "como_avaliar": [
+            "Lições aprendidas de incidentes alimentam melhorias nos controles?",
+        ],
+        "evidencias_esperadas": [
+            "Relatórios pós-incidente e ações de melhoria",
+        ],
+    },
+    "A.5.28": {
+        "como_avaliar": [
+            "Há procedimentos para coleta e preservação de evidências?",
+        ],
+        "evidencias_esperadas": [
+            "Procedimento de cadeia de custódia/coleta de evidências",
+        ],
+    },
+    "A.5.29": {
+        "como_avaliar": [
+            "A SI é mantida durante disrupções (planos de contingência)?",
+        ],
+        "evidencias_esperadas": [
+            "Plano de continuidade considerando a SI",
+        ],
+    },
+    "A.5.30": {
+        "como_avaliar": [
+            "A prontidão de TIC para continuidade é planejada e testada?",
+        ],
+        "evidencias_esperadas": [
+            "Plano de continuidade de TIC e registros de testes",
+        ],
+    },
+    "A.5.31": {
+        "como_avaliar": [
+            "Requisitos legais, regulatórios e contratuais de SI estão identificados e atualizados?",
+        ],
+        "evidencias_esperadas": [
+            "Inventário de requisitos legais/contratuais (ex.: LGPD, contratos)",
+        ],
+    },
+    "A.5.32": {
+        "como_avaliar": [
+            "Há controles para proteger direitos de propriedade intelectual e licenças?",
+        ],
+        "evidencias_esperadas": [
+            "Inventário de licenças e procedimento de conformidade de software",
+        ],
+    },
+    "A.5.33": {
+        "como_avaliar": [
+            "Registros são protegidos contra perda, falsificação e acesso não autorizado?",
+        ],
+        "evidencias_esperadas": [
+            "Política de retenção/proteção de registros",
+        ],
+    },
+    "A.5.34": {
+        "como_avaliar": [
+            "Requisitos de privacidade e proteção de PII são atendidos (ex.: LGPD)?",
+        ],
+        "evidencias_esperadas": [
+            "Registro de operações de tratamento (ROPA) e medidas de proteção de PII",
+        ],
+    },
+    "A.5.35": {
+        "como_avaliar": [
+            "Há revisão independente da segurança da informação em intervalos planejados?",
+        ],
+        "evidencias_esperadas": [
+            "Relatórios de revisão independente/auditoria externa",
+        ],
+    },
+    "A.5.36": {
+        "como_avaliar": [
+            "A conformidade com políticas e normas de SI é verificada regularmente?",
+        ],
+        "evidencias_esperadas": [
+            "Relatórios de verificação de conformidade interna",
+        ],
+    },
+    "A.5.37": {
+        "como_avaliar": [
+            "Procedimentos operacionais estão documentados e disponíveis a quem precisa?",
+        ],
+        "evidencias_esperadas": [
+            "Procedimentos operacionais documentados e acessíveis",
+        ],
+    },
+    # ---- A.6 Pessoas ----
+    "A.6.1": {
+        "como_avaliar": [
+            "Há verificação de antecedentes na contratação, conforme a legislação?",
+        ],
+        "evidencias_esperadas": [
+            "Procedimento e registros de triagem de candidatos",
+        ],
+    },
+    "A.6.2": {
+        "como_avaliar": [
+            "Os contratos declaram as responsabilidades de SI do colaborador e da organização?",
+        ],
+        "evidencias_esperadas": [
+            "Cláusulas de SI em contratos de trabalho/prestação de serviço",
+        ],
+    },
+    "A.6.3": {
+        "como_avaliar": [
+            "Há programa contínuo de conscientização e treinamento em SI?",
+            "A eficácia do treinamento é medida?",
+        ],
+        "evidencias_esperadas": [
+            "Plano e registros de treinamento/conscientização",
+            "Resultados de avaliações ou campanhas (ex.: phishing simulado)",
+        ],
+    },
+    "A.6.4": {
+        "como_avaliar": [
+            "Existe processo disciplinar formal para violações de SI, comunicado aos colaboradores?",
+        ],
+        "evidencias_esperadas": [
+            "Processo disciplinar documentado e comunicado",
+        ],
+    },
+    "A.6.5": {
+        "como_avaliar": [
+            "Responsabilidades de SI que permanecem após o desligamento são definidas e comunicadas?",
+        ],
+        "evidencias_esperadas": [
+            "Termo de desligamento com obrigações de SI remanescentes",
+        ],
+    },
+    "A.6.6": {
+        "como_avaliar": [
+            "Há acordos de confidencialidade/NDA assinados e revisados periodicamente?",
+        ],
+        "evidencias_esperadas": [
+            "Modelos e registros de NDAs assinados",
+        ],
+    },
+    "A.6.7": {
+        "como_avaliar": [
+            "O trabalho remoto tem medidas de segurança definidas e aplicadas?",
+        ],
+        "evidencias_esperadas": [
+            "Política de trabalho remoto e controles técnicos (VPN, MDM)",
+        ],
+    },
+    "A.6.8": {
+        "como_avaliar": [
+            "Há canal para relato de eventos de SI, conhecido pelos colaboradores?",
+        ],
+        "evidencias_esperadas": [
+            "Canal de reporte e registros de eventos relatados",
+        ],
+    },
+    # ---- A.7 Físico ----
+    "A.7.1": {
+        "como_avaliar": ["Há perímetros de segurança física definidos para áreas sensíveis?"],
+        "evidencias_esperadas": ["Planta de perímetros e controles de fronteira"],
+    },
+    "A.7.2": {
+        "como_avaliar": ["O acesso físico a áreas seguras é controlado e registrado?"],
+        "evidencias_esperadas": ["Logs de entrada/crachá e procedimento de acesso físico"],
+    },
+    "A.7.3": {
+        "como_avaliar": ["Escritórios, salas e instalações têm segurança física projetada?"],
+        "evidencias_esperadas": ["Layout e medidas de segurança das instalações"],
+    },
+    "A.7.4": {
+        "como_avaliar": ["Há monitoramento físico contínuo (ex.: CFTV, alarmes)?"],
+        "evidencias_esperadas": ["Registros de monitoramento e câmeras"],
+    },
+    "A.7.5": {
+        "como_avaliar": ["Existe proteção contra ameaças físicas e ambientais?"],
+        "evidencias_esperadas": ["Medidas anti-incêndio/inundação; avaliação de riscos físicos"],
+    },
+    "A.7.6": {
+        "como_avaliar": ["Há regras para trabalho em áreas seguras?"],
+        "evidencias_esperadas": ["Procedimento de trabalho em áreas seguras"],
+    },
+    "A.7.7": {
+        "como_avaliar": ["Política de mesa limpa e tela limpa está definida e aplicada?"],
+        "evidencias_esperadas": ["Política de mesa/tela limpa e evidências de adesão"],
+    },
+    "A.7.8": {
+        "como_avaliar": ["Equipamentos são posicionados e protegidos contra ameaças?"],
+        "evidencias_esperadas": ["Padrões de instalação/proteção de equipamentos"],
+    },
+    "A.7.9": {
+        "como_avaliar": ["Ativos fora das instalações têm proteção adequada?"],
+        "evidencias_esperadas": ["Política de uso de ativos externos e controles aplicados"],
+    },
+    "A.7.10": {
+        "como_avaliar": ["Mídias de armazenamento são geridas em todo o ciclo de vida?"],
+        "evidencias_esperadas": ["Procedimento de manuseio/descarte de mídias"],
+    },
+    "A.7.11": {
+        "como_avaliar": ["Há proteção das utilidades de suporte (energia, refrigeração)?"],
+        "evidencias_esperadas": ["No-breaks/geradores e registros de manutenção"],
+    },
+    "A.7.12": {
+        "como_avaliar": ["O cabeamento de energia e dados é protegido?"],
+        "evidencias_esperadas": ["Projeto/proteção de cabeamento estruturado"],
+    },
+    "A.7.13": {
+        "como_avaliar": ["Equipamentos recebem manutenção adequada?"],
+        "evidencias_esperadas": ["Plano e registros de manutenção"],
+    },
+    "A.7.14": {
+        "como_avaliar": ["Há descarte/reutilização segura com remoção de dados?"],
+        "evidencias_esperadas": ["Procedimento de sanitização e certificados de descarte"],
+    },
+    # ---- A.8 Tecnológico ----
+    "A.8.1": {
+        "como_avaliar": ["Dispositivos de endpoint têm proteção (cifragem, antimalware, MDM)?"],
+        "evidencias_esperadas": ["Configuração de endpoints e política de dispositivos"],
+    },
+    "A.8.2": {
+        "como_avaliar": ["Acessos privilegiados são restritos, controlados e monitorados?"],
+        "evidencias_esperadas": ["Inventário de contas privilegiadas e logs de uso"],
+    },
+    "A.8.3": {
+        "como_avaliar": ["O acesso à informação segue a política de controle de acesso?"],
+        "evidencias_esperadas": ["Configuração de permissões por sistema"],
+    },
+    "A.8.4": {
+        "como_avaliar": ["O acesso ao código-fonte é restrito e gerenciado?"],
+        "evidencias_esperadas": ["Permissões do repositório e revisão de acessos"],
+    },
+    "A.8.5": {
+        "como_avaliar": ["A autenticação é segura (ex.: MFA) conforme o risco?"],
+        "evidencias_esperadas": ["Configuração de MFA e política de autenticação"],
+    },
+    "A.8.6": {
+        "como_avaliar": ["A capacidade é monitorada e projetada para necessidades futuras?"],
+        "evidencias_esperadas": ["Métricas de capacidade e plano de capacidade"],
+    },
+    "A.8.7": {
+        "como_avaliar": ["Há proteção contra malware com conscientização de usuários?"],
+        "evidencias_esperadas": ["Solução antimalware e cobertura/atualização"],
+    },
+    "A.8.8": {
+        "como_avaliar": ["Vulnerabilidades técnicas são identificadas e tratadas em tempo hábil?"],
+        "evidencias_esperadas": ["Relatórios de varredura e gestão de patches"],
+    },
+    "A.8.9": {
+        "como_avaliar": ["Configurações (incl. segurança) são definidas e mantidas?"],
+        "evidencias_esperadas": ["Baselines de configuração e verificação de conformidade"],
+    },
+    "A.8.10": {
+        "como_avaliar": ["Informações são excluídas com segurança quando não mais necessárias?"],
+        "evidencias_esperadas": ["Política de retenção/exclusão e registros"],
+    },
+    "A.8.11": {
+        "como_avaliar": ["Há mascaramento de dados sensíveis quando aplicável?"],
+        "evidencias_esperadas": ["Regras de mascaramento em ambientes não produtivos"],
+    },
+    "A.8.12": {
+        "como_avaliar": ["Existem medidas de prevenção de vazamento de dados (DLP)?"],
+        "evidencias_esperadas": ["Configuração de DLP e regras aplicadas"],
+    },
+    "A.8.13": {
+        "como_avaliar": ["Backups são realizados e testados regularmente?"],
+        "evidencias_esperadas": ["Política de backup e registros de testes de restauração"],
+    },
+    "A.8.14": {
+        "como_avaliar": ["Há redundância suficiente para os requisitos de disponibilidade?"],
+        "evidencias_esperadas": ["Arquitetura de redundância e testes de failover"],
+    },
+    "A.8.15": {
+        "como_avaliar": ["Logs relevantes são produzidos, protegidos e analisados?"],
+        "evidencias_esperadas": ["Política de logging e retenção; amostras de logs"],
+    },
+    "A.8.16": {
+        "como_avaliar": ["Redes/sistemas são monitorados para comportamento anômalo?"],
+        "evidencias_esperadas": ["Solução de monitoramento/SIEM e alertas"],
+    },
+    "A.8.17": {
+        "como_avaliar": ["Os relógios dos sistemas são sincronizados com fonte confiável?"],
+        "evidencias_esperadas": ["Configuração de NTP"],
+    },
+    "A.8.18": {
+        "como_avaliar": ["O uso de utilitários privilegiados é restrito e monitorado?"],
+        "evidencias_esperadas": ["Lista de utilitários e controles de uso"],
+    },
+    "A.8.19": {
+        "como_avaliar": ["A instalação de software em sistemas é controlada?"],
+        "evidencias_esperadas": ["Política de instalação e listas de software permitido"],
+    },
+    "A.8.20": {
+        "como_avaliar": ["As redes e seus componentes são protegidos?"],
+        "evidencias_esperadas": ["Topologia, firewall e regras de rede"],
+    },
+    "A.8.21": {
+        "como_avaliar": ["Os serviços de rede têm requisitos de segurança definidos e monitorados?"],
+        "evidencias_esperadas": ["Acordos de nível de serviço de rede e monitoramento"],
+    },
+    "A.8.22": {
+        "como_avaliar": ["Há segregação de redes (ex.: VLANs, zonas)?"],
+        "evidencias_esperadas": ["Segmentação de rede documentada"],
+    },
+    "A.8.23": {
+        "como_avaliar": ["O acesso a sites externos é filtrado?"],
+        "evidencias_esperadas": ["Solução de filtragem web e regras"],
+    },
+    "A.8.24": {
+        "como_avaliar": [
+            "Existe política/norma de uso de criptografia (em trânsito e em repouso)?",
+            "O gerenciamento de chaves está definido (geração, rotação, guarda, revogação)?",
+            "Há evidência de uso consistente nos sistemas relevantes?",
+        ],
+        "evidencias_esperadas": [
+            "Política de criptografia e padrão de gestão de chaves",
+            "Configuração de TLS/VPN/cifragem de banco ou storage",
+            "Registro de exceções aprovadas",
+        ],
+    },
+    "A.8.25": {
+        "como_avaliar": ["Há ciclo de vida de desenvolvimento seguro definido?"],
+        "evidencias_esperadas": ["Política/processo de SDLC seguro"],
+    },
+    "A.8.26": {
+        "como_avaliar": ["Requisitos de segurança de aplicações são definidos e aprovados?"],
+        "evidencias_esperadas": ["Requisitos de segurança nas especificações de aplicações"],
+    },
+    "A.8.27": {
+        "como_avaliar": ["Princípios de engenharia de sistemas seguros são aplicados?"],
+        "evidencias_esperadas": ["Padrões de arquitetura segura"],
+    },
+    "A.8.28": {
+        "como_avaliar": ["Princípios de codificação segura são adotados?"],
+        "evidencias_esperadas": ["Guia de codificação segura e análise estática (SAST)"],
+    },
+    "A.8.29": {
+        "como_avaliar": ["Há testes de segurança no desenvolvimento e na aceitação?"],
+        "evidencias_esperadas": ["Resultados de testes de segurança (ex.: DAST/pentest)"],
+    },
+    "A.8.30": {
+        "como_avaliar": ["O desenvolvimento terceirizado é dirigido e monitorado?"],
+        "evidencias_esperadas": ["Requisitos contratuais de SI e revisões do fornecedor"],
+    },
+    "A.8.31": {
+        "como_avaliar": ["Ambientes de desenvolvimento, teste e produção são separados?"],
+        "evidencias_esperadas": ["Evidência de segregação de ambientes"],
+    },
+    "A.8.32": {
+        "como_avaliar": ["Mudanças são submetidas a gerenciamento formal?"],
+        "evidencias_esperadas": ["Processo de gestão de mudanças e registros"],
+    },
+    "A.8.33": {
+        "como_avaliar": ["As informações de teste são selecionadas e protegidas?"],
+        "evidencias_esperadas": ["Procedimento de dados de teste e mascaramento"],
+    },
+    "A.8.34": {
+        "como_avaliar": ["Testes de auditoria em sistemas operacionais são planejados e acordados?"],
+        "evidencias_esperadas": ["Plano de testes de auditoria acordado"],
+    },
+}
+
+# Legenda global de Status e Prioridade (Feature 007) — definições PT-BR originais (4 + 4).
+LEGEND_DEFS: list[dict] = [
+    {"kind": "status", "code": "not_meet", "label": "Não atende", "order": 1,
+     "definition": "O requisito ou controle não existe na organização. Lacuna completa — deve ser implementado do zero."},
+    {"kind": "status", "code": "partial", "label": "Atende Parcialmente", "order": 2,
+     "definition": "Existe prática informal ou parcial, sem documentação sistemática ou sem evidências de operação regular."},
+    {"kind": "status", "code": "meets", "label": "Atende Totalmente", "order": 3,
+     "definition": "Implementado, documentado e com evidências de operação. Um auditor encontraria conformidade."},
+    {"kind": "status", "code": "not_applicable", "label": "Não Aplicável", "order": 4,
+     "definition": "Não se aplica ao escopo definido. Deve ser justificado na Declaração de Aplicabilidade (SoA)."},
+    {"kind": "priority", "code": "critical", "label": "Crítica", "order": 1,
+     "definition": "Lacuna que inviabiliza a certificação ou expõe a risco alto. Tratar com urgência."},
+    {"kind": "priority", "code": "high", "label": "Alta", "order": 2,
+     "definition": "Lacuna relevante a tratar durante o projeto; pode gerar não conformidade na auditoria se não resolvida."},
+    {"kind": "priority", "code": "medium", "label": "Média", "order": 3,
+     "definition": "Oportunidade de melhoria recomendada, mas não crítica para a certificação inicial."},
+    {"kind": "priority", "code": "low", "label": "Baixa", "order": 4,
+     "definition": "Ação de melhoria contínua; pode ser tratada no ciclo pós-certificação."},
+]
+
+
+def _referencia(ref_code: str, dimension: GapDimension) -> str:
+    if dimension == GapDimension.clause:
+        return f"ISO/IEC 27001:2022 — Cláusula {ref_code}"
+    return f"ISO/IEC 27001:2022 — {ref_code}"
+
+
+def _with_guidance(item: dict) -> dict:
+    """Acrescenta `referencia` (derivada) + orientação do GUIDANCE (vazia se não houver)."""
+    g = GUIDANCE.get(item["ref_code"], {})
+    return {
+        **item,
+        "referencia": _referencia(item["ref_code"], item["dimension"]),
+        "como_avaliar": list(g.get("como_avaliar", [])),
+        "evidencias_esperadas": list(g.get("evidencias_esperadas", [])),
+        "nota": g.get("nota"),
+    }
+
+
 def build_seed_items() -> list[dict]:
     """Retorna lista de dicts para inserção em `gap_seed_item` (sem id nem seed_version_id)."""
     items: list[dict] = []
 
     # Cláusulas
     for c in CLAUSES:
-        items.append({**c})
+        items.append(_with_guidance({**c}))
 
     # A.5 — organizacional
     for ref, name, objective, order in A5_CONTROLS:
-        items.append({
-            "ref_code": ref,
-            "name": name,
-            "dimension": GapDimension.annex_a,
-            "theme": GapTheme.organizational,
-            "objective": objective,
-            "order": 100 + order,
-        })
+        items.append(_with_guidance({
+            "ref_code": ref, "name": name, "dimension": GapDimension.annex_a,
+            "theme": GapTheme.organizational, "objective": objective, "order": 100 + order,
+        }))
 
     # A.6 — pessoas
     for ref, name, objective, order in A6_CONTROLS:
-        items.append({
-            "ref_code": ref,
-            "name": name,
-            "dimension": GapDimension.annex_a,
-            "theme": GapTheme.people,
-            "objective": objective,
-            "order": 200 + order,
-        })
+        items.append(_with_guidance({
+            "ref_code": ref, "name": name, "dimension": GapDimension.annex_a,
+            "theme": GapTheme.people, "objective": objective, "order": 200 + order,
+        }))
 
     # A.7 — físico
     for ref, name, objective, order in A7_CONTROLS:
-        items.append({
-            "ref_code": ref,
-            "name": name,
-            "dimension": GapDimension.annex_a,
-            "theme": GapTheme.physical,
-            "objective": objective,
-            "order": 300 + order,
-        })
+        items.append(_with_guidance({
+            "ref_code": ref, "name": name, "dimension": GapDimension.annex_a,
+            "theme": GapTheme.physical, "objective": objective, "order": 300 + order,
+        }))
 
     # A.8 — tecnológico
     for ref, name, objective, order in A8_CONTROLS:
-        items.append({
-            "ref_code": ref,
-            "name": name,
-            "dimension": GapDimension.annex_a,
-            "theme": GapTheme.technological,
-            "objective": objective,
-            "order": 400 + order,
-        })
+        items.append(_with_guidance({
+            "ref_code": ref, "name": name, "dimension": GapDimension.annex_a,
+            "theme": GapTheme.technological, "objective": objective, "order": 400 + order,
+        }))
 
     return items
+

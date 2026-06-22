@@ -291,6 +291,28 @@ Home da organização — capacidade **transversal de leitura/agregação**. Spe
   série) + `test_tenant_isolation_dashboard.py` (11 no total) e `dashboard.spec.ts` (frontend, 88 no
   admin). **Pendente**: E2E manual no browser (login + Postgres real).
 
+#### Orientação de Avaliação por Item — Gap (Feature 007 — implementada)
+Enriquece a matriz do Gap (Módulo 2) com orientação por item. Spec/plano em `specs/007-gap-item-guidance/`.
+- **Conteúdo de plataforma** (sem `tenant_id`): novos campos de orientação em `gap_seed_item`
+  (`referencia`, `como_avaliar`[JSON lista], `evidencias_esperadas`[JSON lista], `nota`; `objective`
+  já existia). Legenda global em `gap_legend_entry` (4 Status + 4 Prioridade). Trilha append-only em
+  `gap_guidance_event` (SQLite+PG triggers). Conteúdo PT-BR **original** dos 100 itens em
+  `data/iso27001_seed.py` (IP: sem reproduzir texto normativo ISO).
+- **Leitura**: `GET /gap/guidance` (`view_gap`) devolve itens + legenda; a matriz resolve a orientação
+  pelo vínculo `gap_catalog_item.seed_item_id → gap_seed_item` (já existente). **Edição**:
+  `PUT /gap/guidance/items|legend` + `GET /gap/guidance/events` (`require_super_admin`, sem contexto
+  de org) com trilha + audit. `services/gap_guidance_service.py` + `routers/gap_guidance.py` (em
+  `main.py`). `load_seed` semeia a legenda e preenche orientação **só quando vazia** (preserva edição
+  do admin). Migration `a9b0c1d2e308` (`down_revision="f8a9b0c1d207"`), idempotente, **sem RLS**
+  (tabelas de plataforma — mesma exceção do seed da Feature 004).
+- **Frontend**: seção "Orientação de avaliação" (read-only) no painel da matriz + legenda recolhível
+  (`pages/gap-analysis/`); área administrativa `pages/gap-guidance-admin/` (rota com `superAdminGuard`,
+  link no shell só p/ Super Admin). Distingue "evidências esperadas" (orientação) de "evidência
+  existente" (`evidence_ref` da org). Painel preparado para a futura feature de evidências anexadas.
+- **Testes**: `test_gap_guidance.py` + `test_gap_guidance_rbac.py` (10) e
+  `gap-analysis.spec.ts`/`gap-guidance-admin.spec.ts` (104 no admin). **Pendente**: E2E browser +
+  `alembic upgrade` no Postgres real.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -432,8 +454,8 @@ specify em `docs/README.md`).
 ## Plano ativo (Spec Kit)
 
 **Feature 007 — Orientação de Avaliação por Item (Gap Analysis)** (`007-gap-item-guidance`) —
-**planejada** (spec + clarify + plan prontos; implementação pendente via `/speckit.tasks` →
-`/speckit.implement`)
+**implementada** (10 testes backend dedicados + suíte completa verde; 104 testes frontend; E2E
+browser + `alembic upgrade` no Postgres pendentes — fluxo do usuário)
 - Plano: `specs/007-gap-item-guidance/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·
   Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
 - Escopo: orientação por item da matriz do Gap (referência/objetivo/como avaliar/evidências esperadas/

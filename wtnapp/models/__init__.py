@@ -15,6 +15,8 @@ from wtnapp.models.form_template_model import FormTemplate
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem, GapAssessmentItemEvent
 from wtnapp.models.gap_assignment_model import GapAssignment
 from wtnapp.models.gap_catalog_model import GapCatalogItem
+from wtnapp.models.gap_guidance_event_model import GapGuidanceEvent
+from wtnapp.models.gap_legend_model import GapLegendEntry
 from wtnapp.models.gap_seed_model import GapSeedItem, GapSeedVersion
 from wtnapp.models.invitation_model import Invitation
 from wtnapp.models.membership_model import Membership
@@ -45,6 +47,8 @@ __all__ = [
     "GapAssessmentItemEvent",
     "GapAssignment",
     "GapCatalogItem",
+    "GapGuidanceEvent",
+    "GapLegendEntry",
     "GapSeedItem",
     "GapSeedVersion",
     "Invitation",

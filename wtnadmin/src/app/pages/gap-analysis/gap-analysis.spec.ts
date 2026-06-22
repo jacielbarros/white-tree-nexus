@@ -68,4 +68,47 @@ describe('GapAnalysisPage', () => {
     expect(cls.statusClass('not_meet')).toBe('wtn-tag--danger');
     expect(cls.statusClass('partial')).toBe('wtn-tag--warning');
   });
+
+  it('renders the per-item guidance in the panel (US1)', () => {
+    const fixture = TestBed.createComponent(GapAnalysisPage);
+    const comp = fixture.componentInstance as never as {
+      loading: { set(v: boolean): void };
+      assessment: { set(v: unknown): void };
+      guidanceByRef: { set(v: unknown): void };
+      selectItem(i: unknown): void;
+    };
+    const item = { id: '1', ref_code: 'A.8.24', name: 'Uso de criptografia', status: 'not_filled', dimension: 'annex_a' };
+    fixture.detectChanges(); // dispara ngOnInit (load() seta loading=true; HTTP não é resolvido nos testes)
+    comp.assessment.set({ id: 'a', draft_status: 'draft', current_version_id: null, items: [item] });
+    comp.guidanceByRef.set({
+      'A.8.24': {
+        seed_item_id: 's1', ref_code: 'A.8.24', referencia: 'ISO/IEC 27001:2022 — A.8.24',
+        objetivo: 'Regras para uso de criptografia.', como_avaliar: ['Existe política de criptografia?'],
+        evidencias_esperadas: ['Política de criptografia'], nota: null,
+      },
+    });
+    comp.selectItem(item);
+    comp.loading.set(false); // depois do ngOnInit, libera a renderização da matriz/painel
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.guidance-block')).toBeTruthy();
+    expect(el.textContent).toContain('Como avaliar');
+    expect(el.textContent).toContain('Existe política de criptografia?');
+    expect(el.textContent).toContain('Política de criptografia');
+  });
+
+  it('renders the global legend when present (US3)', () => {
+    const fixture = TestBed.createComponent(GapAnalysisPage);
+    const comp = fixture.componentInstance as never as {
+      legendStatus: { set(v: unknown): void };
+      legendPriority: { set(v: unknown): void };
+    };
+    comp.legendStatus.set([{ code: 'meets', label: 'Atende Totalmente', definition: 'Implementado e evidenciado.', order: 3 }]);
+    comp.legendPriority.set([{ code: 'critical', label: 'Crítica', definition: 'Inviabiliza a certificação.', order: 1 }]);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.wtn-legend')).toBeTruthy();
+    expect(el.textContent).toContain('Atende Totalmente');
+    expect(el.textContent).toContain('Crítica');
+  });
 });

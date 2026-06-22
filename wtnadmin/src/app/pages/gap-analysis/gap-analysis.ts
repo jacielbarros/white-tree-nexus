@@ -106,6 +106,28 @@ interface GapGroup {
   items: GapAssessmentItem[];
 }
 
+interface ItemGuidance {
+  seed_item_id: string;
+  ref_code: string;
+  referencia: string;
+  objetivo: string;
+  como_avaliar: string[];
+  evidencias_esperadas: string[];
+  nota: string | null;
+}
+
+interface GuidanceLegendEntry {
+  code: string;
+  label: string;
+  definition: string;
+  order: number;
+}
+
+interface GuidanceResponse {
+  items: ItemGuidance[];
+  legend: { status: GuidanceLegendEntry[]; priority: GuidanceLegendEntry[] };
+}
+
 @Component({
   selector: 'app-gap-analysis',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +162,26 @@ interface GapGroup {
         }
       </div>
     </header>
+
+    @if (legendStatus().length || legendPriority().length) {
+      <details class="wtn-legend">
+        <summary>Legenda — escalas de Status e Prioridade</summary>
+        <div class="legend-grid">
+          <div>
+            <div class="legend-h">Status</div>
+            @for (s of legendStatus(); track s.code) {
+              <div class="legend-row"><strong>{{ s.label }}</strong><span>{{ s.definition }}</span></div>
+            }
+          </div>
+          <div>
+            <div class="legend-h">Prioridade</div>
+            @for (p of legendPriority(); track p.code) {
+              <div class="legend-row"><strong>{{ p.label }}</strong><span>{{ p.definition }}</span></div>
+            }
+          </div>
+        </div>
+      </details>
+    }
 
     @if (loading()) {
       <div class="matrix-loading">
@@ -233,6 +275,29 @@ interface GapGroup {
               </div>
               <button type="button" class="panel-close" (click)="closeDetails()" title="Fechar painel">×</button>
             </div>
+
+            @if (selectedGuidance(); as g) {
+              <div class="guidance-block">
+                <div class="guidance-head">Orientação de avaliação</div>
+                @if (g.objetivo) { <p class="guidance-obj">{{ g.objetivo }}</p> }
+                @if (g.como_avaliar.length) {
+                  <div class="guidance-sub">Como avaliar</div>
+                  <ul class="guidance-list">
+                    @for (q of g.como_avaliar; track q) { <li>{{ q }}</li> }
+                  </ul>
+                }
+                @if (g.evidencias_esperadas.length) {
+                  <div class="guidance-sub">Evidências esperadas</div>
+                  <ul class="guidance-list">
+                    @for (e of g.evidencias_esperadas; track e) { <li>{{ e }}</li> }
+                  </ul>
+                }
+                @if (g.nota) { <div class="guidance-note">{{ g.nota }}</div> }
+              </div>
+            } @else {
+              <div class="guidance-empty">Sem orientação disponível para este item.</div>
+            }
+            <!-- FR-010: espaço reservado para a futura seção de "Evidências anexadas" por item. -->
 
             <div class="panel-field">
               <label>Status da avaliação</label>
@@ -731,6 +796,97 @@ interface GapGroup {
       text-align: center;
     }
 
+    /* Orientação de avaliação (read-only) no painel */
+    .guidance-block {
+      background: var(--wtn-surface-2);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-md);
+      padding: 12px 14px;
+    }
+    .guidance-head {
+      color: var(--wtn-muted);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .guidance-obj {
+      color: var(--wtn-text);
+      font-size: 12.5px;
+      line-height: 1.5;
+      margin: 0 0 10px;
+    }
+    .guidance-sub {
+      color: var(--wtn-text-2);
+      font-size: 11.5px;
+      font-weight: 600;
+      margin: 8px 0 4px;
+    }
+    .guidance-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .guidance-list li {
+      color: var(--wtn-text-2);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .guidance-note {
+      border-left: 3px solid var(--wtn-info);
+      background: var(--wtn-info-soft);
+      color: var(--wtn-info);
+      font-size: 11.5px;
+      margin-top: 10px;
+      padding: 7px 10px;
+      border-radius: 0 var(--wtn-r-md) var(--wtn-r-md) 0;
+    }
+    .guidance-empty {
+      color: var(--wtn-text-2);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    /* Legenda global (status/prioridade) */
+    .wtn-legend {
+      background: var(--wtn-card);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-lg);
+      box-shadow: var(--wtn-e1);
+      margin-bottom: 14px;
+      padding: 10px 16px;
+    }
+    .wtn-legend summary {
+      color: var(--wtn-text);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .legend-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr 1fr;
+      margin-top: 12px;
+    }
+    .legend-h {
+      color: var(--wtn-muted);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .legend-row {
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .legend-row strong { color: var(--wtn-text); margin-right: 6px; }
+    .legend-row span { color: var(--wtn-text-2); }
+
+    @media (max-width: 760px) {
+      .legend-grid { grid-template-columns: 1fr; }
+    }
+
     .assign-form {
       display: flex;
       flex-direction: column;
@@ -774,6 +930,14 @@ export class GapAnalysisPage implements OnInit {
 
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
+
+  protected readonly guidanceByRef = signal<Record<string, ItemGuidance>>({});
+  protected readonly legendStatus = signal<GuidanceLegendEntry[]>([]);
+  protected readonly legendPriority = signal<GuidanceLegendEntry[]>([]);
+  protected readonly selectedGuidance = computed<ItemGuidance | null>(() => {
+    const it = this.selectedItem();
+    return it ? this.guidanceByRef()[it.ref_code] ?? null : null;
+  });
 
   protected readonly assignments = signal<GapAssignmentItem[]>([]);
   protected readonly assigning = signal(false);
@@ -833,6 +997,20 @@ export class GapAnalysisPage implements OnInit {
   ngOnInit() {
     this.load();
     this.loadAssignments();
+    this.loadGuidance();
+  }
+
+  private loadGuidance() {
+    this.api.get<GuidanceResponse>('/gap/guidance').subscribe({
+      next: (g) => {
+        const byRef: Record<string, ItemGuidance> = {};
+        for (const it of g.items) byRef[it.ref_code] = it;
+        this.guidanceByRef.set(byRef);
+        this.legendStatus.set(g.legend.status);
+        this.legendPriority.set(g.legend.priority);
+      },
+      error: () => {},
+    });
   }
 
   protected load() {
