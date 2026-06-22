@@ -31,6 +31,9 @@
 
 ## Notes
 
+- **Clarificações (sessão 2026-06-22):** (1) orientação resolvida por **vínculo ao seed** (sem cópia
+  no item da org → edições propagam); (2) `como_avaliar`/`evidencias_esperadas` = **listas de
+  strings**; (3) MVP entrega orientação dos **100 itens** (93 + 7).
 - Natureza incomum (e bem definida): a orientação é **conteúdo de plataforma compartilhado** (sem
   `tenant_id`), não dado de organização. A seção de isolamento foi adaptada para refletir isso — o
   isolamento protege o acesso de edição (só plataforma) e garante que nenhum dado de avaliação de

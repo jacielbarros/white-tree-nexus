@@ -26,6 +26,22 @@ auditoria. Não altera o fluxo de avaliação existente — apenas o enriquece.
 
 ---
 
+## Clarifications
+
+### Session 2026-06-22
+
+- Q: Como o catálogo de uma organização (já adotado) resolve a orientação canônica? → A: **Por
+  vínculo ao item do seed (join)** — a orientação fica **somente no item base do catálogo
+  compartilhado** e a matriz da organização a resolve por referência (`seed_item_id`/`ref_code`),
+  **sem duplicar** conteúdo. Edição do administrador reflete em todas as organizações
+  automaticamente. (Pode exigir garantir o vínculo `seed_item_id` no item do catálogo da organização.)
+- Q: Forma dos campos `como_avaliar` e `evidencias_esperadas`? → A: **Lista de strings** (itens
+  curtos) — cada pergunta/evidência é um item simples, renderizado como bullets; sem objetos ricos.
+- Q: Escopo de conteúdo no MVP? → A: **Todos os 100 itens** — orientação autoral em PT-BR para os 93
+  controles do Anexo A + as 7 cláusulas (4–10), entregue por tema (A.5/A.6/A.7/A.8 + cláusulas).
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Avaliar um item com orientação ao lado (Priority: P1)
@@ -140,8 +156,9 @@ de Prioridade.
 
 - **FR-001**: O sistema MUST permitir associar, a cada item do catálogo da plataforma (cláusulas 4–10
   e 93 controles do Anexo A), uma **orientação de avaliação** com os campos: **referência** (rótulo
-  factual), **objetivo** (texto curto), **como avaliar** (lista de perguntas), **evidências
-  esperadas** (lista) e **nota** (texto opcional).
+  factual), **objetivo** (texto curto), **como avaliar** (**lista de strings** — perguntas curtas),
+  **evidências esperadas** (**lista de strings**) e **nota** (texto opcional). As listas são itens
+  simples (sem objetos/atributos por item), renderizadas como tópicos.
 - **FR-002**: Ao selecionar um item na matriz, o sistema MUST exibir a orientação correspondente em
   **somente leitura** para o usuário da organização, sem alterar o fluxo nem os campos de avaliação.
 - **FR-003**: A orientação MUST cobrir os 93 controles do Anexo A e as 7 cláusulas (4–10); itens sem
@@ -150,7 +167,9 @@ de Prioridade.
   **Status** (Não atende / Atende Parcialmente / Atende Totalmente / Não Aplicável) e de
   **Prioridade** (Crítica / Alta / Média / Baixa).
 - **FR-005**: A orientação e a legenda são **conteúdo canônico da plataforma** — uma alteração vale
-  para **todas** as organizações; nenhuma organização edita esse conteúdo neste escopo.
+  para **todas** as organizações; nenhuma organização edita esse conteúdo neste escopo. A matriz da
+  organização resolve a orientação **por vínculo ao item base do catálogo compartilhado** (não há
+  cópia da orientação no item da organização), de modo que edições propagam sem readoção.
 - **FR-006**: Apenas um **administrador da plataforma** MUST poder editar os textos de orientação e
   da legenda, por uma área administrativa, **sem** contexto de organização.
 - **FR-007**: Toda edição de orientação/legenda MUST registrar uma entrada em **trilha append-only**
@@ -197,9 +216,10 @@ de Prioridade.
 > Módulo 2 (com `tenant_id`).
 
 - **Orientação do item (plataforma)**: estende o item do **catálogo-base compartilhado** do Gap com
-  os campos de orientação (referência, objetivo, como avaliar [lista], evidências esperadas [lista],
-  nota). Sem `tenant_id`. Exibida na matriz da organização por **vínculo** do item do catálogo da
-  organização ao item base correspondente.
+  os campos de orientação (referência, objetivo, **como avaliar [lista de strings]**, **evidências
+  esperadas [lista de strings]**, nota). Sem `tenant_id`. Exibida na matriz da organização por
+  **vínculo** do item do catálogo da organização ao item base correspondente (via `seed_item_id`/
+  `ref_code`) — **sem cópia** da orientação no item da organização.
 - **Legenda global (plataforma)**: definições textuais das escalas de Status e de Prioridade. Sem
   `tenant_id`. Conteúdo único da plataforma.
 - **Trilha de edição da orientação (append-only, plataforma)**: registra cada alteração de orientação
@@ -233,7 +253,9 @@ de Prioridade.
   português** e pré-carregado no catálogo base (paráfrase própria; sem reprodução do texto normativo).
 - A orientação reside no **catálogo-base compartilhado** do Gap (mesma natureza sem `tenant_id` já
   usada no Módulo 2) e é resolvida para a matriz da organização por **vínculo** do item adotado ao
-  item base (por referência/código), sem duplicar o conteúdo por organização.
+  item base (`seed_item_id`/`ref_code`), sem duplicar o conteúdo por organização. Se o item do
+  catálogo da organização ainda não guardar esse vínculo, o /plan deve garanti-lo (ex.: backfill por
+  `ref_code`).
 - O "administrador da plataforma" é o **Super Admin** já existente (único papel cross-tenant); a
   edição é uma operação de plataforma, sem `X-Org-Context`.
 - A legenda global é conteúdo de plataforma; sua personalização por organização está **fora de
