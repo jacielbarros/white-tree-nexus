@@ -6,25 +6,26 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
-import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
-import { TooltipModule } from 'primeng/tooltip';
 
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
-import { GapAssessment, GapAssessmentItem, GapAssignmentItem, GapStatus, GapDimension } from '@app/core/models';
-
-type StatusSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
+import {
+  GapAssessment,
+  GapAssessmentItem,
+  GapAssignmentItem,
+  GapDimension,
+  GapPriority,
+  GapStatus,
+  GapTheme,
+} from '@app/core/models';
 
 const STATUS_LABELS: Record<GapStatus, string> = {
   not_filled: 'Não avaliado',
@@ -34,12 +35,12 @@ const STATUS_LABELS: Record<GapStatus, string> = {
   not_applicable: 'N/A',
 };
 
-const STATUS_SEVERITY: Record<GapStatus, StatusSeverity> = {
-  not_filled: 'secondary',
-  meets: 'success',
-  partial: 'warn',
-  not_meet: 'danger',
-  not_applicable: 'info',
+const STATUS_CLASSES: Record<GapStatus, string> = {
+  not_filled: 'wtn-tag--neutral',
+  meets: 'wtn-tag--success',
+  partial: 'wtn-tag--warning',
+  not_meet: 'wtn-tag--danger',
+  not_applicable: 'wtn-tag--info',
 };
 
 const STATUS_OPTIONS = [
@@ -57,160 +58,312 @@ const PRIORITY_OPTIONS = [
   { label: 'Baixo', value: 'low' },
 ];
 
-const DIM_LABELS: Record<GapDimension, string> = {
-  clause: 'Cláusulas (4–10)',
-  annex_a: 'Anexo A — Controles',
+const PRIORITY_LABELS: Record<GapPriority, string> = {
+  critical: 'Crítico',
+  high: 'Alto',
+  medium: 'Médio',
+  low: 'Baixo',
 };
+
+const PRIORITY_COLORS: Record<GapPriority, string> = {
+  critical: 'var(--wtn-prio-crit)',
+  high: 'var(--wtn-prio-high)',
+  medium: 'var(--wtn-prio-med)',
+  low: 'var(--wtn-prio-low)',
+};
+
+const GROUP_LABELS: Record<GapDimension | GapTheme, string> = {
+  clause: 'Cláusulas (4-10)',
+  annex_a: 'Anexo A - Controles',
+  organizational: 'Organizacional',
+  people: 'Pessoas',
+  physical: 'Físico',
+  technological: 'Tecnológico',
+};
+
+const GROUP_ORDER: Record<string, number> = {
+  clause: 0,
+  organizational: 1,
+  people: 2,
+  physical: 3,
+  technological: 4,
+  annex_a: 5,
+};
+
+const ASSIGNMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendente',
+  in_progress: 'Em avaliação',
+  submitted: 'Enviado',
+  signed: 'Assinado',
+  completed: 'Concluído',
+  cancelled: 'Cancelado',
+};
+
+interface GapGroup {
+  key: string;
+  label: string;
+  count: number;
+  items: GapAssessmentItem[];
+}
 
 @Component({
   selector: 'app-gap-analysis',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     ReactiveFormsModule,
     FormsModule,
     ButtonModule,
-    CardModule,
     DialogModule,
     InputTextModule,
     SelectModule,
-    TagModule,
     TextareaModule,
-    TooltipModule,
   ],
   template: `
-    <div class="page-header">
-      <h2>Gap Analysis — ISO/IEC 27001:2022</h2>
-      @if (canManage()) {
-        <p-button
-          label="Adotar catálogo"
-          icon="pi pi-download"
-          severity="secondary"
-          (onClick)="adoptCatalog()"
-          [loading]="adopting()"
-          pTooltip="Materializa/atualiza o catálogo da organização com o seed 2022.1"
-        />
-      }
-    </div>
+    <header class="wtn-page-header gap-matrix-header">
+      <div>
+        <h1 class="wtn-page-title">Gap Analysis — Matriz</h1>
+        <p class="wtn-page-desc">
+          {{ totalItems() }} controles do Anexo A · {{ evaluatedItems() }} avaliados · aderência geral {{ adherenceLabel() }}
+        </p>
+      </div>
+      <div class="wtn-page-actions">
+        @if (assessment()) {
+          <p-button
+            [label]="showOnlyGaps() ? 'Todos' : 'Filtros'"
+            icon="pi pi-filter"
+            severity="secondary"
+            (onClick)="toggleGapFilter()"
+          />
+          @if (canAssign()) {
+            <p-button label="Atribuir condução" icon="pi pi-user-plus" (onClick)="showAssignDialog()" />
+          }
+        }
+      </div>
+    </header>
 
     @if (loading()) {
-      <div class="p-4 text-center">Carregando avaliação…</div>
-    } @else if (!assessment()) {
-      <p-card>
-        <div class="text-center p-4">
-          <p class="mb-4">Nenhuma avaliação encontrada. Adote o catálogo ISO 27001:2022 para iniciar.</p>
-          @if (canManage()) {
-            <p-button
-              label="Adotar catálogo 2022.1"
-              icon="pi pi-download"
-              (onClick)="adoptCatalog()"
-              [loading]="adopting()"
-            />
-          }
-        </div>
-      </p-card>
-    } @else {
-      <!-- Indicador geral -->
-      <div class="gap-progress-bar mb-4">
-        <span class="text-sm text-color-secondary">
-          Preenchimento: {{ (completeness() * 100).toFixed(0) }}%
-          dos {{ totalItems() }} itens avaliados
-        </span>
-        <div class="progress-track mt-1">
-          <div class="progress-fill" [style.width]="(completeness() * 100) + '%'"></div>
-        </div>
+      <div class="matrix-loading">
+        <div class="wtn-spinner"></div>
+        <span>Carregando matriz...</span>
       </div>
+    } @else if (!assessment()) {
+      <div class="wtn-empty">
+        <div class="wtn-empty-icon">
+          <span class="pi pi-table"></span>
+        </div>
+        <div class="wtn-empty-title">Nenhuma avaliação encontrada</div>
+        <div class="wtn-empty-desc">Adote o catálogo ISO/IEC 27001:2022 para iniciar a matriz.</div>
+        @if (canManage()) {
+          <p-button
+            label="Adotar catálogo 2022.1"
+            icon="pi pi-download"
+            (onClick)="adoptCatalog()"
+            [loading]="adopting()"
+          />
+        }
+      </div>
+    } @else {
+      <section class="gap-matrix-shell">
+        <div class="gap-table-panel">
+          <table class="gap-table">
+            <thead>
+              <tr>
+                <th class="col-ref">Ref.</th>
+                <th>Controle</th>
+                <th class="col-status">Status</th>
+                <th class="col-priority">Prioridade</th>
+                <th class="col-resp">Resp.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (group of groupedItems(); track group.key) {
+                <tr class="group-row">
+                  <td colspan="5">
+                    <div class="group-label">
+                      <span class="chevron">⌄</span>
+                      <strong>{{ group.label }}</strong>
+                      <span>{{ group.count }} controles</span>
+                    </div>
+                  </td>
+                </tr>
+                @for (item of group.items; track item.id) {
+                  <tr
+                    class="matrix-row"
+                    [class.matrix-row--selected]="selectedItem()?.id === item.id"
+                    (click)="selectItem(item)"
+                  >
+                    <td class="ref-cell">{{ item.ref_code }}</td>
+                    <td class="name-cell">{{ item.name }}</td>
+                    <td>
+                      <span [class]="'wtn-tag ' + statusClass(item.status)">
+                        {{ statusLabel(item.status) }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (item.priority) {
+                        <span class="priority-text" [style.color]="priorityColor(item.priority)">
+                          {{ priorityLabel(item.priority) }}
+                        </span>
+                      } @else {
+                        <span class="muted-dash">—</span>
+                      }
+                    </td>
+                    <td>
+                      <span class="assignee-avatar">
+                        {{ responsibleInitials(item.responsible) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr>
+                  <td colspan="5" class="table-empty">Nenhum controle encontrado para o filtro atual.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
-      <!-- Matriz por dimensão -->
-      @for (dim of dimensions(); track dim) {
-        <p-card [header]="dimLabel(dim)" styleClass="mb-3">
-          <div class="gap-matrix">
-            @for (item of itemsByDimension()[dim]; track item.id) {
-              <div
-                class="gap-item"
-                [class.gap-item--editing]="editingId() === item.id"
-                (click)="selectItem(item)"
-              >
-                <div class="gap-item__header">
-                  <span class="gap-item__ref">{{ item.ref_code }}</span>
-                  <p-tag
-                    [value]="statusLabel(item.status)"
-                    [severity]="statusSeverity(item.status)"
-                  />
-                </div>
-                <div class="gap-item__name">{{ item.name }}</div>
+        <aside class="gap-edit-panel">
+          @if (selectedItem(); as it) {
+            <div class="panel-title-row">
+              <div>
+                <div class="panel-ref">{{ it.ref_code }}</div>
+                <h2>{{ it.name }}</h2>
+              </div>
+              <button type="button" class="panel-close" (click)="closeDetails()" title="Fechar painel">×</button>
+            </div>
+
+            <div class="panel-field">
+              <label>Status da avaliação</label>
+              <p-select
+                [options]="statusOptions"
+                [formControl]="editStatus"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="wtn-panel-select"
+              />
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-field">
+                <label>Prioridade</label>
+                <p-select
+                  [options]="priorityOptions"
+                  [formControl]="editPriority"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Selecione"
+                  [showClear]="true"
+                  styleClass="wtn-panel-select"
+                />
+              </div>
+              <div class="panel-field">
+                <label>Responsável</label>
+                <input pInputText [formControl]="editResponsible" placeholder="Nome ou área" />
+              </div>
+            </div>
+
+            @if (editStatus.value === 'not_applicable') {
+              <div class="panel-field">
+                <label>Justificativa de exclusão *</label>
+                <textarea
+                  pTextarea
+                  [formControl]="editJustification"
+                  rows="3"
+                  placeholder="Por que este controle não se aplica?"
+                ></textarea>
               </div>
             }
-          </div>
-        </p-card>
-      }
 
-      <!-- Condução (atribuição da avaliação) -->
-      @if (canAssign()) {
-        <p-card header="Condução da Avaliação" styleClass="mt-4">
-          <div class="flex justify-between items-center mb-3">
-            <span class="text-sm text-color-secondary">Atribuições de condução da avaliação gap</span>
-            <p-button
-              label="Atribuir condução"
-              icon="pi pi-user-plus"
-              size="small"
-              (onClick)="showAssignDialog()"
-            />
-          </div>
-          @if (assignments().length === 0) {
-            <p class="text-color-secondary text-sm">Nenhuma atribuição ainda.</p>
+            <div class="panel-field">
+              <label>Constatações & ações</label>
+              <textarea
+                pTextarea
+                [formControl]="editFindings"
+                rows="4"
+                placeholder="Registre constatações, evidências e observações."
+              ></textarea>
+            </div>
+
+            <div class="panel-field">
+              <label>Ações necessárias</label>
+              <textarea
+                pTextarea
+                [formControl]="editActions"
+                rows="3"
+                placeholder="O que precisa ser feito?"
+              ></textarea>
+            </div>
+
+            <div class="assignment-timeline">
+              <div class="timeline-title">Condução atribuível</div>
+              @if (assignments().length) {
+                @for (a of assignments().slice(0, 2); track a.id) {
+                  <div class="timeline-item">
+                    <span class="timeline-dot"></span>
+                    <div>
+                      <strong>{{ assignmentStatusLabel(a.status) }}</strong>
+                      <span>{{ assignmentActor(a) }}</span>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <div class="timeline-item">
+                  <span class="timeline-dot timeline-dot--muted"></span>
+                  <div>
+                    <strong>Sem condução atribuída</strong>
+                    <span>Use o botão acima para definir responsável.</span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="panel-actions">
+              @if (canManage()) {
+                <p-button label="Salvar" (onClick)="saveItem(it)" [loading]="saving()" />
+              }
+              <p-button label="Cancelar" severity="secondary" (onClick)="resetSelectedItem()" />
+            </div>
           } @else {
-            @for (a of assignments(); track a.id) {
-              <div class="assign-row">
-                <div class="assign-row__meta">
-                  <p-tag [value]="a.status" [severity]="assignSeverity(a.status)" />
-                  @if (a.scope_theme) {
-                    <span class="text-sm text-color-secondary">Tema: {{ a.scope_theme }}</span>
-                  }
-                </div>
-                <div class="text-sm">
-                  {{ a.respondent_email ?? 'membro' }}
-                  @if (a.deadline_at) { · prazo {{ a.deadline_at | date:'dd/MM/yyyy' }} }
-                </div>
-                <div class="flex gap-1 mt-1">
-                  @if (a.status === 'pending') {
-                    <p-button icon="pi pi-times" [text]="true" size="small" severity="secondary"
-                      pTooltip="Cancelar" (onClick)="cancelAssignment(a.id)" />
-                  }
-                </div>
-              </div>
-            }
+            <div class="panel-empty">
+              <strong>Selecione um controle</strong>
+              <span>A edição aparece aqui, mantendo a matriz sempre visível.</span>
+            </div>
           }
-        </p-card>
-      }
+        </aside>
+      </section>
 
-      <!-- Dialog atribuir condução -->
       <p-dialog
         header="Atribuir condução"
         [(visible)]="assignDialogVisible"
         [style]="{ width: '480px' }"
         [modal]="true"
       >
-        <div class="flex flex-col gap-3">
-          <div>
-            <label class="block font-semibold mb-1">E-mail do responsável</label>
-            <input pInputText [(ngModel)]="assignEmail" placeholder="email@exemplo.com" class="w-full" />
-            <small class="text-color-secondary">Deixe vazio para atribuir a você mesmo.</small>
+        <div class="assign-form">
+          <div class="panel-field">
+            <label>E-mail do responsável</label>
+            <input pInputText [(ngModel)]="assignEmail" placeholder="email@exemplo.com" />
+            <small>Deixe vazio para atribuir a você mesmo.</small>
           </div>
-          <div>
-            <label class="block font-semibold mb-1">Escopo</label>
+          <div class="panel-field">
+            <label>Escopo</label>
             <p-select
               [options]="scopeOptions"
               [(ngModel)]="assignScope"
               optionLabel="label"
               optionValue="value"
-              styleClass="w-full"
+              styleClass="wtn-panel-select"
             />
           </div>
-          <div>
-            <label class="block font-semibold mb-1">Instruções</label>
-            <textarea pTextarea [(ngModel)]="assignInstructions" rows="2" class="w-full"
-              placeholder="Instruções para o responsável…"></textarea>
+          <div class="panel-field">
+            <label>Instruções</label>
+            <textarea
+              pTextarea
+              [(ngModel)]="assignInstructions"
+              rows="2"
+              placeholder="Instruções para o responsável..."
+            ></textarea>
           </div>
         </div>
         <ng-template pTemplate="footer">
@@ -218,122 +371,382 @@ const DIM_LABELS: Record<GapDimension, string> = {
           <p-button label="Atribuir" icon="pi pi-check" (onClick)="createAssignment()" [loading]="assigning()" />
         </ng-template>
       </p-dialog>
-
-      <!-- Dialog de edição -->
-      <p-dialog
-        [header]="selectedItem()?.ref_code + ' — ' + selectedItem()?.name"
-        [(visible)]="dialogVisible"
-        [style]="{ width: '640px' }"
-        [modal]="true"
-      >
-        @if (selectedItem(); as it) {
-          <div class="flex flex-col gap-3">
-            <div>
-              <label class="block font-semibold mb-1">Status</label>
-              <p-select
-                [options]="statusOptions"
-                [formControl]="editStatus"
-                optionLabel="label"
-                optionValue="value"
-                styleClass="w-full"
-              />
-            </div>
-
-            @if (editStatus.value === 'not_applicable') {
-              <div>
-                <label class="block font-semibold mb-1">Justificativa de exclusão *</label>
-                <textarea
-                  pTextarea
-                  [formControl]="editJustification"
-                  rows="3"
-                  class="w-full"
-                  placeholder="Por que este controle não se aplica?"
-                ></textarea>
-              </div>
-            }
-
-            <div>
-              <label class="block font-semibold mb-1">Evidências / constatações</label>
-              <textarea
-                pTextarea
-                [formControl]="editFindings"
-                rows="3"
-                class="w-full"
-                placeholder="Descreva o que foi encontrado…"
-              ></textarea>
-            </div>
-
-            <div>
-              <label class="block font-semibold mb-1">Ações necessárias</label>
-              <textarea
-                pTextarea
-                [formControl]="editActions"
-                rows="2"
-                class="w-full"
-                placeholder="O que precisa ser feito?"
-              ></textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block font-semibold mb-1">Prioridade</label>
-                <p-select
-                  [options]="priorityOptions"
-                  [formControl]="editPriority"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Selecione…"
-                  [showClear]="true"
-                  styleClass="w-full"
-                />
-              </div>
-              <div>
-                <label class="block font-semibold mb-1">Responsável</label>
-                <input
-                  pInputText
-                  [formControl]="editResponsible"
-                  placeholder="Nome ou área"
-                  class="w-full"
-                />
-              </div>
-            </div>
-          </div>
-
-          <ng-template pTemplate="footer">
-            <p-button
-              label="Cancelar"
-              severity="secondary"
-              (onClick)="closeDialog()"
-            />
-            @if (canManage()) {
-              <p-button
-                label="Salvar"
-                icon="pi pi-check"
-                (onClick)="saveItem(it)"
-                [loading]="saving()"
-              />
-            }
-          </ng-template>
-        }
-      </p-dialog>
     }
   `,
   styles: [`
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .gap-progress-bar { background: var(--surface-border); border-radius: 4px; }
-    .progress-track { height: 6px; background: var(--surface-border); border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--primary-color); transition: width .3s; }
-    .gap-matrix { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
-    .gap-item {
-      border: 1px solid var(--surface-border); border-radius: 6px; padding: .75rem;
-      cursor: pointer; transition: box-shadow .2s;
+    :host {
+      display: block;
     }
-    .gap-item:hover, .gap-item--editing { box-shadow: 0 0 0 2px var(--primary-color); }
-    .gap-item__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .25rem; }
-    .gap-item__ref { font-weight: 700; font-size: .85rem; color: var(--text-color-secondary); }
-    .gap-item__name { font-size: .9rem; }
-    .assign-row { border: 1px solid var(--surface-border); border-radius: 6px; padding: .6rem .75rem; margin-bottom: .5rem; }
-    .assign-row__meta { display: flex; gap: .5rem; align-items: center; margin-bottom: .2rem; }
+
+    .gap-matrix-header {
+      margin-bottom: 16px;
+    }
+
+    .matrix-loading {
+      align-items: center;
+      background: var(--wtn-card);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-lg);
+      color: var(--wtn-text-2);
+      display: flex;
+      gap: 12px;
+      padding: 24px;
+    }
+
+    .gap-matrix-shell {
+      background: var(--wtn-card);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-lg);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 348px;
+      min-height: 560px;
+      overflow: hidden;
+    }
+
+    .gap-table-panel {
+      min-width: 0;
+      overflow: auto;
+    }
+
+    .gap-table {
+      border-collapse: collapse;
+      font-size: 12.5px;
+      min-width: 760px;
+      width: 100%;
+    }
+
+    .gap-table th {
+      background: var(--wtn-surface-2);
+      border-bottom: 1px solid var(--wtn-border);
+      color: var(--wtn-muted);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      padding: 8px 12px;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .gap-table td {
+      border-bottom: 1px solid var(--wtn-surface-2);
+      padding: 10px 12px;
+      vertical-align: middle;
+    }
+
+    .col-ref {
+      padding-left: 16px !important;
+      width: 84px;
+    }
+
+    .col-status {
+      width: 170px;
+    }
+
+    .col-priority {
+      width: 106px;
+    }
+
+    .col-resp {
+      padding-right: 16px !important;
+      width: 64px;
+    }
+
+    .group-row td {
+      background: var(--wtn-bg);
+      border-bottom: 1px solid var(--wtn-border);
+      padding: 9px 16px;
+    }
+
+    .group-label {
+      align-items: center;
+      display: flex;
+      gap: 9px;
+    }
+
+    .group-label strong {
+      color: var(--wtn-text);
+      font-size: 12px;
+    }
+
+    .group-label span:last-child {
+      color: var(--wtn-muted);
+      font-size: 11px;
+    }
+
+    .chevron {
+      color: var(--wtn-text-2);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .matrix-row {
+      background: var(--wtn-surface);
+      cursor: pointer;
+      transition: background .12s;
+    }
+
+    .matrix-row:hover {
+      background: var(--wtn-surface-2);
+    }
+
+    .matrix-row--selected,
+    .matrix-row--selected:hover {
+      background: var(--wtn-primary-soft);
+    }
+
+    .ref-cell {
+      color: var(--wtn-text-2);
+      font-family: var(--wtn-font-mono);
+      font-size: 11.5px;
+      padding-left: 16px !important;
+    }
+
+    .name-cell {
+      color: var(--wtn-text);
+      font-weight: 500;
+    }
+
+    .priority-text {
+      font-weight: 700;
+    }
+
+    .muted-dash {
+      color: var(--wtn-muted);
+      font-weight: 700;
+    }
+
+    .assignee-avatar {
+      align-items: center;
+      background: var(--wtn-primary-soft);
+      border-radius: 50%;
+      color: var(--wtn-primary);
+      display: inline-flex;
+      font-size: 9.5px;
+      font-weight: 700;
+      height: 24px;
+      justify-content: center;
+      width: 24px;
+    }
+
+    .gap-edit-panel {
+      background: var(--wtn-surface);
+      border-left: 1px solid var(--wtn-border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .panel-title-row {
+      align-items: flex-start;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .panel-ref {
+      color: var(--wtn-primary);
+      font-family: var(--wtn-font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .panel-title-row h2 {
+      color: var(--wtn-text);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0;
+    }
+
+    .panel-close {
+      align-items: center;
+      background: var(--wtn-surface-2);
+      border: 0;
+      border-radius: var(--wtn-r-md);
+      color: var(--wtn-text-2);
+      cursor: pointer;
+      display: flex;
+      flex: none;
+      font-size: 18px;
+      height: 28px;
+      justify-content: center;
+      line-height: 1;
+      width: 28px;
+    }
+
+    .panel-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .panel-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .panel-field label,
+    .timeline-title {
+      color: var(--wtn-text-2);
+      font-size: 11.5px;
+      font-weight: 500;
+    }
+
+    .timeline-title {
+      color: var(--wtn-muted);
+      font-weight: 600;
+      letter-spacing: .05em;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+
+    .panel-field input,
+    .panel-field textarea {
+      background: var(--wtn-surface);
+      border: 1px solid var(--wtn-border-strong);
+      border-radius: var(--wtn-r-md);
+      color: var(--wtn-text);
+      font: inherit;
+      font-size: 13px;
+      padding: 8px 11px;
+      width: 100%;
+    }
+
+    .panel-field textarea {
+      resize: vertical;
+    }
+
+    .panel-field input:focus,
+    .panel-field textarea:focus {
+      border-color: var(--wtn-focus);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--wtn-focus) 26%, transparent);
+      outline: 0;
+    }
+
+    .panel-field small {
+      color: var(--wtn-muted);
+      font-size: 11px;
+    }
+
+    ::ng-deep .wtn-panel-select {
+      width: 100%;
+    }
+
+    ::ng-deep .wtn-panel-select .p-select {
+      background: var(--wtn-surface);
+      border-color: var(--wtn-border-strong);
+      border-radius: var(--wtn-r-md);
+      color: var(--wtn-text);
+      min-height: 36px;
+      width: 100%;
+    }
+
+    .assignment-timeline {
+      margin-top: 2px;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 11px;
+      padding-bottom: 14px;
+      position: relative;
+    }
+
+    .timeline-item::before {
+      background: var(--wtn-border);
+      bottom: 0;
+      content: "";
+      left: 5px;
+      position: absolute;
+      top: 15px;
+      width: 2px;
+    }
+
+    .timeline-item:last-child::before {
+      display: none;
+    }
+
+    .timeline-dot {
+      background: var(--wtn-primary);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px var(--wtn-primary-soft);
+      flex: none;
+      height: 11px;
+      margin-top: 3px;
+      width: 11px;
+    }
+
+    .timeline-dot--muted {
+      background: var(--wtn-neutral);
+      box-shadow: none;
+    }
+
+    .timeline-item strong {
+      color: var(--wtn-text);
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .timeline-item span:last-child {
+      color: var(--wtn-muted);
+      display: block;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 9px;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
+    .panel-actions p-button:first-child {
+      flex: 1;
+    }
+
+    .panel-empty {
+      align-items: center;
+      color: var(--wtn-text-2);
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .panel-empty strong {
+      color: var(--wtn-text);
+      font-size: 14px;
+    }
+
+    .table-empty {
+      color: var(--wtn-text-2);
+      padding: 24px !important;
+      text-align: center;
+    }
+
+    .assign-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    @media (max-width: 1100px) {
+      .gap-matrix-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .gap-edit-panel {
+        border-left: 0;
+        border-top: 1px solid var(--wtn-border);
+      }
+    }
   `],
 })
 export class GapAnalysisPage implements OnInit {
@@ -341,34 +754,34 @@ export class GapAnalysisPage implements OnInit {
   private auth = inject(AuthStore);
   private msg = inject(MessageService);
 
-  assessment = signal<GapAssessment | null>(null);
-  loading = signal(true);
-  adopting = signal(false);
-  saving = signal(false);
-  editingId = signal<string | null>(null);
-  selectedItem = signal<GapAssessmentItem | null>(null);
-  dialogVisible = false;
+  readonly assessment = signal<GapAssessment | null>(null);
+  readonly loading = signal(true);
+  protected readonly adopting = signal(false);
+  protected readonly saving = signal(false);
+  protected readonly editingId = signal<string | null>(null);
+  protected readonly selectedItem = signal<GapAssessmentItem | null>(null);
+  protected readonly showOnlyGaps = signal(false);
 
-  editStatus = new FormControl<GapStatus>('not_filled', { nonNullable: true });
-  editFindings = new FormControl('', { nonNullable: true });
-  editActions = new FormControl('', { nonNullable: true });
-  editPriority = new FormControl<string | null>(null);
-  editResponsible = new FormControl('', { nonNullable: true });
-  editJustification = new FormControl('', { nonNullable: true });
+  protected readonly editStatus = new FormControl<GapStatus>('not_filled', { nonNullable: true });
+  protected readonly editFindings = new FormControl('', { nonNullable: true });
+  protected readonly editActions = new FormControl('', { nonNullable: true });
+  protected readonly editPriority = new FormControl<GapPriority | null>(null);
+  protected readonly editResponsible = new FormControl('', { nonNullable: true });
+  protected readonly editJustification = new FormControl('', { nonNullable: true });
 
-  canManage = computed(() => hasPermission(this.auth.currentRole(), 'manage_gap'));
-  canAssign = computed(() => hasPermission(this.auth.currentRole(), 'assign_form'));
+  protected readonly canManage = computed(() => hasPermission(this.auth.currentRole(), 'manage_gap'));
+  protected readonly canAssign = computed(() => hasPermission(this.auth.currentRole(), 'assign_form'));
 
-  statusOptions = STATUS_OPTIONS;
-  priorityOptions = PRIORITY_OPTIONS;
+  protected readonly statusOptions = STATUS_OPTIONS;
+  protected readonly priorityOptions = PRIORITY_OPTIONS;
 
-  assignments = signal<GapAssignmentItem[]>([]);
-  assigning = signal(false);
-  assignDialogVisible = false;
-  assignEmail = '';
-  assignScope = 'whole';
-  assignInstructions = '';
-  scopeOptions = [
+  protected readonly assignments = signal<GapAssignmentItem[]>([]);
+  protected readonly assigning = signal(false);
+  protected assignDialogVisible = false;
+  protected assignEmail = '';
+  protected assignScope = 'whole';
+  protected assignInstructions = '';
+  protected readonly scopeOptions = [
     { label: 'Avaliação completa', value: 'whole' },
     { label: 'Organizacional', value: 'organizational' },
     { label: 'Pessoas', value: 'people' },
@@ -376,26 +789,45 @@ export class GapAnalysisPage implements OnInit {
     { label: 'Tecnológico', value: 'technological' },
   ];
 
-  totalItems = computed(() => this.assessment()?.items.length ?? 0);
-  completeness = computed(() => {
-    const items = this.assessment()?.items ?? [];
-    const filled = items.filter((i) => i.status !== 'not_filled').length;
-    return items.length ? filled / items.length : 0;
+  readonly totalItems = computed(() => this.assessment()?.items.length ?? 0);
+
+  protected readonly evaluatedItems = computed(() =>
+    (this.assessment()?.items ?? []).filter((item) => item.status !== 'not_filled').length,
+  );
+
+  readonly completeness = computed(() => {
+    const total = this.totalItems();
+    return total ? this.evaluatedItems() / total : 0;
   });
 
-  dimensions = computed<GapDimension[]>(() => {
-    const dims = new Set(
-      (this.assessment()?.items ?? []).map((i) => i.dimension as GapDimension),
+  protected readonly adherence = computed(() => {
+    const relevant = (this.assessment()?.items ?? []).filter((item) =>
+      ['meets', 'partial', 'not_meet'].includes(item.status),
     );
-    return (['clause', 'annex_a'] as GapDimension[]).filter((d) => dims.has(d));
+    if (!relevant.length) return null;
+    return relevant.filter((item) => item.status === 'meets').length / relevant.length;
   });
 
-  itemsByDimension = computed(() => {
-    const map: Record<string, GapAssessmentItem[]> = {};
-    for (const item of this.assessment()?.items ?? []) {
-      (map[item.dimension] ??= []).push(item);
+  protected readonly visibleItems = computed(() => {
+    const items = this.assessment()?.items ?? [];
+    if (!this.showOnlyGaps()) return items;
+    return items.filter((item) => ['partial', 'not_meet'].includes(item.status));
+  });
+
+  protected readonly groupedItems = computed<GapGroup[]>(() => {
+    const groups = new Map<string, GapAssessmentItem[]>();
+    for (const item of this.visibleItems()) {
+      const key = this.groupKey(item);
+      groups.set(key, [...(groups.get(key) ?? []), item]);
     }
-    return map;
+    return [...groups.entries()]
+      .sort(([a], [b]) => (GROUP_ORDER[a] ?? 99) - (GROUP_ORDER[b] ?? 99))
+      .map(([key, items]) => ({
+        key,
+        label: GROUP_LABELS[key as GapDimension | GapTheme] ?? key,
+        count: items.length,
+        items,
+      }));
   });
 
   ngOnInit() {
@@ -403,22 +835,36 @@ export class GapAnalysisPage implements OnInit {
     this.loadAssignments();
   }
 
-  load() {
+  protected load() {
     this.loading.set(true);
     this.api.get<GapAssessment>('/gap/assessment').subscribe({
-      next: (a) => { this.assessment.set(a); this.loading.set(false); },
+      next: (a) => {
+        this.assessment.set(a);
+        this.loading.set(false);
+        const selected = this.selectedItem();
+        const nextSelected = selected
+          ? a.items.find((item) => item.id === selected.id) ?? this.defaultSelected(a.items)
+          : this.defaultSelected(a.items);
+        if (nextSelected) this.selectItem(nextSelected);
+      },
       error: (e) => {
-        if (e.status !== 404) this.msg.add({ severity: 'error', summary: 'Erro ao carregar avaliação', detail: e.message });
+        if (e.status !== 404) {
+          this.msg.add({ severity: 'error', summary: 'Erro ao carregar avaliação', detail: e.message });
+        }
         this.loading.set(false);
       },
     });
   }
 
-  adoptCatalog() {
+  protected adoptCatalog() {
     this.adopting.set(true);
     this.api.post<unknown>('/gap/catalog/adopt', { seed_version: '2022.1' }).subscribe({
       next: () => {
-        this.msg.add({ severity: 'success', summary: 'Catálogo adotado', detail: 'Avaliação inicializada com o seed 2022.1.' });
+        this.msg.add({
+          severity: 'success',
+          summary: 'Catálogo adotado',
+          detail: 'Avaliação inicializada com o seed 2022.1.',
+        });
         this.adopting.set(false);
         this.load();
       },
@@ -429,27 +875,29 @@ export class GapAnalysisPage implements OnInit {
     });
   }
 
-  selectItem(item: GapAssessmentItem) {
+  protected selectItem(item: GapAssessmentItem) {
     this.selectedItem.set(item);
     this.editingId.set(item.id);
-    this.editStatus.setValue(item.status);
-    this.editFindings.setValue(item.findings ?? '');
-    this.editActions.setValue(item.actions ?? '');
-    this.editPriority.setValue(item.priority);
-    this.editResponsible.setValue(item.responsible ?? '');
-    this.editJustification.setValue(item.exclusion_justification ?? '');
-    this.dialogVisible = true;
+    this.resetForm(item);
   }
 
-  closeDialog() {
-    this.dialogVisible = false;
+  protected closeDetails() {
     this.editingId.set(null);
     this.selectedItem.set(null);
   }
 
-  saveItem(item: GapAssessmentItem) {
+  protected resetSelectedItem() {
+    const item = this.selectedItem();
+    if (item) this.resetForm(item);
+  }
+
+  protected saveItem(item: GapAssessmentItem) {
     if (this.editStatus.value === 'not_applicable' && !this.editJustification.value.trim()) {
-      this.msg.add({ severity: 'warn', summary: 'Justificativa obrigatória', detail: 'Informe a justificativa para marcar como N/A.' });
+      this.msg.add({
+        severity: 'warn',
+        summary: 'Justificativa obrigatória',
+        detail: 'Informe a justificativa para marcar como N/A.',
+      });
       return;
     }
 
@@ -460,7 +908,8 @@ export class GapAnalysisPage implements OnInit {
       actions: this.editActions.value || null,
       priority: this.editPriority.value || null,
       responsible: this.editResponsible.value || null,
-      exclusion_justification: this.editStatus.value === 'not_applicable' ? this.editJustification.value : null,
+      exclusion_justification:
+        this.editStatus.value === 'not_applicable' ? this.editJustification.value : null,
     };
 
     this.api.put<GapAssessmentItem>(`/gap/assessment/items/${item.id}`, body).subscribe({
@@ -472,9 +921,10 @@ export class GapAnalysisPage implements OnInit {
             items: a.items.map((i) => (i.id === updated.id ? updated : i)),
           };
         });
+        this.selectedItem.set(updated);
+        this.resetForm(updated);
         this.msg.add({ severity: 'success', summary: 'Salvo', detail: `${item.ref_code} atualizado.` });
         this.saving.set(false);
-        this.closeDialog();
       },
       error: (e) => {
         this.msg.add({ severity: 'error', summary: 'Erro ao salvar', detail: e.error?.detail ?? e.message });
@@ -483,21 +933,14 @@ export class GapAnalysisPage implements OnInit {
     });
   }
 
-  private loadAssignments() {
-    this.api.get<GapAssignmentItem[]>('/gap/assignments').subscribe({
-      next: (list) => this.assignments.set(list),
-      error: () => {},
-    });
-  }
-
-  showAssignDialog() {
+  protected showAssignDialog() {
     this.assignEmail = '';
     this.assignScope = 'whole';
     this.assignInstructions = '';
     this.assignDialogVisible = true;
   }
 
-  createAssignment() {
+  protected createAssignment() {
     this.assigning.set(true);
     const body: Record<string, unknown> = {
       scope: this.assignScope,
@@ -525,32 +968,78 @@ export class GapAnalysisPage implements OnInit {
     });
   }
 
-  cancelAssignment(id: string) {
-    this.api.post<GapAssignmentItem>(`/gap/assignments/${id}/cancel`, {}).subscribe({
-      next: (a) => {
-        this.assignments.update((list) => list.map((x) => (x.id === a.id ? a : x)));
-        this.msg.add({ severity: 'info', summary: 'Cancelado' });
-      },
-      error: (e) => this.msg.add({ severity: 'error', summary: 'Erro', detail: e.error?.detail ?? e.message }),
+  protected toggleGapFilter() {
+    this.showOnlyGaps.update((value) => !value);
+  }
+
+  protected adherenceLabel(): string {
+    const value = this.adherence();
+    return value === null ? '—' : `${Math.round(value * 100)}%`;
+  }
+
+  statusLabel(status: GapStatus): string {
+    return STATUS_LABELS[status];
+  }
+
+  protected statusClass(status: GapStatus): string {
+    return STATUS_CLASSES[status];
+  }
+
+  protected priorityLabel(priority: GapPriority): string {
+    return PRIORITY_LABELS[priority];
+  }
+
+  protected priorityColor(priority: GapPriority): string {
+    return PRIORITY_COLORS[priority];
+  }
+
+  protected responsibleInitials(value: string | null): string {
+    if (!value?.trim()) return '-';
+    return value
+      .split(/[\s@.]/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  }
+
+  protected assignmentStatusLabel(status: string): string {
+    return ASSIGNMENT_STATUS_LABELS[status] ?? status;
+  }
+
+  protected assignmentActor(a: GapAssignmentItem): string {
+    if (a.respondent_email) return a.respondent_email;
+    if (a.respondent_user_id) return 'Membro da organização';
+    return 'Sem responsável definido';
+  }
+
+  private loadAssignments() {
+    this.api.get<GapAssignmentItem[]>('/gap/assignments').subscribe({
+      next: (list) => this.assignments.set(list),
+      error: () => {},
     });
   }
 
-  assignSeverity(status: string): 'info' | 'warn' | 'success' | 'danger' | 'secondary' {
-    const map: Record<string, 'info' | 'warn' | 'success' | 'danger' | 'secondary'> = {
-      pending: 'info', in_progress: 'warn', submitted: 'success', cancelled: 'secondary',
-    };
-    return map[status] ?? 'secondary';
+  private resetForm(item: GapAssessmentItem) {
+    this.editStatus.setValue(item.status);
+    this.editFindings.setValue(item.findings ?? '');
+    this.editActions.setValue(item.actions ?? '');
+    this.editPriority.setValue(item.priority);
+    this.editResponsible.setValue(item.responsible ?? '');
+    this.editJustification.setValue(item.exclusion_justification ?? '');
   }
 
-  dimLabel(dim: GapDimension): string {
-    return DIM_LABELS[dim] ?? dim;
+  private defaultSelected(items: GapAssessmentItem[]): GapAssessmentItem | null {
+    return (
+      items.find((item) => item.status === 'not_meet' && item.priority === 'critical') ??
+      items.find((item) => ['not_meet', 'partial'].includes(item.status)) ??
+      items[0] ??
+      null
+    );
   }
 
-  statusLabel(s: GapStatus): string {
-    return STATUS_LABELS[s] ?? s;
-  }
-
-  statusSeverity(s: GapStatus): StatusSeverity {
-    return STATUS_SEVERITY[s] ?? 'secondary';
+  private groupKey(item: GapAssessmentItem): string {
+    if (item.dimension === 'annex_a') return item.theme ?? 'annex_a';
+    return item.dimension;
   }
 }

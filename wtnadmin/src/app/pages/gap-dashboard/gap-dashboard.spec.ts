@@ -8,8 +8,25 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { GapDashboardPage } from './gap-dashboard';
 import { AuthStore } from '@app/core/auth.store';
 
+const DASH = {
+  overall_adherence: 0.5,
+  completeness: 0.4,
+  status_distribution: { meets: 2, partial: 1, not_meet: 1, not_applicable: 0, not_filled: 6 },
+  by_dimension: { clause: 0.8, annex_a: 0.4 },
+  by_theme: {},
+};
+
 describe('GapDashboardPage', () => {
   let component: GapDashboardPage;
+  // acesso a membros protegidos (computeds/helpers da UI) nos testes
+  let view: {
+    totalControls(): number;
+    evaluatedControls(): number;
+    statusViews(): { key: string; count: number; percent: number }[];
+    dimensionViews(): { key: string; value: number | null }[];
+    percentLabel(v: number | null): string;
+    statusTagClass(s: string): string;
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -27,46 +44,44 @@ describe('GapDashboardPage', () => {
 
     const fixture = TestBed.createComponent(GapDashboardPage);
     component = fixture.componentInstance;
+    view = component as unknown as typeof view;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should start loading', () => {
+  it('should start loading and with a null dashboard', () => {
     expect(component.loading()).toBe(true);
-  });
-
-  it('dashboard signal starts null', () => {
     expect(component.dashboard()).toBeNull();
   });
 
-  it('statusLabel maps correctly', () => {
-    expect(component.statusLabel('meets')).toBe('Atende');
-    expect(component.statusLabel('partial')).toBe('Parcialmente atende');
-    expect(component.statusLabel('not_meet')).toBe('Não atende');
-    expect(component.statusLabel('not_applicable')).toBe('N/A');
-    expect(component.statusLabel('not_filled')).toBe('Não avaliado');
+  it('counts total and evaluated controls from the distribution', () => {
+    component.dashboard.set(DASH as never);
+    expect(view.totalControls()).toBe(10);
+    expect(view.evaluatedControls()).toBe(4); // 10 - 6 não avaliados
   });
 
-  it('dimLabel maps correctly', () => {
-    expect(component.dimLabel('clause')).toBe('Cláusulas (4–10)');
-    expect(component.dimLabel('annex_a')).toBe('Anexo A — Controles');
+  it('builds status views with counts and percentages', () => {
+    component.dashboard.set(DASH as never);
+    const meets = view.statusViews().find((s) => s.key === 'meets')!;
+    expect(meets.count).toBe(2);
+    expect(Math.round(meets.percent)).toBe(20);
   });
 
-  it('prioritySeverity maps correctly', () => {
-    expect(component.prioritySeverity('critical')).toBe('danger');
-    expect(component.prioritySeverity('high')).toBe('warn');
-    expect(component.prioritySeverity('medium')).toBe('info');
-    expect(component.prioritySeverity('low')).toBe('secondary');
-    expect(component.prioritySeverity('unknown')).toBe('secondary');
+  it('builds dimension views (falls back to by_dimension when by_theme is empty)', () => {
+    component.dashboard.set(DASH as never);
+    const keys = view.dimensionViews().map((d) => d.key);
+    expect(keys).toEqual(['clause', 'annex_a']);
   });
 
-  it('statusEntries returns empty array without dashboard', () => {
-    expect(component.statusEntries()).toEqual([]);
+  it('percentLabel formats ratio and dash', () => {
+    expect(view.percentLabel(0.5)).toBe('50%');
+    expect(view.percentLabel(null)).toBe('—');
   });
 
-  it('dimensionEntries returns empty array without dashboard', () => {
-    expect(component.dimensionEntries()).toEqual([]);
+  it('statusTagClass maps to wtn-tag modifiers', () => {
+    expect(view.statusTagClass('meets')).toBe('wtn-tag--success');
+    expect(view.statusTagClass('not_meet')).toBe('wtn-tag--danger');
   });
 });
