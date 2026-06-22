@@ -52,10 +52,13 @@ texto normativo ISO).
   `down_revision="f8a9b0c1d207"`: `add_column` guardado (x4 em `gap_seed_item`), `create_table`
   guardado (`gap_legend_entry`, `gap_guidance_event`), triggers idempotentes. **Sem RLS** (tabelas de
   plataforma). **Idempotente** (rodar 2× sem erro).
-- [ ] T008 Em `wtnapp/services/gap_seed_service.py`: (a) `load_seed` **semeia `gap_legend_entry`**
-  idempotentemente (por `kind`+`code`) a partir de `data/iso27001_seed.py`; (b) `load_seed` preenche
-  os campos de orientação do seed **somente quando vazios** — **nunca sobrescreve** valor não-vazio
-  (preserva edição do admin). Versão segue 2022.1.
+- [ ] T008 **Legenda (conteúdo + seed)** em `wtnapp/data/iso27001_seed.py` + `wtnapp/services/
+  gap_seed_service.py`: (a) autorar as **8 definições** da legenda — **4 Status** (`meets`/`partial`/
+  `not_meet`/`not_applicable`; **exclui `not_filled`**) e **4 Prioridade** (`critical`/`high`/`medium`/
+  `low`), PT-BR **original**, em `iso27001_seed.py`; (b) `load_seed` **semeia `gap_legend_entry`**
+  idempotentemente (por `kind`+`code`); (c) `load_seed` preenche os campos de orientação do seed
+  **somente quando vazios** — **nunca sobrescreve** valor não-vazio (preserva edição do admin).
+  Versão segue 2022.1.
 
 **Checkpoint**: schema + legenda prontos; endpoint pode ser construído.
 
@@ -93,7 +96,9 @@ disponível".
   `GET /gap/guidance` e renderizar, no painel lateral, a seção **"Orientação de avaliação"**
   (somente leitura: referência, objetivo, `como_avaliar` em bullets, `evidencias_esperadas` em
   bullets, nota); mapear por `ref_code`; "sem orientação disponível" quando ausente; **reservar
-  espaço** para a futura seção de Evidências (FR-010).
+  espaço** para a futura seção de Evidências (FR-010). **Rotular distintamente (FR-009)**: a
+  orientação é "Evidências esperadas"; o campo da org (`evidence_ref`, já na matriz) é "Evidência
+  existente" — não confundir os dois.
 - [ ] T018 [P] [US1] Frontend: atualizar `wtnadmin/src/app/pages/gap-analysis/gap-analysis.spec.ts`
   para mockar `/gap/guidance` e validar render da orientação + estado "sem orientação".
 
@@ -142,15 +147,19 @@ reflete na leitura de qualquer org; não-Super-Admin ⇒ 403.
 **Independent Test**: abrir a tela do Gap e ver as 4 definições de Status + 4 de Prioridade.
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
-- [ ] T026 [P] [US3] `wtnapp/test/test_gap_guidance.py`: a `legend` de `GET /gap/guidance` traz 4
-  entradas `status` + 4 `priority` (semeadas), com `label` e `definition`.
+- [ ] T026 [P] [US3] `wtnapp/test/test_gap_guidance.py`: a `legend` de `GET /gap/guidance` traz **4**
+  entradas `status` + **4** `priority` (semeadas no T008), com `label` e `definition`.
 
 ### Implementation for User Story 3
-- [ ] T027 [US3] **Conteúdo** — definições PT-BR **originais** das escalas (status: Não atende/Atende
-  Parcialmente/Atende Totalmente/Não Aplicável; prioridade: Crítica/Alta/Média/Baixa) em
-  `wtnapp/data/iso27001_seed.py` (consumidas pelo seed de legenda do T008).
-- [ ] T028 [P] [US3] Frontend: exibir a **legenda** (status + prioridade) na tela do Gap
-  (`wtnadmin/src/app/pages/gap-analysis/gap-analysis.ts` — painel recolhível/ajuda) + spec do render.
+
+> A autoria das definições da legenda foi movida para **T008 (Foundational)**; US3 cobre apenas a
+> exibição na tela.
+
+- [ ] T027 [US3] Frontend: exibir a **legenda** (status + prioridade) em
+  `wtnadmin/src/app/pages/gap-analysis/gap-analysis.ts` (painel recolhível/ajuda), consumindo a
+  `legend` de `GET /gap/guidance`.
+- [ ] T028 [P] [US3] Frontend: spec do render da legenda em
+  `wtnadmin/src/app/pages/gap-analysis/gap-analysis.spec.ts` (4 status + 4 prioridade).
 
 **Checkpoint**: US1, US2 e US3 funcionam independentemente.
 
@@ -184,8 +193,9 @@ reflete na leitura de qualquer org; não-Super-Admin ⇒ 403.
 
 ### Within Each User Story
 - Testes (incl. **RBAC/isolamento** em US2) escritos e FALHANDO antes da implementação.
-- **Conteúdo (T013–T016, T027)** edita o mesmo arquivo `iso27001_seed.py` → **sequencial** entre si.
-- Frontend (T017/T018, T024/T025, T028) em paralelo ao backend da mesma story (arquivos diferentes).
+- **Conteúdo** edita `iso27001_seed.py` em vários pontos (T008 legenda, depois T013–T016 itens) →
+  **sequencial** entre si no mesmo arquivo.
+- Frontend (T017/T018, T024/T025, T027/T028) em paralelo ao backend da mesma story (arquivos diferentes).
 
 ### Parallel Opportunities
 - **Foundational**: T004, T005, T006 em paralelo (arquivos diferentes); T003 e T007/T008 à parte.

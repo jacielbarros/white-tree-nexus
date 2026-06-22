@@ -29,7 +29,7 @@ Definições das escalas, editáveis pelo Super Admin.
 |-------|------|-------|
 | `id` | UUID PK | |
 | `kind` | String(10) | `status` \| `priority` |
-| `code` | String(20) | `meets`/`partial`/`not_meet`/`not_applicable`/`not_filled` ou `critical`/`high`/`medium`/`low` |
+| `code` | String(20) | Status (**4**): `meets`/`partial`/`not_meet`/`not_applicable` (exclui `not_filled` — é estado de preenchimento, não nível de conformidade). Prioridade (**4**): `critical`/`high`/`medium`/`low` |
 | `label` | String(60) | rótulo curto (ex.: "Atende Totalmente") |
 | `definition` | Text | definição objetiva (PT-BR original) |
 | `order` | Integer | ordem de exibição |
