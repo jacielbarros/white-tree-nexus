@@ -431,6 +431,27 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
+**Feature 007 — Orientação de Avaliação por Item (Gap Analysis)** (`007-gap-item-guidance`) —
+**planejada** (spec + clarify + plan prontos; implementação pendente via `/speckit.tasks` →
+`/speckit.implement`)
+- Plano: `specs/007-gap-item-guidance/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: orientação por item da matriz do Gap (referência/objetivo/como avaliar/evidências esperadas/
+  nota) + legenda global de Status/Prioridade. **Conteúdo de plataforma compartilhado** (no
+  catálogo-base `gap_seed_item`, sem `tenant_id`), **somente leitura** para a org (resolvido pelo
+  vínculo `gap_catalog_item.seed_item_id → gap_seed_item`, que já existe), **editável só pelo Super
+  Admin** (`require_super_admin`) com **trilha append-only** + audit. Conteúdo PT-BR **original** dos
+  100 itens (IP: proibido reproduzir texto normativo ISO).
+- Decisões-chave: `objetivo` já existe no seed (`objective`) e já é autorado; campos novos no seed
+  (`referencia`/`como_avaliar`[JSON]/`evidencias_esperadas`[JSON]/`nota`); `como_avaliar`/`evidencias`
+  = **listas de strings**; `load_seed` preenche orientação **só quando vazia** (não sobrescreve
+  edição do admin); legenda em tabela `gap_legend_entry`; trilha `gap_guidance_event` (ambas
+  platform-level, sem `tenant_id` — mesma exceção do seed, Feature 004). Migration
+  `down_revision="f8a9b0c1d207"`. Leitura via `GET /gap/guidance` (view_gap); edição via
+  `PUT /gap/guidance/items|legend` (Super Admin). MVP cobre os 100 itens.
+- Prepara o terreno para a feature seguinte (evidências anexadas por item) — ver
+  `docs/feature-gap-guidance-and-evidence.md`.
+
 **Feature 006 — Dashboard de Conformidade** (`006-compliance-dashboard`) — **implementada**
 (11 testes backend dedicados + suíte completa verde; 88 testes frontend; E2E browser pendente —
 roda no fluxo Postgres do usuário). Endpoint `GET /dashboard`, sem migration.

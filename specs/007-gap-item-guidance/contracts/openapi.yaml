@@ -1,0 +1,186 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Orientação de Avaliação por Item (Feature 007)
+  version: 1.0.0
+  description: >
+    Orientação de avaliação por item do Gap Analysis + legenda global de Status/Prioridade.
+    Conteúdo de PLATAFORMA compartilhado (sem tenant_id). Leitura por usuário da org (view_gap);
+    edição exclusiva do Super Admin da plataforma (require_super_admin, sem X-Org-Context), com
+    trilha append-only + audit. Textos originais (sem reproduzir norma ISO).
+
+servers:
+  - url: /
+
+paths:
+  /gap/guidance:
+    get:
+      operationId: getGapGuidance
+      tags: [gap-guidance]
+      summary: Orientação de todos os itens do seed corrente + legenda global
+      description: >
+        Conteúdo de plataforma (igual para todas as organizações). Gated por `view_gap`. A matriz
+        mapeia a orientação por `ref_code`/`seed_item_id`.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrgContext' }]
+      responses:
+        '200':
+          description: Orientação + legenda.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GuidanceResponse' }
+        '401': { description: Não autenticado. }
+        '403': { description: Sem permissão `view_gap`. }
+
+  /gap/guidance/items/{seed_item_id}:
+    put:
+      operationId: updateItemGuidance
+      tags: [gap-guidance-admin]
+      summary: Editar a orientação de um item (Super Admin da plataforma)
+      description: >
+        Operação de PLATAFORMA — exige Super Admin (sem contexto de org). Cada campo alterado gera
+        um registro na trilha append-only e um audit log. A alteração reflete em todas as orgs.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: seed_item_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ItemGuidanceUpdate' }
+      responses:
+        '200':
+          description: Orientação atualizada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ItemGuidance' }
+        '401': { description: Não autenticado. }
+        '403': { description: Não é Super Admin da plataforma (tentativa auditada). }
+        '404': { description: Item de seed inexistente. }
+
+  /gap/guidance/legend/{entry_id}:
+    put:
+      operationId: updateLegendEntry
+      tags: [gap-guidance-admin]
+      summary: Editar uma entrada da legenda (Super Admin da plataforma)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LegendEntryUpdate' }
+      responses:
+        '200':
+          description: Entrada atualizada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegendEntry' }
+        '403': { description: Não é Super Admin (tentativa auditada). }
+        '404': { description: Entrada inexistente. }
+
+  /gap/guidance/events:
+    get:
+      operationId: listGuidanceEvents
+      tags: [gap-guidance-admin]
+      summary: Histórico (trilha append-only) de edições de orientação/legenda (Super Admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Trilha de edições (mais recentes primeiro).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/GuidanceEvent' }
+        '403': { description: Não é Super Admin. }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: false
+      description: UUID da organização ativa (para a leitura em contexto de org).
+      schema: { type: string, format: uuid }
+
+  schemas:
+    GuidanceResponse:
+      type: object
+      required: [items, legend]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ItemGuidance' }
+        legend: { $ref: '#/components/schemas/Legend' }
+
+    ItemGuidance:
+      type: object
+      required: [seed_item_id, ref_code, referencia, objetivo, como_avaliar, evidencias_esperadas]
+      properties:
+        seed_item_id: { type: string, format: uuid }
+        ref_code: { type: string }
+        referencia: { type: string }
+        objetivo: { type: string }
+        como_avaliar: { type: array, items: { type: string } }
+        evidencias_esperadas: { type: array, items: { type: string } }
+        nota: { type: [string, "null"] }
+
+    ItemGuidanceUpdate:
+      type: object
+      description: Campos ausentes não são alterados.
+      properties:
+        referencia: { type: string }
+        objetivo: { type: string }
+        como_avaliar: { type: array, items: { type: string } }
+        evidencias_esperadas: { type: array, items: { type: string } }
+        nota: { type: [string, "null"] }
+
+    Legend:
+      type: object
+      required: [status, priority]
+      properties:
+        status:
+          type: array
+          items: { $ref: '#/components/schemas/LegendEntry' }
+        priority:
+          type: array
+          items: { $ref: '#/components/schemas/LegendEntry' }
+
+    LegendEntry:
+      type: object
+      required: [code, label, definition, order]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        label: { type: string }
+        definition: { type: string }
+        order: { type: integer }
+
+    LegendEntryUpdate:
+      type: object
+      properties:
+        label: { type: string }
+        definition: { type: string }
+
+    GuidanceEvent:
+      type: object
+      required: [target_type, target_id, field, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        target_type: { type: string, enum: [seed_item, legend] }
+        target_id: { type: string, format: uuid }
+        field: { type: string }
+        old_value: { type: [string, "null"] }
+        new_value: { type: [string, "null"] }
+        actor_id: { type: [string, "null"], format: uuid }
+        created_at: { type: string, format: date-time }
