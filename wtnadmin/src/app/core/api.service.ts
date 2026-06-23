@@ -7,18 +7,24 @@ import {
   Classification,
   ContextAnalysis,
   Diagnostic,
+  DocumentPreview,
   DocumentVersion,
   FormAssignment,
   FormSignature,
   FormTemplate,
+  IntegrityVerification,
   Invitation,
   InviteLookup,
   Me,
   MembershipRow,
   Organization,
+  PrintableDocumentType,
+  PrintTemplate,
+  PrintTemplateVersion,
   Role,
   ScopeStatement,
   SignaturePolicy,
+  SignedDocument,
   Stakeholder,
   StakeholderMap,
   Suggestion,
@@ -256,6 +262,92 @@ export class ApiService {
 
   updateSignaturePolicy(payload: SignaturePolicy): Observable<SignaturePolicy> {
     return this.http.put<SignaturePolicy>(`${this.base}/form-signature-policy`, payload);
+  }
+
+  // --- Documentos imprimiveis/assinaveis ---
+  listPrintTemplates(documentType?: PrintableDocumentType): Observable<PrintTemplate[]> {
+    return this.http.get<PrintTemplate[]>(`${this.base}/print-documents/templates`, {
+      params: documentType ? { document_type: documentType } : {},
+    });
+  }
+
+  createPrintTemplate(payload: {
+    document_type: PrintableDocumentType;
+    name: string;
+    description?: string | null;
+    default_classification?: string;
+  }): Observable<PrintTemplate> {
+    return this.http.post<PrintTemplate>(`${this.base}/print-documents/templates`, payload);
+  }
+
+  createPrintTemplateVersion(
+    templateId: string,
+    payload: {
+      layout_schema: Record<string, unknown>;
+      allowed_variables: Record<string, unknown>;
+      required_sections: string[];
+    },
+  ): Observable<PrintTemplateVersion> {
+    return this.http.post<PrintTemplateVersion>(
+      `${this.base}/print-documents/templates/${templateId}/versions`,
+      payload,
+    );
+  }
+
+  activatePrintTemplateVersion(templateId: string, versionId: string): Observable<PrintTemplate> {
+    return this.http.post<PrintTemplate>(
+      `${this.base}/print-documents/templates/${templateId}/versions/${versionId}/activate`,
+      {},
+    );
+  }
+
+  createDocumentPreview(payload: {
+    document_type: PrintableDocumentType;
+    source_artifact_id?: string | null;
+    template_version_id?: string | null;
+    classification?: string | null;
+  }): Observable<DocumentPreview> {
+    return this.http.post<DocumentPreview>(`${this.base}/print-documents/previews`, payload);
+  }
+
+  getDocumentPreview(previewId: string): Observable<DocumentPreview> {
+    return this.http.get<DocumentPreview>(`${this.base}/print-documents/previews/${previewId}`);
+  }
+
+  downloadPreviewPdf(previewId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/print-documents/previews/${previewId}/pdf`, {
+      responseType: 'blob',
+    });
+  }
+
+  signDocumentPreview(previewId: string, snapshotHash?: string): Observable<SignedDocument> {
+    return this.http.post<SignedDocument>(`${this.base}/print-documents/previews/${previewId}/sign`, {
+      confirm_snapshot_hash: snapshotHash ?? null,
+    });
+  }
+
+  listSignedDocuments(
+    documentType?: PrintableDocumentType,
+    sourceArtifactId?: string | null,
+  ): Observable<SignedDocument[]> {
+    const params: Record<string, string> = {};
+    if (documentType) {
+      params['document_type'] = documentType;
+    }
+    if (sourceArtifactId) {
+      params['source_artifact_id'] = sourceArtifactId;
+    }
+    return this.http.get<SignedDocument[]>(`${this.base}/print-documents/signed`, { params });
+  }
+
+  downloadSignedPdf(documentId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/print-documents/signed/${documentId}/pdf`, {
+      responseType: 'blob',
+    });
+  }
+
+  verifySignedDocument(documentId: string): Observable<IntegrityVerification> {
+    return this.http.post<IntegrityVerification>(`${this.base}/print-documents/signed/${documentId}/verify`, {});
   }
 
   // --- Atalhos genéricos (para módulos sem métodos nomeados no service) ---

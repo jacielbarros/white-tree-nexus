@@ -76,6 +76,11 @@ FIELD_ENCRYPTION_KEY=     # Fernet (urlsafe-b64 32B) p/ cifrar campos sensíveis
 EVIDENCE_STORAGE_DIR=./evidence_store/   # local; trocar por S3/objeto em produção
 EVIDENCE_MAX_FILE_BYTES=20971520          # 20 MB
 EVIDENCE_ALLOWED_EXTENSIONS=.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.7z
+# --- Storage de documentos imprimíveis/assináveis ---
+DOCUMENT_STORAGE_DIR=./document_store/    # local; trocar por objeto externo em produção
+DOCUMENT_PREVIEW_TTL_MINUTES=60
+DOCUMENT_MAX_PDF_BYTES=20971520           # 20 MB
+DOCUMENT_RENDER_TIMEOUT_SECONDS=30
 # --- Recursos de IA (Módulo 10, opt-in por organização) ---
 AI_FEATURES_ENABLED=false
 ANTHROPIC_API_KEY=
@@ -141,6 +146,10 @@ Ordem de MVP: 1) Diagnóstico e Contexto · 2) Gap Analysis · 3) SoA · 4) Plan
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
+Toda migration deve ser idempotente: além de criar objetos quando não existirem, deve reconciliar
+tabelas já existentes adicionando colunas, índices, constraints, políticas RLS e triggers ausentes
+sem duplicar objetos nem falhar em bancos que ficaram em estado intermediário por `create_all()` ou
+execuções parciais anteriores.
 
 ## Backend Key Conventions
 
@@ -263,16 +272,16 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
-**Feature 008 — Anexos/Evidências na Matriz do Gap Analysis** (`008-gap-evidence-attachments`)
-- Plano: `specs/008-gap-evidence-attachments/plan.md`
-- Spec: `specs/008-gap-evidence-attachments/spec.md` · Research: `.../research.md` ·
-  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+**Feature 009 - Documentos Imprimiveis, Pre-visualizaveis e Assinaveis** (`009-signable-print-documents`)
+- Plano: `specs/009-signable-print-documents/plan.md`
+- Spec: `specs/009-signable-print-documents/spec.md` . Research: `.../research.md` .
+  Data model: `.../data-model.md` . Contracts: `.../contracts/openapi.yaml` .
   Quickstart: `.../quickstart.md`
-- Decisões-chave: evidências anexadas são dados tenant-scoped (`tenant_id` + `scoped_query` +
-  RLS); metadados em PostgreSQL e arquivo em storage local configurável por `EVIDENCE_STORAGE_DIR`,
-  cifrado em repouso via `FIELD_ENCRYPTION_KEY`; integridade por SHA-256; lista principal mostra
-  apenas evidências ativas/correntes; histórico, versões anteriores e inativas exigem `manage_gap`;
-  download de `publico`/`uso_interno` exige `view_gap`, enquanto `confidencial`/`restrito` exige
-  `manage_gap`; upload/download/substituição/inativação/tentativas negadas geram audit sem conteúdo,
-  storage_key ou path interno.
+- Decisoes-chave: capacidade transversal em `/print-documents`; Contexto consolidado, Gap Analysis e
+  SoA continuam donos dos dados e permissoes; assinatura usa permissoes de aprovacao existentes
+  (`approve_context_document`, `approve_gap_baseline`, `approve_soa`); previews criam snapshot
+  temporario e so podem ser assinados se artefato/template nao mudaram; PDFs usam ReportLab e storage
+  local cifrado por `DOCUMENT_STORAGE_DIR` + `FIELD_ENCRYPTION_KEY`; templates sao versionados com
+  secoes/variaveis controladas; documentos assinados preservam template versionado, PDF final, hash,
+  assinante, tenant e trilha de auditoria sem conteudo sensivel.
 <!-- SPECKIT END -->

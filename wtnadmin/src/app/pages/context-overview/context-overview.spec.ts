@@ -24,6 +24,9 @@ const mockApi = {
   getContextOverview: vi.fn(() => of(OVERVIEW)),
   listSuggestions: vi.fn(() => of([{ id: 's1', target: 'stakeholder', payload: {}, reason: 'Adicionar parte X' }])),
   acceptSuggestion: vi.fn(() => of({})),
+  listSignedDocuments: vi.fn(() => of([])),
+  downloadSignedPdf: vi.fn(),
+  verifySignedDocument: vi.fn(),
 };
 
 interface View {
@@ -37,6 +40,7 @@ describe('ContextOverviewPage', () => {
 
   beforeEach(async () => {
     mockApi.getContextOverview.mockClear();
+    mockApi.listSignedDocuments.mockClear();
     await TestBed.configureTestingModule({
       imports: [ContextOverviewPage],
       providers: [

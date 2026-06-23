@@ -6,6 +6,7 @@ import { SelectModule } from 'primeng/select';
 
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
+import { hasPermission } from '@app/core/permissions';
 
 interface OrgOption { label: string; value: string; }
 
@@ -176,6 +177,17 @@ interface OrgOption { label: string; value: string; }
                 </svg>
                 @if (!collapsed()) { <span>Formulários</span> }
               </a>
+              @if (canManagePrintTemplates()) {
+                <a class="wtn-nav-item" routerLink="print-templates" routerLinkActive="active" [title]="collapsed() ? 'Templates de impressão' : ''">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <path d="M7 3h8l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+                          stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M15 3v5h5M9 13h6M9 17h4"
+                          stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  @if (!collapsed()) { <span>Templates de impressão</span> }
+                </a>
+              }
             </div>
 
             <!-- Gap Analysis -->
@@ -487,6 +499,10 @@ export class Shell implements OnInit {
 
   protected onOrgChange(orgId: string): void {
     this.store.setActiveOrg(orgId);
+  }
+
+  protected canManagePrintTemplates(): boolean {
+    return hasPermission(this.store.currentRole(), 'manage_print_templates');
   }
 
   protected logout(): void {

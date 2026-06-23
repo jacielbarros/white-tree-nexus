@@ -23,6 +23,15 @@ from wtnapp.models.invitation_model import Invitation
 from wtnapp.models.membership_model import Membership
 from wtnapp.models.organization_model import Organization
 from wtnapp.models.password_reset_model import PasswordResetToken
+from wtnapp.models.print_document_model import (
+    DocumentAccessEvent,
+    DocumentPreview,
+    DocumentSignature,
+    PrintTemplate,
+    PrintTemplateVersion,
+    SignedDocument,
+    SignedDocumentSnapshot,
+)
 from wtnapp.models.scope_model import ScopeItem, ScopeStatement
 # SoA (Feature 005)
 from wtnapp.models.soa_model import Soa, SoaItem, SoaItemEvent
@@ -59,6 +68,13 @@ __all__ = [
     "Membership",
     "Organization",
     "PasswordResetToken",
+    "DocumentAccessEvent",
+    "DocumentPreview",
+    "DocumentSignature",
+    "PrintTemplate",
+    "PrintTemplateVersion",
+    "SignedDocument",
+    "SignedDocumentSnapshot",
     "ScopeItem",
     "ScopeStatement",
     "Soa",

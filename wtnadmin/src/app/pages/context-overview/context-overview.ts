@@ -4,6 +4,8 @@ import { MessageService } from 'primeng/api';
 
 import { ApiService } from '@app/core/api.service';
 import { Suggestion } from '@app/core/models';
+import { DocumentHistory } from '@app/shared/document-history/document-history';
+import { DocumentPreview } from '@app/shared/document-preview/document-preview';
 
 /** Subconjunto do retorno de GET /context/overview que esta tela consome. */
 interface ArtifactState {
@@ -47,7 +49,7 @@ function statusOf(a: ArtifactState | undefined): { label: string; cls: string } 
 @Component({
   selector: 'app-context-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, DocumentPreview, DocumentHistory],
   template: `
     <header class="wtn-page-header">
       <div>
@@ -57,6 +59,17 @@ function statusOf(a: ArtifactState | undefined): { label: string; cls: string } 
         </p>
       </div>
     </header>
+
+    <div class="document-tools">
+      <app-document-preview
+        [documentType]="'context_report'"
+        title="Relatorio consolidado de Contexto"
+      />
+      <app-document-history
+        [documentType]="'context_report'"
+        title="Historico de Contexto"
+      />
+    </div>
 
     @if (loading()) {
       <div class="wtn-loading-row">
@@ -144,6 +157,19 @@ function statusOf(a: ArtifactState | undefined): { label: string; cls: string } 
       gap: 14px;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       margin-bottom: 22px;
+    }
+
+    .document-tools {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 980px) {
+      .document-tools {
+        grid-template-columns: 1fr;
+      }
     }
 
     .artifact-card {

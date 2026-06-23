@@ -22,6 +22,8 @@ import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
 import { Soa, SoaItem, SoaImplementationStatus, SoaInclusionReason, GapTheme } from '@app/core/models';
+import { DocumentHistory } from '@app/shared/document-history/document-history';
+import { DocumentPreview } from '@app/shared/document-preview/document-preview';
 
 const STATUS_LABELS: Record<string, string> = {
   implemented: 'Implementado',
@@ -62,6 +64,8 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
     TagModule,
     TextareaModule,
     TooltipModule,
+    DocumentPreview,
+    DocumentHistory,
   ],
   template: `
     <div class="page-header">
@@ -94,6 +98,19 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
         </div>
       </p-card>
     } @else {
+      <div class="document-tools">
+        <app-document-preview
+          [documentType]="'soa_report'"
+          [sourceArtifactId]="soa()?.id ?? null"
+          title="Relatorio da SoA"
+        />
+        <app-document-history
+          [documentType]="'soa_report'"
+          [sourceArtifactId]="soa()?.id ?? null"
+          title="Historico da SoA"
+        />
+      </div>
+
       <div class="soa-summary mb-3">
         <span>Total: <b>{{ soa()!.summary.total }}</b></span>
         <span>Aplicáveis: <b>{{ soa()!.summary.applicable }}</b></span>
@@ -226,6 +243,12 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
   `,
   styles: [`
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .document-tools {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+      margin-bottom: 16px;
+    }
     .soa-summary { display: flex; gap: 1.5rem; font-size: .9rem; }
     .soa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .75rem; }
     .soa-item { border: 1px solid var(--surface-border); border-radius: 6px; padding: .75rem; cursor: pointer; transition: box-shadow .2s; }
@@ -237,6 +260,9 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
     .reasons { display: flex; flex-wrap: wrap; gap: .75rem; }
     .reason { display: flex; align-items: center; gap: .35rem; font-size: .9rem; }
     .divergence-box { border: 1px solid var(--yellow-300, #f5d76e); background: var(--yellow-50, #fffbe6); border-radius: 6px; padding: .6rem .75rem; }
+    @media (max-width: 980px) {
+      .document-tools { grid-template-columns: 1fr; }
+    }
   `],
 })
 export class SoaPage implements OnInit {

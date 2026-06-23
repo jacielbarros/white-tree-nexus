@@ -77,6 +77,82 @@ export interface InviteLookup {
 export type Level = 'alto' | 'medio' | 'baixo';
 export type Classification = 'publico' | 'uso_interno' | 'confidencial' | 'restrito';
 
+export type PrintableDocumentType =
+  | 'context_report'
+  | 'gap_report'
+  | 'soa_report'
+  | 'gap_baseline'
+  | 'form_response';
+export type PrintTemplateScope = 'system' | 'tenant';
+export type PrintTemplateStatus = 'draft' | 'active' | 'inactive';
+export type DocumentPreviewStatus = 'active' | 'expired' | 'stale' | 'signed';
+export type SignedDocumentStatus = 'signed' | 'obsolete';
+
+export interface PrintTemplate {
+  id: string;
+  tenant_id: string | null;
+  scope: PrintTemplateScope;
+  document_type: PrintableDocumentType;
+  name: string;
+  description: string | null;
+  status: PrintTemplateStatus;
+  default_classification: Classification;
+  current_version_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface PrintTemplateVersion {
+  id: string;
+  template_id: string;
+  version_number: number;
+  renderer: string;
+  layout_schema: Record<string, unknown>;
+  allowed_variables: Record<string, unknown>;
+  required_sections: string[];
+  content_hash: string;
+  is_current: boolean;
+  created_at: string;
+}
+
+export interface DocumentPreview {
+  id: string;
+  document_type: PrintableDocumentType;
+  source_artifact_id: string | null;
+  template_version_id: string;
+  classification: Classification;
+  status: DocumentPreviewStatus;
+  snapshot_hash: string;
+  preview_pdf_hash: string;
+  expires_at: string;
+  created_at: string;
+  warnings: string[];
+}
+
+export interface SignedDocument {
+  id: string;
+  document_type: PrintableDocumentType;
+  source_artifact_id: string | null;
+  template_version_id: string;
+  version_number: number;
+  status: SignedDocumentStatus;
+  classification: Classification;
+  identifier: string;
+  pdf_hash: string;
+  snapshot_hash: string;
+  size_bytes: number;
+  signed_by: string;
+  signed_at: string;
+}
+
+export interface IntegrityVerification {
+  valid: boolean;
+  identifier: string;
+  pdf_hash: string;
+  snapshot_hash: string;
+  verified_at: string;
+}
+
 export interface Diagnostic {
   id?: string;
   status: 'draft' | 'completed';

@@ -83,6 +83,12 @@ export const routes: Routes = [
           import('@app/pages/form-fill/form-fill').then((m) => m.FormFillPage),
       },
       {
+        path: 'print-templates',
+        canActivate: [permissionGuard('manage_print_templates')],
+        loadComponent: () =>
+          import('@app/pages/print-templates/print-templates').then((m) => m.PrintTemplatesPage),
+      },
+      {
         path: 'gap-analysis',
         canActivate: [permissionGuard('view_gap')],
         loadComponent: () =>

@@ -26,6 +26,7 @@ coverage/
 
 # --- Evidence store (local) ---
 evidence_store/
+document_store/
 
 #Material de contexto
 material_de_contexto/

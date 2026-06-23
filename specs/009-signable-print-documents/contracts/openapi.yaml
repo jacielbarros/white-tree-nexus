@@ -1,0 +1,587 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus - Printable Signed Documents API
+  version: 0.1.0
+  description: >
+    Contract for Feature 009: controlled printable previews, signed PDFs,
+    versioned print templates and integrity verification.
+servers:
+  - url: http://localhost:8000
+security:
+  - bearerAuth: []
+paths:
+  /print-documents/templates:
+    get:
+      summary: List available print templates
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/DocumentType'
+      responses:
+        '200':
+          description: Templates visible to the active tenant plus system defaults.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrintTemplate'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create a tenant print template
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintTemplateCreate'
+      responses:
+        '201':
+          description: Template created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintTemplate'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /print-documents/templates/{template_id}/versions:
+    post:
+      summary: Create an immutable version for a tenant template
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintTemplateVersionCreate'
+      responses:
+        '201':
+          description: Template version created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintTemplateVersion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/templates/{template_id}/versions/{version_id}/activate:
+    post:
+      summary: Activate a template version
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/TemplateId'
+        - $ref: '#/components/parameters/VersionId'
+      responses:
+        '200':
+          description: Template version activated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/previews:
+    post:
+      summary: Generate a document preview from an artifact snapshot
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentPreviewCreate'
+      responses:
+        '201':
+          description: Preview created and ready to display/download.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPreview'
+        '409':
+          description: Artifact/template state prevents preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          description: PDF rendering timed out or document storage is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /print-documents/previews/{preview_id}:
+    get:
+      summary: Get preview metadata
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPreview'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/previews/{preview_id}/pdf:
+    get:
+      summary: Download preliminary preview PDF
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: PDF marked as not signed / preview.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/previews/{preview_id}/sign:
+    post:
+      summary: Sign a valid preview and create immutable signed PDF
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignPreviewRequest'
+      responses:
+        '201':
+          description: Signed document created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedDocument'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Preview is stale, expired or already signed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /print-documents/signed:
+    get:
+      summary: List signed documents history
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/DocumentType'
+        - name: source_artifact_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Signed document history.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignedDocument'
+
+  /print-documents/signed/{document_id}:
+    get:
+      summary: Get signed document metadata
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/SignedDocumentId'
+      responses:
+        '200':
+          description: Signed document metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/signed/{document_id}/pdf:
+    get:
+      summary: Download final signed PDF
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/SignedDocumentId'
+      responses:
+        '200':
+          description: Final immutable signed PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /print-documents/signed/{document_id}/verify:
+    post:
+      summary: Verify stored PDF and snapshot integrity
+      tags: [print-documents]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/SignedDocumentId'
+      responses:
+        '200':
+          description: Integrity verification result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrityVerification'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Active organization context.
+    DocumentType:
+      name: document_type
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/PrintableDocumentType'
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VersionId:
+      name: version_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PreviewId:
+      name: preview_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SignedDocumentId:
+      name: document_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Forbidden:
+      description: Permission denied or classification denied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found or not visible in current tenant.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    PrintableDocumentType:
+      type: string
+      enum: [context_report, gap_report, soa_report, gap_baseline, form_response]
+    Classification:
+      type: string
+      enum: [publico, uso_interno, confidencial, restrito]
+    PrintTemplate:
+      type: object
+      required: [id, scope, document_type, name, status, default_classification, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+          nullable: true
+        scope:
+          type: string
+          enum: [system, tenant]
+        document_type:
+          $ref: '#/components/schemas/PrintableDocumentType'
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, active, inactive]
+        default_classification:
+          $ref: '#/components/schemas/Classification'
+        current_version_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    PrintTemplateCreate:
+      type: object
+      required: [document_type, name]
+      properties:
+        document_type:
+          $ref: '#/components/schemas/PrintableDocumentType'
+        name:
+          type: string
+          minLength: 3
+          maxLength: 160
+        description:
+          type: string
+          maxLength: 500
+        default_classification:
+          $ref: '#/components/schemas/Classification'
+    PrintTemplateVersion:
+      type: object
+      required: [id, template_id, version_number, renderer, layout_schema, content_hash, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        version_number:
+          type: integer
+        renderer:
+          type: string
+        layout_schema:
+          type: object
+          additionalProperties: true
+        allowed_variables:
+          type: object
+          additionalProperties: true
+        content_hash:
+          type: string
+        is_current:
+          type: boolean
+          description: Computed from PrintTemplate.current_version_id; not stored on the immutable version row.
+        created_at:
+          type: string
+          format: date-time
+    PrintTemplateVersionCreate:
+      type: object
+      required: [layout_schema, allowed_variables]
+      properties:
+        layout_schema:
+          type: object
+          additionalProperties: true
+        allowed_variables:
+          type: object
+          additionalProperties: true
+        required_sections:
+          type: array
+          items:
+            type: string
+    DocumentPreviewCreate:
+      type: object
+      required: [document_type]
+      properties:
+        document_type:
+          $ref: '#/components/schemas/PrintableDocumentType'
+        source_artifact_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_version_id:
+          type: string
+          format: uuid
+          nullable: true
+        classification:
+          $ref: '#/components/schemas/Classification'
+    DocumentPreview:
+      type: object
+      required:
+        - id
+        - document_type
+        - template_version_id
+        - classification
+        - status
+        - snapshot_hash
+        - preview_pdf_hash
+        - expires_at
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_type:
+          $ref: '#/components/schemas/PrintableDocumentType'
+        source_artifact_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_version_id:
+          type: string
+          format: uuid
+        classification:
+          $ref: '#/components/schemas/Classification'
+        status:
+          type: string
+          enum: [active, expired, stale, signed]
+        snapshot_hash:
+          type: string
+        preview_pdf_hash:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          description: Non-blocking missing optional data rendered as "Nao informado".
+          items:
+            type: string
+    SignPreviewRequest:
+      type: object
+      properties:
+        confirm_snapshot_hash:
+          type: string
+          description: Optional client confirmation that the reviewed preview hash is expected.
+    SignedDocument:
+      type: object
+      required:
+        - id
+        - document_type
+        - version_number
+        - status
+        - classification
+        - identifier
+        - pdf_hash
+        - snapshot_hash
+        - signed_by
+        - signed_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_type:
+          $ref: '#/components/schemas/PrintableDocumentType'
+        source_artifact_id:
+          type: string
+          format: uuid
+          nullable: true
+        template_version_id:
+          type: string
+          format: uuid
+        version_number:
+          type: integer
+        status:
+          type: string
+          enum: [signed, obsolete]
+        classification:
+          $ref: '#/components/schemas/Classification'
+        identifier:
+          type: string
+        pdf_hash:
+          type: string
+        snapshot_hash:
+          type: string
+        signed_by:
+          type: string
+          format: uuid
+        signed_at:
+          type: string
+          format: date-time
+    IntegrityVerification:
+      type: object
+      required: [valid, identifier, pdf_hash, snapshot_hash, verified_at]
+      properties:
+        valid:
+          type: boolean
+        identifier:
+          type: string
+        pdf_hash:
+          type: string
+        snapshot_hash:
+          type: string
+        verified_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        code:
+          type: string
+          nullable: true
+        detail:
+          type: string
+        missing_fields:
+          type: array
+          items:
+            type: string
+        missing_sections:
+          type: array
+          items:
+            type: string
+        missing_variables:
+          type: array
+          items:
+            type: string

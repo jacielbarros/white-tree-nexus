@@ -29,6 +29,8 @@ import {
   GapStatus,
   GapTheme,
 } from '@app/core/models';
+import { DocumentHistory } from '@app/shared/document-history/document-history';
+import { DocumentPreview } from '@app/shared/document-preview/document-preview';
 
 const STATUS_LABELS: Record<GapStatus, string> = {
   not_filled: 'Não avaliado',
@@ -156,6 +158,8 @@ interface GuidanceResponse {
     InputTextModule,
     SelectModule,
     TextareaModule,
+    DocumentPreview,
+    DocumentHistory,
   ],
   template: `
     <header class="wtn-page-header gap-matrix-header">
@@ -222,6 +226,19 @@ interface GuidanceResponse {
         }
       </div>
     } @else {
+      <div class="document-tools">
+        <app-document-preview
+          [documentType]="'gap_report'"
+          [sourceArtifactId]="assessment()?.id ?? null"
+          title="Relatorio de Gap Analysis"
+        />
+        <app-document-history
+          [documentType]="'gap_report'"
+          [sourceArtifactId]="assessment()?.id ?? null"
+          title="Historico de Gap Analysis"
+        />
+      </div>
+
       <section class="gap-matrix-shell">
         <div class="gap-table-panel">
           <table class="gap-table">
@@ -646,6 +663,13 @@ interface GuidanceResponse {
       margin-bottom: 16px;
     }
 
+    .document-tools {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
+      margin-bottom: 16px;
+    }
+
     .matrix-loading {
       align-items: center;
       background: var(--wtn-card);
@@ -996,234 +1020,6 @@ interface GuidanceResponse {
     }
 
     /* Orientação de avaliação (read-only) no painel */
-    .guidance-block {
-      background: var(--wtn-surface-2);
-      border: 1px solid var(--wtn-border);
-      border-radius: var(--wtn-r-md);
-      padding: 12px 14px;
-    }
-    .guidance-head {
-      color: var(--wtn-muted);
-      font-size: 10.5px;
-      font-weight: 600;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .guidance-obj {
-      color: var(--wtn-text);
-      font-size: 12.5px;
-      line-height: 1.5;
-      margin: 0 0 10px;
-    }
-    .guidance-sub {
-      color: var(--wtn-text-2);
-      font-size: 11.5px;
-      font-weight: 600;
-      margin: 8px 0 4px;
-    }
-    .guidance-list {
-      margin: 0;
-      padding-left: 18px;
-    }
-    .guidance-list li {
-      color: var(--wtn-text-2);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .guidance-note {
-      border-left: 3px solid var(--wtn-info);
-      background: var(--wtn-info-soft);
-      color: var(--wtn-info);
-      font-size: 11.5px;
-      margin-top: 10px;
-      padding: 7px 10px;
-      border-radius: 0 var(--wtn-r-md) var(--wtn-r-md) 0;
-    }
-    .guidance-empty {
-      color: var(--wtn-text-2);
-      font-size: 12px;
-      font-style: italic;
-    }
-
-    .evidence-block {
-      background: var(--wtn-surface-2);
-      border: 1px solid var(--wtn-border);
-      border-radius: var(--wtn-r-md);
-      padding: 12px 14px;
-    }
-
-    .evidence-head {
-      align-items: center;
-      color: var(--wtn-muted);
-      display: flex;
-      font-size: 10.5px;
-      font-weight: 600;
-      justify-content: space-between;
-      letter-spacing: .05em;
-      margin-bottom: 10px;
-      text-transform: uppercase;
-    }
-
-    .mini-loading {
-      color: var(--wtn-text-2);
-      font-size: 10px;
-      letter-spacing: 0;
-      text-transform: none;
-    }
-
-    .evidence-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .evidence-row {
-      background: var(--wtn-surface);
-      border: 1px solid var(--wtn-border);
-      border-radius: var(--wtn-r-md);
-      display: grid;
-      gap: 10px;
-      grid-template-columns: minmax(0, 1fr) auto;
-      padding: 10px;
-    }
-
-    .evidence-meta {
-      min-width: 0;
-    }
-
-    .evidence-meta strong {
-      color: var(--wtn-text);
-      display: block;
-      font-size: 12.5px;
-      font-weight: 600;
-      overflow-wrap: anywhere;
-    }
-
-    .evidence-meta span,
-    .evidence-meta p {
-      color: var(--wtn-text-2);
-      display: block;
-      font-size: 11px;
-      line-height: 1.45;
-      margin: 3px 0 0;
-      overflow-wrap: anywhere;
-    }
-
-    .evidence-foot {
-      color: var(--wtn-muted) !important;
-      font-family: var(--wtn-font-mono);
-    }
-
-    .evidence-actions {
-      align-content: start;
-      display: grid;
-      gap: 6px;
-      grid-template-columns: repeat(2, 28px);
-    }
-
-    .icon-action {
-      align-items: center;
-      background: var(--wtn-surface-2);
-      border: 1px solid var(--wtn-border);
-      border-radius: var(--wtn-r-sm);
-      color: var(--wtn-text-2);
-      cursor: pointer;
-      display: inline-flex;
-      height: 28px;
-      justify-content: center;
-      width: 28px;
-    }
-
-    .icon-action svg {
-      fill: none;
-      height: 15px;
-      pointer-events: none;
-      stroke: currentColor;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 1.8;
-      width: 15px;
-    }
-
-    .icon-action:hover {
-      border-color: var(--wtn-primary);
-      color: var(--wtn-primary);
-    }
-
-    .icon-action:disabled {
-      cursor: wait;
-      opacity: .6;
-    }
-
-    .icon-action--danger:hover {
-      border-color: var(--wtn-danger);
-      color: var(--wtn-danger);
-    }
-
-    .evidence-empty {
-      color: var(--wtn-text-2);
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-
-    .evidence-upload {
-      border-top: 1px solid var(--wtn-border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 10px;
-      padding-top: 10px;
-    }
-
-    .file-input {
-      background: var(--wtn-surface);
-      border: 1px solid var(--wtn-border-strong);
-      border-radius: var(--wtn-r-md);
-      color: var(--wtn-text-2);
-      font-size: 12px;
-      max-width: 100%;
-      padding: 7px;
-    }
-
-    .history-loading {
-      color: var(--wtn-text-2);
-      font-size: 13px;
-      padding: 12px 0;
-    }
-
-    .history-section + .history-section {
-      margin-top: 16px;
-    }
-
-    .history-title {
-      color: var(--wtn-muted);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .05em;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-    }
-
-    .history-row {
-      border-bottom: 1px solid var(--wtn-border);
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 8px 0;
-    }
-
-    .history-row strong {
-      color: var(--wtn-text);
-      font-size: 12.5px;
-    }
-
-    .history-row span {
-      color: var(--wtn-text-2);
-      font-size: 11.5px;
-      overflow-wrap: anywhere;
-    }
-
     /* Legenda global (status/prioridade) */
     .wtn-legend {
       background: var(--wtn-card);
@@ -1271,6 +1067,10 @@ interface GuidanceResponse {
     }
 
     @media (max-width: 1100px) {
+      .document-tools {
+        grid-template-columns: 1fr;
+      }
+
       .gap-matrix-shell {
         grid-template-columns: 1fr;
       }

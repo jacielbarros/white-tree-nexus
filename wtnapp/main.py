@@ -38,6 +38,7 @@ from wtnapp.routers import (
     me,
     memberships,
     organizations,
+    print_documents,
     scope,
     soa,
     stakeholders,
@@ -130,6 +131,7 @@ app.include_router(organizations.router)
 app.include_router(invitations.router)
 app.include_router(memberships.router)
 app.include_router(me.router)
+app.include_router(print_documents.router)
 app.include_router(diagnostic.router)
 app.include_router(context_analysis.router)
 app.include_router(stakeholders.router)

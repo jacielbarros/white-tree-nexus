@@ -19,6 +19,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_context",
         "manage_context",
         "approve_context_document",
+        # Documentos imprimiveis/assinaveis (Feature 009)
+        "manage_print_templates",
         # Motor de Workflow (Feature 003)
         "assign_form",
         "view_form",
@@ -40,6 +42,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_context",
         "manage_context",
         "approve_context_document",
+        # Documentos imprimiveis/assinaveis (Feature 009)
+        "manage_print_templates",
         # Motor de Workflow (Feature 003)
         "assign_form",
         "view_form",

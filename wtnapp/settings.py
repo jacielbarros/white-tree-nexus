@@ -178,6 +178,57 @@ class Classification(str, Enum):
     restrito = "restrito"
 
 
+# --- Documentos imprimiveis/assinaveis (Feature 009) ---
+DOCUMENT_STORAGE_DIR = os.getenv("DOCUMENT_STORAGE_DIR", "./document_store/")
+DOCUMENT_PREVIEW_TTL_MINUTES = _int("DOCUMENT_PREVIEW_TTL_MINUTES", 60)
+DOCUMENT_MAX_PDF_BYTES = _int("DOCUMENT_MAX_PDF_BYTES", 20 * 1024 * 1024)
+DOCUMENT_RENDER_TIMEOUT_SECONDS = _int("DOCUMENT_RENDER_TIMEOUT_SECONDS", 30)
+
+
+class PrintableDocumentType(str, Enum):
+    context_report = "context_report"
+    gap_report = "gap_report"
+    soa_report = "soa_report"
+    gap_baseline = "gap_baseline"
+    form_response = "form_response"
+
+
+class PrintTemplateScope(str, Enum):
+    system = "system"
+    tenant = "tenant"
+
+
+class PrintTemplateStatus(str, Enum):
+    draft = "draft"
+    active = "active"
+    inactive = "inactive"
+
+
+class DocumentPreviewStatus(str, Enum):
+    active = "active"
+    expired = "expired"
+    stale = "stale"
+    signed = "signed"
+
+
+class SignedDocumentStatus(str, Enum):
+    signed = "signed"
+    obsolete = "obsolete"
+
+
+class DocumentAccessEventType(str, Enum):
+    preview_created = "preview_created"
+    preview_downloaded = "preview_downloaded"
+    signed = "signed"
+    signed_downloaded = "signed_downloaded"
+    verified = "verified"
+    template_created = "template_created"
+    template_version_created = "template_version_created"
+    template_activated = "template_activated"
+    template_deactivated = "template_deactivated"
+    access_denied = "access_denied"
+
+
 # --- Storage de evidencias documentais (Feature 008) ---
 EVIDENCE_STORAGE_DIR = os.getenv("EVIDENCE_STORAGE_DIR", "./evidence_store/")
 EVIDENCE_MAX_FILE_BYTES = _int("EVIDENCE_MAX_FILE_BYTES", 20 * 1024 * 1024)
