@@ -209,8 +209,10 @@ baseline com selo verificável; OTP do externo; isolamento.
   congelar/aprovar baseline geram log sem PII/conteúdo sensível.
 - [X] T033 [P] `alembic check` (sem drift) + upgrade/downgrade da migration; carga do seed idempotente
   (rodar duas vezes não duplica).
-- [ ] T034 Validar `quickstart.md` end-to-end (cenários A–F: avaliar, dashboard, catálogo, baseline,
-  condução, isolamento).
+- [X] T034 Validar `quickstart.md` end-to-end (cenários A–F: avaliar, dashboard, catálogo, baseline,
+  condução, isolamento). **Validado em 2026-06-23**: cenários A-D, condução com assinatura
+  autenticada (`POST /gap/assignments/{id}/sign`) congelando baseline com hash SHA-256, e isolamento
+  via testes automatizados passaram.
 - [X] T035 [P] Atualizar docs: seção do módulo em `CLAUDE.md` (implementado) + nota em `docs/README.md`.
 - [X] T036 [P] Testes unitários de frontend (matriz/dashboard/catálogo/baseline) em
   `wtnadmin/src/app/pages/gap-*/**/*.spec.ts`.

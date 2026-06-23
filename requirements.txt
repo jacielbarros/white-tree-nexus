@@ -5,6 +5,7 @@ sqlalchemy>=2.0
 pydantic>=2
 email-validator
 alembic
+python-multipart
 python-jose[cryptography]
 argon2-cffi
 slowapi

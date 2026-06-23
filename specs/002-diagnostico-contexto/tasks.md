@@ -212,10 +212,10 @@ persiste.
   `tenant_scope` e que RLS estÃ¡ habilitada em todas as novas tabelas.
 - [X] T037 [P] **Audit review**: toda operaÃ§Ã£o sensÃ­vel (diagnÃ³stico, CRUD, transiÃ§Ãµes, accept)
   gera log sem PII/segredos.
-- [ ] T038 Validar `quickstart.md` end-to-end (diagnÃ³stico â†’ anÃ¡lise â†’ partes â†’ escopo â†’ versÃµes â†’
-  overview/sugestÃµes). **Pendente**: requer subir servidor + DB real (SQLite/Postgres), como na
-  validaÃ§Ã£o E2E da Feature 001. O fluxo jÃ¡ Ã© coberto de ponta a ponta pelos testes de integraÃ§Ã£o
-  (`TestClient`), mas a validaÃ§Ã£o manual no browser ainda nÃ£o foi executada.
+- [X] T038 Validar `quickstart.md` end-to-end (diagnÃ³stico â†’ anÃ¡lise â†’ partes â†’ escopo â†’ versÃµes â†’
+  overview/sugestÃµes). **Validado em 2026-06-22** contra backend local `:8000` + DB real,
+  exercitando diagnÃ³stico incremental, anÃ¡lise PESTEL/SWOT, partes interessadas, escopo com
+  referÃªncias de versÃ£o, versionamento controlado, overview e aceite explÃ­cito de sugestÃ£o.
 - [X] T039 [P] `alembic check` (sem drift) + upgrade/downgrade das novas migrations (SQLite e, em
   CI, PostgreSQL â€” incl. gatilho append-only de `document_versions` e policy de classificaÃ§Ã£o).
 - [X] T040 [P] Atualizar docs: seÃ§Ã£o do MÃ³dulo 1 em `CLAUDE.md` (implementado) e referÃªncia ao
@@ -261,4 +261,3 @@ demonstrar. Depois US2 â†’ US3 â†’ US4 (torna os artefatos documentos 
 **Total: 43 tasks** â€” Setup 2 Â· Foundational 5 Â· US1 10 Â· US2 6 Â· US3 5 Â· US4 5 Â· US5 4 Â· Polish 6
 (inclui T005a â€” router da polÃ­tica de classificaÃ§Ã£o â€” e T009a â€” teste de enforcement â€”, adicionados
 na remediaÃ§Ã£o do `/speckit-analyze` para FR-011a; FR-003 esclarecido na spec.)
-

@@ -18,10 +18,13 @@ import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
 import {
+  Classification,
   GapAssessment,
   GapAssessmentItem,
   GapAssignmentItem,
   GapDimension,
+  GapEvidenceHistory,
+  GapEvidenceSummary,
   GapPriority,
   GapStatus,
   GapTheme,
@@ -70,6 +73,20 @@ const PRIORITY_COLORS: Record<GapPriority, string> = {
   high: 'var(--wtn-prio-high)',
   medium: 'var(--wtn-prio-med)',
   low: 'var(--wtn-prio-low)',
+};
+
+const CLASSIFICATION_OPTIONS: { label: string; value: Classification }[] = [
+  { label: 'Uso interno', value: 'uso_interno' },
+  { label: 'Público', value: 'publico' },
+  { label: 'Confidencial', value: 'confidencial' },
+  { label: 'Restrito', value: 'restrito' },
+];
+
+const CLASSIFICATION_LABELS: Record<Classification, string> = {
+  publico: 'Público',
+  uso_interno: 'Uso interno',
+  confidencial: 'Confidencial',
+  restrito: 'Restrito',
 };
 
 const GROUP_LABELS: Record<GapDimension | GapTheme, string> = {
@@ -297,7 +314,120 @@ interface GuidanceResponse {
             } @else {
               <div class="guidance-empty">Sem orientação disponível para este item.</div>
             }
-            <!-- FR-010: espaço reservado para a futura seção de "Evidências anexadas" por item. -->
+
+            <div class="evidence-block">
+              <div class="evidence-head">
+                <span>Evidências anexadas</span>
+                @if (evidenceLoading()) { <span class="mini-loading">Carregando...</span> }
+              </div>
+
+              @if (!evidenceLoading() && evidences().length) {
+                <div class="evidence-list">
+                  @for (ev of evidences(); track ev.id) {
+                    <div class="evidence-row">
+                      <div class="evidence-meta">
+                        <strong>{{ ev.title }}</strong>
+                        <span>{{ ev.file_name }} · {{ formatBytes(ev.size_bytes) }} · {{ classificationLabel(ev.classification) }}</span>
+                        @if (ev.description) { <p>{{ ev.description }}</p> }
+                        <span class="evidence-foot">
+                          {{ formatDate(ev.uploaded_at) }} · hash {{ shortHash(ev.content_hash) }}
+                        </span>
+                      </div>
+                      <div class="evidence-actions">
+                        @if (ev.can_download) {
+                          <button
+                            type="button"
+                            class="icon-action icon-action--download"
+                            (click)="downloadEvidence(ev)"
+                            [disabled]="evidenceDownloadingId() === ev.id"
+                            aria-label="Baixar evidencia"
+                            title="Baixar evidência"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path d="M12 3v10"></path>
+                              <path d="m8 9 4 4 4-4"></path>
+                              <path d="M5 18h14"></path>
+                            </svg>
+                          </button>
+                        }
+                        @if (canManage()) {
+                          <button
+                            type="button"
+                            class="icon-action icon-action--history"
+                            (click)="openEvidenceHistory(ev)"
+                            aria-label="Historico da evidencia"
+                            title="Histórico"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                              <path d="M3 4v5h5"></path>
+                              <path d="M12 7v5l3 2"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="icon-action icon-action--replace"
+                            (click)="openReplaceEvidence(ev)"
+                            aria-label="Substituir evidencia"
+                            title="Substituir"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path d="M20 7v5h-5"></path>
+                              <path d="M4 17v-5h5"></path>
+                              <path d="M18.2 12A6.5 6.5 0 0 0 7 7.4L4 12"></path>
+                              <path d="M5.8 12A6.5 6.5 0 0 0 17 16.6L20 12"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            class="icon-action icon-action--danger icon-action--delete"
+                            (click)="inactivateEvidence(ev)"
+                            [disabled]="evidenceInactivatingId() === ev.id"
+                            aria-label="Inativar evidencia"
+                            title="Inativar"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path d="M4 7h16"></path>
+                              <path d="M10 11v6"></path>
+                              <path d="M14 11v6"></path>
+                              <path d="M6 7l1 13h10l1-13"></path>
+                              <path d="M9 7V4h6v3"></path>
+                            </svg>
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else if (!evidenceLoading()) {
+                <div class="evidence-empty">Nenhuma evidência anexada ainda.</div>
+              }
+
+              @if (canManage()) {
+                <div class="evidence-upload">
+                  <input type="file" class="file-input" (change)="onEvidenceFileSelected($event)" />
+                  <p-select
+                    [options]="classificationOptions"
+                    [formControl]="evidenceClassification"
+                    optionLabel="label"
+                    optionValue="value"
+                    styleClass="wtn-panel-select"
+                  />
+                  <textarea
+                    pTextarea
+                    [formControl]="evidenceDescription"
+                    rows="2"
+                    placeholder="Descrição curta"
+                  ></textarea>
+                  <p-button
+                    label="Adicionar evidência"
+                    icon="pi pi-paperclip"
+                    (onClick)="uploadEvidence()"
+                    [loading]="evidenceUploading()"
+                  />
+                </div>
+              }
+            </div>
 
             <div class="panel-field">
               <label>Status da avaliação</label>
@@ -435,6 +565,75 @@ interface GuidanceResponse {
           <p-button label="Cancelar" severity="secondary" (onClick)="assignDialogVisible = false" />
           <p-button label="Atribuir" icon="pi pi-check" (onClick)="createAssignment()" [loading]="assigning()" />
         </ng-template>
+      </p-dialog>
+
+      <p-dialog
+        header="Substituir evidência"
+        [(visible)]="evidenceReplaceDialogVisible"
+        [style]="{ width: '460px' }"
+        [modal]="true"
+      >
+        <div class="assign-form">
+          <div class="panel-field">
+            <label>Arquivo</label>
+            <input type="file" class="file-input" (change)="onReplaceFileSelected($event)" />
+          </div>
+          <div class="panel-field">
+            <label>Classificação</label>
+            <p-select
+              [options]="classificationOptions"
+              [formControl]="replaceClassification"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="wtn-panel-select"
+            />
+          </div>
+          <div class="panel-field">
+            <label>Descrição</label>
+            <textarea pTextarea [formControl]="replaceDescription" rows="2"></textarea>
+          </div>
+        </div>
+        <ng-template pTemplate="footer">
+          <p-button label="Cancelar" severity="secondary" (onClick)="evidenceReplaceDialogVisible = false" />
+          <p-button
+            label="Substituir"
+            icon="pi pi-refresh"
+            (onClick)="replaceEvidence()"
+            [disabled]="!replaceEvidenceFile()"
+            [loading]="evidenceUploading()"
+          />
+        </ng-template>
+      </p-dialog>
+
+      <p-dialog
+        header="Histórico da evidência"
+        [(visible)]="evidenceHistoryDialogVisible"
+        [style]="{ width: '560px' }"
+        [modal]="true"
+      >
+        @if (evidenceHistoryLoading()) {
+          <div class="history-loading">Carregando...</div>
+        } @else if (evidenceHistory(); as h) {
+          <div class="history-section">
+            <div class="history-title">Versões</div>
+            @for (version of h.versions; track version.id) {
+              <div class="history-row">
+                <strong>v{{ version.version_number }} {{ version.is_current ? '· atual' : '' }}</strong>
+                <span>{{ version.file_name }} · {{ classificationLabel(version.classification) }} · {{ formatBytes(version.size_bytes) }}</span>
+                <span>hash {{ shortHash(version.content_hash) }} · {{ formatDate(version.uploaded_at) }}</span>
+              </div>
+            }
+          </div>
+          <div class="history-section">
+            <div class="history-title">Eventos</div>
+            @for (event of h.events; track event.id) {
+              <div class="history-row">
+                <strong>{{ event.event_type }}</strong>
+                <span>{{ event.outcome }} · {{ formatDate(event.occurred_at) }}</span>
+              </div>
+            }
+          </div>
+        }
       </p-dialog>
     }
   `,
@@ -847,6 +1046,184 @@ interface GuidanceResponse {
       font-style: italic;
     }
 
+    .evidence-block {
+      background: var(--wtn-surface-2);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-md);
+      padding: 12px 14px;
+    }
+
+    .evidence-head {
+      align-items: center;
+      color: var(--wtn-muted);
+      display: flex;
+      font-size: 10.5px;
+      font-weight: 600;
+      justify-content: space-between;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .mini-loading {
+      color: var(--wtn-text-2);
+      font-size: 10px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .evidence-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .evidence-row {
+      background: var(--wtn-surface);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-md);
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 10px;
+    }
+
+    .evidence-meta {
+      min-width: 0;
+    }
+
+    .evidence-meta strong {
+      color: var(--wtn-text);
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .evidence-meta span,
+    .evidence-meta p {
+      color: var(--wtn-text-2);
+      display: block;
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 3px 0 0;
+      overflow-wrap: anywhere;
+    }
+
+    .evidence-foot {
+      color: var(--wtn-muted) !important;
+      font-family: var(--wtn-font-mono);
+    }
+
+    .evidence-actions {
+      align-content: start;
+      display: grid;
+      gap: 6px;
+      grid-template-columns: repeat(2, 28px);
+    }
+
+    .icon-action {
+      align-items: center;
+      background: var(--wtn-surface-2);
+      border: 1px solid var(--wtn-border);
+      border-radius: var(--wtn-r-sm);
+      color: var(--wtn-text-2);
+      cursor: pointer;
+      display: inline-flex;
+      height: 28px;
+      justify-content: center;
+      width: 28px;
+    }
+
+    .icon-action svg {
+      fill: none;
+      height: 15px;
+      pointer-events: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+      width: 15px;
+    }
+
+    .icon-action:hover {
+      border-color: var(--wtn-primary);
+      color: var(--wtn-primary);
+    }
+
+    .icon-action:disabled {
+      cursor: wait;
+      opacity: .6;
+    }
+
+    .icon-action--danger:hover {
+      border-color: var(--wtn-danger);
+      color: var(--wtn-danger);
+    }
+
+    .evidence-empty {
+      color: var(--wtn-text-2);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .evidence-upload {
+      border-top: 1px solid var(--wtn-border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+    }
+
+    .file-input {
+      background: var(--wtn-surface);
+      border: 1px solid var(--wtn-border-strong);
+      border-radius: var(--wtn-r-md);
+      color: var(--wtn-text-2);
+      font-size: 12px;
+      max-width: 100%;
+      padding: 7px;
+    }
+
+    .history-loading {
+      color: var(--wtn-text-2);
+      font-size: 13px;
+      padding: 12px 0;
+    }
+
+    .history-section + .history-section {
+      margin-top: 16px;
+    }
+
+    .history-title {
+      color: var(--wtn-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .history-row {
+      border-bottom: 1px solid var(--wtn-border);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 0;
+    }
+
+    .history-row strong {
+      color: var(--wtn-text);
+      font-size: 12.5px;
+    }
+
+    .history-row span {
+      color: var(--wtn-text-2);
+      font-size: 11.5px;
+      overflow-wrap: anywhere;
+    }
+
     /* Legenda global (status/prioridade) */
     .wtn-legend {
       background: var(--wtn-card);
@@ -925,11 +1302,29 @@ export class GapAnalysisPage implements OnInit {
   protected readonly editResponsible = new FormControl('', { nonNullable: true });
   protected readonly editJustification = new FormControl('', { nonNullable: true });
 
+  protected readonly evidences = signal<GapEvidenceSummary[]>([]);
+  protected readonly evidenceLoading = signal(false);
+  protected readonly evidenceUploading = signal(false);
+  protected readonly evidenceDownloadingId = signal<string | null>(null);
+  protected readonly evidenceInactivatingId = signal<string | null>(null);
+  protected readonly selectedEvidenceFile = signal<File | null>(null);
+  protected readonly evidenceDescription = new FormControl('', { nonNullable: true });
+  protected readonly evidenceClassification = new FormControl<Classification>('uso_interno', { nonNullable: true });
+  protected readonly replacingEvidence = signal<GapEvidenceSummary | null>(null);
+  protected readonly replaceEvidenceFile = signal<File | null>(null);
+  protected readonly replaceDescription = new FormControl('', { nonNullable: true });
+  protected readonly replaceClassification = new FormControl<Classification>('uso_interno', { nonNullable: true });
+  protected readonly evidenceHistory = signal<GapEvidenceHistory | null>(null);
+  protected readonly evidenceHistoryLoading = signal(false);
+  protected evidenceReplaceDialogVisible = false;
+  protected evidenceHistoryDialogVisible = false;
+
   protected readonly canManage = computed(() => hasPermission(this.auth.currentRole(), 'manage_gap'));
   protected readonly canAssign = computed(() => hasPermission(this.auth.currentRole(), 'assign_form'));
 
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly priorityOptions = PRIORITY_OPTIONS;
+  protected readonly classificationOptions = CLASSIFICATION_OPTIONS;
 
   protected readonly guidanceByRef = signal<Record<string, ItemGuidance>>({});
   protected readonly legendStatus = signal<GuidanceLegendEntry[]>([]);
@@ -1057,11 +1452,13 @@ export class GapAnalysisPage implements OnInit {
     this.selectedItem.set(item);
     this.editingId.set(item.id);
     this.resetForm(item);
+    this.loadEvidences(item.id);
   }
 
   protected closeDetails() {
     this.editingId.set(null);
     this.selectedItem.set(null);
+    this.evidences.set([]);
   }
 
   protected resetSelectedItem() {
@@ -1107,6 +1504,165 @@ export class GapAnalysisPage implements OnInit {
       error: (e) => {
         this.msg.add({ severity: 'error', summary: 'Erro ao salvar', detail: e.error?.detail ?? e.message });
         this.saving.set(false);
+      },
+    });
+  }
+
+  protected loadEvidences(itemId: string) {
+    this.evidenceLoading.set(true);
+    this.api.get<GapEvidenceSummary[]>(`/gap/assessment/items/${itemId}/evidences`).subscribe({
+      next: (list) => {
+        if (this.selectedItem()?.id === itemId) {
+          this.evidences.set(list);
+        }
+        this.evidenceLoading.set(false);
+      },
+      error: (e) => {
+        if (this.selectedItem()?.id === itemId) {
+          this.evidences.set([]);
+        }
+        this.msg.add({ severity: 'error', summary: 'Erro ao carregar evidências', detail: this.errorDetail(e) });
+        this.evidenceLoading.set(false);
+      },
+    });
+  }
+
+  protected onEvidenceFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedEvidenceFile.set(input.files?.[0] ?? null);
+  }
+
+  protected uploadEvidence() {
+    const item = this.selectedItem();
+    const file = this.selectedEvidenceFile();
+    if (!item || !file) {
+      this.msg.add({ severity: 'warn', summary: 'Arquivo obrigatório', detail: 'Selecione um arquivo.' });
+      return;
+    }
+    const body = new FormData();
+    body.append('file', file);
+    body.append('classification', this.evidenceClassification.value);
+    if (this.evidenceDescription.value.trim()) {
+      body.append('description', this.evidenceDescription.value.trim());
+    }
+
+    this.evidenceUploading.set(true);
+    this.api.postForm<GapEvidenceSummary>(`/gap/assessment/items/${item.id}/evidences`, body).subscribe({
+      next: (created) => {
+        this.evidences.update((list) => [created, ...list]);
+        this.selectedEvidenceFile.set(null);
+        this.evidenceDescription.setValue('');
+        this.evidenceClassification.setValue('uso_interno');
+        this.msg.add({ severity: 'success', summary: 'Evidência anexada', detail: created.file_name });
+        this.evidenceUploading.set(false);
+      },
+      error: (e) => {
+        this.msg.add({ severity: 'error', summary: 'Erro ao anexar evidência', detail: this.errorDetail(e) });
+        this.evidenceUploading.set(false);
+      },
+    });
+  }
+
+  protected downloadEvidence(evidence: GapEvidenceSummary) {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.evidenceDownloadingId.set(evidence.id);
+    this.api.getBlob(`/gap/assessment/items/${item.id}/evidences/${evidence.id}/download`).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = evidence.file_name;
+        link.click();
+        URL.revokeObjectURL(url);
+        this.evidenceDownloadingId.set(null);
+      },
+      error: (e) => {
+        this.msg.add({ severity: 'error', summary: 'Erro ao baixar evidência', detail: this.errorDetail(e) });
+        this.evidenceDownloadingId.set(null);
+      },
+    });
+  }
+
+  protected openReplaceEvidence(evidence: GapEvidenceSummary) {
+    this.replacingEvidence.set(evidence);
+    this.replaceEvidenceFile.set(null);
+    this.replaceClassification.setValue(evidence.classification);
+    this.replaceDescription.setValue(evidence.description ?? '');
+    this.evidenceReplaceDialogVisible = true;
+  }
+
+  protected onReplaceFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.replaceEvidenceFile.set(input.files?.[0] ?? null);
+  }
+
+  protected replaceEvidence() {
+    const item = this.selectedItem();
+    const evidence = this.replacingEvidence();
+    const file = this.replaceEvidenceFile();
+    if (!item || !evidence || !file) return;
+    const body = new FormData();
+    body.append('file', file);
+    body.append('classification', this.replaceClassification.value);
+    if (this.replaceDescription.value.trim()) {
+      body.append('description', this.replaceDescription.value.trim());
+    }
+    this.evidenceUploading.set(true);
+    this.api.postForm<GapEvidenceSummary>(
+      `/gap/assessment/items/${item.id}/evidences/${evidence.id}/versions`,
+      body,
+    ).subscribe({
+      next: (updated) => {
+        this.evidences.update((list) => list.map((ev) => (ev.id === updated.id ? updated : ev)));
+        this.evidenceReplaceDialogVisible = false;
+        this.replacingEvidence.set(null);
+        this.replaceEvidenceFile.set(null);
+        this.msg.add({ severity: 'success', summary: 'Evidência substituída', detail: updated.file_name });
+        this.evidenceUploading.set(false);
+      },
+      error: (e) => {
+        this.msg.add({ severity: 'error', summary: 'Erro ao substituir evidência', detail: this.errorDetail(e) });
+        this.evidenceUploading.set(false);
+      },
+    });
+  }
+
+  protected inactivateEvidence(evidence: GapEvidenceSummary) {
+    const item = this.selectedItem();
+    if (!item) return;
+    const reason = window.prompt('Motivo da inativação');
+    if (reason === null) return;
+    this.evidenceInactivatingId.set(evidence.id);
+    this.api.delete<void>(`/gap/assessment/items/${item.id}/evidences/${evidence.id}`, {
+      reason: reason.trim() || null,
+    }).subscribe({
+      next: () => {
+        this.evidences.update((list) => list.filter((ev) => ev.id !== evidence.id));
+        this.msg.add({ severity: 'success', summary: 'Evidência inativada', detail: evidence.file_name });
+        this.evidenceInactivatingId.set(null);
+      },
+      error: (e) => {
+        this.msg.add({ severity: 'error', summary: 'Erro ao inativar evidência', detail: this.errorDetail(e) });
+        this.evidenceInactivatingId.set(null);
+      },
+    });
+  }
+
+  protected openEvidenceHistory(evidence: GapEvidenceSummary) {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.evidenceHistoryDialogVisible = true;
+    this.evidenceHistoryLoading.set(true);
+    this.evidenceHistory.set(null);
+    this.api.get<GapEvidenceHistory>(`/gap/assessment/items/${item.id}/evidences/${evidence.id}/history`).subscribe({
+      next: (history) => {
+        this.evidenceHistory.set(history);
+        this.evidenceHistoryLoading.set(false);
+      },
+      error: (e) => {
+        this.msg.add({ severity: 'error', summary: 'Erro ao carregar histórico', detail: this.errorDetail(e) });
+        this.evidenceHistoryLoading.set(false);
       },
     });
   }
@@ -1157,6 +1713,30 @@ export class GapAnalysisPage implements OnInit {
 
   statusLabel(status: GapStatus): string {
     return STATUS_LABELS[status];
+  }
+
+  protected classificationLabel(classification: Classification): string {
+    return CLASSIFICATION_LABELS[classification] ?? classification;
+  }
+
+  protected formatBytes(value: number): string {
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  protected shortHash(value: string): string {
+    return value ? value.slice(0, 10) : '-';
+  }
+
+  protected formatDate(value: string): string {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
   }
 
   protected statusClass(status: GapStatus): string {
@@ -1219,5 +1799,16 @@ export class GapAnalysisPage implements OnInit {
   private groupKey(item: GapAssessmentItem): string {
     if (item.dimension === 'annex_a') return item.theme ?? 'annex_a';
     return item.dimension;
+  }
+
+  private errorDetail(error: unknown): string {
+    if (typeof error === 'object' && error && 'error' in error) {
+      const payload = (error as { error?: { detail?: string } }).error;
+      if (payload?.detail) return payload.detail;
+    }
+    if (typeof error === 'object' && error && 'message' in error) {
+      return String((error as { message?: unknown }).message);
+    }
+    return 'Operação não concluída.';
   }
 }

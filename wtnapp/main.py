@@ -32,6 +32,7 @@ from wtnapp.routers import (
     gap_assignment,
     gap_assessment,
     gap_catalog,
+    gap_evidence,
     gap_guidance,
     invitations,
     me,
@@ -141,6 +142,7 @@ app.include_router(form_signature_policy.router)
 app.include_router(gap_catalog.router)
 app.include_router(gap_assessment.router)
 app.include_router(gap_assignment.router)
+app.include_router(gap_evidence.router)
 app.include_router(gap_guidance.router)
 app.include_router(soa.router)
 app.include_router(dashboard.router)

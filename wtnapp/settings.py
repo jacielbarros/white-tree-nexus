@@ -56,6 +56,9 @@ CSP_ENABLED = _bool("CSP_ENABLED", "true")
 HSTS_ENABLED = _bool("HSTS_ENABLED", "false")  # opt-in — só ligar em produção HTTPS
 HSTS_MAX_AGE = _int("HSTS_MAX_AGE", 31536000)
 
+# --- Protecao de dados sensiveis em repouso ---
+FIELD_ENCRYPTION_KEY = os.getenv("FIELD_ENCRYPTION_KEY", "")
+
 # --- E-mail (SMTP) — entrega best-effort (fail-soft) ---
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = _int("SMTP_PORT", 587)
@@ -173,6 +176,38 @@ class Classification(str, Enum):
     uso_interno = "uso_interno"
     confidencial = "confidencial"
     restrito = "restrito"
+
+
+# --- Storage de evidencias documentais (Feature 008) ---
+EVIDENCE_STORAGE_DIR = os.getenv("EVIDENCE_STORAGE_DIR", "./evidence_store/")
+EVIDENCE_MAX_FILE_BYTES = _int("EVIDENCE_MAX_FILE_BYTES", 20 * 1024 * 1024)
+EVIDENCE_ALLOWED_EXTENSIONS = {
+    ext.strip().lower()
+    for ext in os.getenv(
+        "EVIDENCE_ALLOWED_EXTENSIONS",
+        ".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.7z",
+    ).split(",")
+    if ext.strip()
+}
+EVIDENCE_ALLOWED_MIME_TYPES = {
+    mime.strip().lower()
+    for mime in os.getenv("EVIDENCE_ALLOWED_MIME_TYPES", "").split(",")
+    if mime.strip()
+}
+
+
+class GapEvidenceStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
+
+class GapEvidenceEventType(str, Enum):
+    uploaded = "uploaded"
+    content_viewed = "content_viewed"
+    downloaded = "downloaded"
+    replaced = "replaced"
+    inactivated = "inactivated"
+    access_denied = "access_denied"
 
 
 # --- Motor de Workflow de Preenchimento (Feature 003) ---

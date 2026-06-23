@@ -55,3 +55,22 @@ implementadas; org criada e selecionada (`X-Org-Context`); Super Admin/Consultor
 3. Confirmar no audit log o registro da tentativa cross-tenant.
 4. O catálogo-seed compartilhado é **somente leitura**: nenhum endpoint de organização escreve nele.
 5. Coberto por `wtnapp/test/test_tenant_isolation_gap.py`.
+
+## Registro de validacao E2E
+
+Validado em 2026-06-23 contra backend local `http://localhost:8000` e DB real, com o run
+`20260623074439`. A validacao parcial anterior foi executada em 2026-06-22 com o run
+`20260622214313`.
+
+- Cenários A-D validados via API: adocao idempotente do catalogo, matriz com itens materializados,
+  persistencia de avaliacao, negativo de N/A sem justificativa, N/A com justificativa, dashboard,
+  lacunas priorizadas, item proprio de catalogo, baseline v1/v2 e comparacao de baselines.
+- Cenario E validado: criacao/listagem de atribuicao, claim, submit e assinatura autenticada via
+  `POST /gap/assignments/{id}/sign`, congelando uma baseline versionada com selo SHA-256. O caminho
+  de assinatura validado usa usuario autenticado com `sign_form`; fluxo publico de OTP externo nao
+  foi expandido nesta correcao.
+- Cenario F coberto pela suite automatizada de isolamento.
+- Suite automatizada executada: `.\\.venv\\Scripts\\pytest.exe wtnapp/test/test_gap_assessment.py
+  wtnapp/test/test_gap_metrics.py wtnapp/test/test_gap_catalog.py wtnapp/test/test_gap_baseline.py
+  wtnapp/test/test_gap_assignment.py wtnapp/test/test_tenant_isolation_gap.py`.
+- Resultado: `41 passed`.

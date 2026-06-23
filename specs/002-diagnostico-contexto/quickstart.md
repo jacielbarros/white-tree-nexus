@@ -70,3 +70,17 @@ Cobertura mínima: happy path de cada artefato; derivação Poder×Interesse (to
 versionamento append-only + "1 em vigor + rascunho paralelo"; aprovação negada sem papel (403);
 sugestões nunca auto-aplicadas; **isolamento de tenant** dedicado para diagnóstico, análise,
 partes, escopo e versões.
+
+## Registro de validacao E2E
+
+Validado em 2026-06-22 contra backend local `http://localhost:8000` e DB real, com o run
+`20260622214313`.
+
+- Fluxo API validado: diagnostico incremental, analise PESTEL/SWOT, partes interessadas com
+  estrategia derivada, escopo com referencias de versao, submit/approve dos tres artefatos,
+  historico de versoes, overview consolidado e aceite explicito de sugestao.
+- Suite automatizada executada: `.\\.venv\\Scripts\\pytest.exe wtnapp/test/test_tenant_isolation.py
+  wtnapp/test/test_diagnostic.py wtnapp/test/test_context_analysis.py
+  wtnapp/test/test_stakeholders.py wtnapp/test/test_scope.py
+  wtnapp/test/test_document_version.py wtnapp/test/test_overview_suggestions.py`.
+- Resultado: `21 passed`.

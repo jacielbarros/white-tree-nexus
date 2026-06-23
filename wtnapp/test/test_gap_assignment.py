@@ -4,11 +4,16 @@ Cobre: criação de atribuição (membro + externo via token), ciclo de vida
 (pending→in_progress→submitted), cancelamento, isolamento de tenant, token hash.
 """
 
+import hashlib
+import json
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 
 from wtnapp.main import app
-from wtnapp.settings import Role
+from wtnapp.models.document_version_model import DocumentVersion
+from wtnapp.settings import DocType, Role
 
 
 @pytest.fixture
@@ -43,6 +48,11 @@ def headers_for(login_fn, email, org_id):
 
 def _setup(client, h):
     client.post("/gap/catalog/adopt", json={"seed_version": "2022.1"}, headers=h)
+
+
+def _canonical_hash(payload):
+    content = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
 def test_create_assignment_to_member(client, login, gap_assign_org, gap_seed):
@@ -110,6 +120,68 @@ def test_lifecycle_pending_to_submitted(client, login, gap_assign_org, gap_seed)
     assert r.status_code == 200
     assert r.json()["status"] == "submitted"
     assert r.json()["submitted_at"] is not None
+
+
+def test_sign_submitted_assignment_freezes_baseline(client, login, gap_assign_org, gap_seed, db):
+    """Assinar uma conducao submetida cria baseline imutavel com selo SHA-256."""
+    ha = headers_for(login, "admin@gap-assign.com", gap_assign_org["org"].id)
+    hc = headers_for(login, "client@gap-assign.com", gap_assign_org["org"].id)
+    _setup(client, ha)
+
+    assessment = client.get("/gap/assessment", headers=ha).json()
+    first_item_id = assessment["items"][0]["id"]
+    client.put(f"/gap/assessment/items/{first_item_id}", json={"status": "meets"}, headers=ha)
+
+    r = client.post(
+        "/gap/assignments",
+        json={"scope": "whole", "respondent_user_id": str(gap_assign_org["client"].id)},
+        headers=ha,
+    )
+    aid = r.json()["id"]
+    client.post(f"/gap/assignments/{aid}/claim", headers=ha)
+    client.post(f"/gap/assignments/{aid}/submit", headers=ha)
+
+    r = client.post(f"/gap/assignments/{aid}/sign", headers=hc)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["assignment"]["status"] == "signed"
+    assert data["assignment"]["signed_at"] is not None
+    assert data["baseline"]["version_number"] == 1
+    assert data["content_hash"]
+    assert len(data["content_hash"]) == 64
+
+    r = client.get("/gap/assessment/baselines", headers=ha)
+    assert r.status_code == 200
+    assert any(b["id"] == data["baseline"]["id"] for b in r.json())
+
+    db.expire_all()
+    version = db.get(DocumentVersion, uuid.UUID(data["baseline"]["id"]))
+    assert version is not None
+    assert version.document_type == DocType.gap_baseline
+    snapshot = version.content_snapshot
+    assert snapshot["signature"]["signer_email"] == "client@gap-assign.com"
+    assert snapshot["signature"]["content_hash"] == data["content_hash"]
+    assert _canonical_hash(snapshot["signed_content"]) == data["content_hash"]
+
+    r = client.post(f"/gap/assignments/{aid}/sign", headers=hc)
+    assert r.status_code == 409
+
+
+def test_sign_requires_submitted_assignment(client, login, gap_assign_org, gap_seed):
+    """Assinar antes do envio da conducao deve retornar 409."""
+    ha = headers_for(login, "admin@gap-assign.com", gap_assign_org["org"].id)
+    hc = headers_for(login, "client@gap-assign.com", gap_assign_org["org"].id)
+    _setup(client, ha)
+
+    r = client.post(
+        "/gap/assignments",
+        json={"scope": "whole", "respondent_user_id": str(gap_assign_org["client"].id)},
+        headers=ha,
+    )
+    aid = r.json()["id"]
+
+    r = client.post(f"/gap/assignments/{aid}/sign", headers=hc)
+    assert r.status_code == 409
 
 
 def test_cancel_assignment(client, login, gap_assign_org, gap_seed):
@@ -200,3 +272,29 @@ def test_assignment_cross_tenant_returns_404(client, login, factory, gap_seed):
     # Org B lista suas atribuições (vazias)
     r = client.get("/gap/assignments", headers=hb)
     assert r.json() == []
+
+
+def test_assignment_sign_cross_tenant_returns_404(client, login, factory, gap_seed):
+    """Assinatura de conducao de outra org nao pode ser inferida."""
+    org_a = factory.org("assign-sign-a", "Assign Sign A")
+    org_b = factory.org("assign-sign-b", "Assign Sign B")
+    admin_a = factory.user("admin@assign-sign-a.com", full_name="Admin A")
+    admin_b = factory.user("admin@assign-sign-b.com", full_name="Admin B")
+    factory.membership(admin_a, org_a, Role.org_admin)
+    factory.membership(admin_b, org_b, Role.org_admin)
+
+    ha = headers_for(login, "admin@assign-sign-a.com", org_a.id)
+    hb = headers_for(login, "admin@assign-sign-b.com", org_b.id)
+
+    client.post("/gap/catalog/adopt", json={"seed_version": "2022.1"}, headers=ha)
+    client.post("/gap/catalog/adopt", json={"seed_version": "2022.1"}, headers=hb)
+
+    r = client.post(
+        "/gap/assignments",
+        json={"scope": "whole", "respondent_email": "x@x.com"},
+        headers=ha,
+    )
+    aid = r.json()["id"]
+
+    r = client.post(f"/gap/assignments/{aid}/sign", headers=hb)
+    assert r.status_code in (403, 404)

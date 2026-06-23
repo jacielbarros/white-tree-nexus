@@ -1,6 +1,7 @@
 """Gap Assignment router — condutor de análise gap atribuível (US5)."""
 
 import hashlib
+import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -11,17 +12,24 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from wtnapp.database.database import get_db
-from wtnapp.helpers.permissions import require_permission
+from wtnapp.helpers.permissions import has_permission, require_permission
 from wtnapp.helpers.tenant_scope import OrgContext, scoped_query
-from wtnapp.models.gap_assessment_model import GapAssessment
+from wtnapp.models.document_version_model import DocumentVersion
+from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
 from wtnapp.models.gap_assignment_model import GapAssignment
+from wtnapp.models.gap_catalog_model import GapCatalogItem
+from wtnapp.schemas.gap_assessment_schema import BaselineResponse
+from wtnapp.services import controlled_document_service as cds
 from wtnapp.services.audit_service import AuditService
+from wtnapp.services.gap_metrics_service import compute_dashboard
+from wtnapp.settings import Classification, DocStatus, DocType
 
 router = APIRouter(prefix="/gap/assignments", tags=["gap-assignments"])
 
 db_dep = Annotated[Session, Depends(get_db)]
 view_dep = Annotated[OrgContext, Depends(require_permission("view_gap"))]
 manage_dep = Annotated[OrgContext, Depends(require_permission("manage_gap"))]
+sign_dep = Annotated[OrgContext, Depends(require_permission("sign_form"))]
 
 _TOKEN_EXPIRY_HOURS = 72
 
@@ -57,6 +65,14 @@ class AssignmentResponse(BaseModel):
         from_attributes = True
 
 
+class AssignmentSignResponse(BaseModel):
+    assignment: AssignmentResponse
+    baseline: BaselineResponse
+    content_hash: str
+    hash_algorithm: str = "sha256"
+    signed_at: datetime
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get_assessment(db: Session, tenant_id: uuid.UUID) -> GapAssessment:
@@ -83,6 +99,94 @@ def _to_response(a: GapAssignment, token: str | None = None) -> AssignmentRespon
         created_at=a.created_at,
         token=token,
     )
+
+
+def _enum_value(value):
+    return value.value if hasattr(value, "value") else value
+
+
+def _date_value(value):
+    return value.isoformat() if value is not None else None
+
+
+def _canonicalize(payload: dict) -> str:
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+
+
+def _content_hash(payload: dict) -> str:
+    return hashlib.sha256(_canonicalize(payload).encode("utf-8")).hexdigest()
+
+
+def _baseline_response(version: DocumentVersion) -> BaselineResponse:
+    dashboard = version.content_snapshot.get("dashboard", {}) if version.content_snapshot else {}
+    return BaselineResponse(
+        id=version.id,
+        version_number=version.version_number,
+        status=version.status.value,
+        classification=version.classification.value,
+        emitted_at=version.created_at,
+        overall_adherence=dashboard.get("overall_adherence"),
+    )
+
+
+def _signed_content(
+    db: Session,
+    assignment: GapAssignment,
+    assessment: GapAssessment,
+    signed_at: datetime,
+) -> dict:
+    rows = (
+        db.query(GapAssessmentItem, GapCatalogItem)
+        .join(GapCatalogItem, GapAssessmentItem.catalog_item_id == GapCatalogItem.id)
+        .filter(GapAssessmentItem.assessment_id == assessment.id)
+        .order_by(GapCatalogItem.order)
+        .all()
+    )
+    items = []
+    for item, catalog_item in rows:
+        items.append({
+            "id": str(item.id),
+            "catalog_item_id": str(item.catalog_item_id),
+            "ref_code": catalog_item.ref_code,
+            "dimension": _enum_value(catalog_item.dimension),
+            "theme": _enum_value(catalog_item.theme) if catalog_item.theme else None,
+            "name": catalog_item.name,
+            "status": _enum_value(item.status),
+            "priority": _enum_value(item.priority) if item.priority else None,
+            "findings": item.findings,
+            "actions": item.actions,
+            "responsible": item.responsible,
+            "deadline": _date_value(item.deadline),
+            "evidence_ref": item.evidence_ref,
+            "notes": item.notes,
+            "exclusion_justification": item.exclusion_justification,
+            "maturity_level": item.maturity_level,
+            "effort_estimate": item.effort_estimate,
+            "soa_ref": item.soa_ref,
+        })
+
+    return {
+        "assessment_id": str(assessment.id),
+        "assignment": {
+            "id": str(assignment.id),
+            "scope": assignment.scope,
+            "scope_theme": assignment.scope_theme,
+            "respondent_user_id": str(assignment.respondent_user_id) if assignment.respondent_user_id else None,
+            "respondent_email": assignment.respondent_email,
+            "submitted_at": _date_value(assignment.submitted_at),
+            "signed_at": _date_value(signed_at),
+        },
+        "dashboard": compute_dashboard(db, assessment.tenant_id, assessment.id),
+        "items": items,
+    }
+
+
+def _assert_can_sign(assignment: GapAssignment, ctx: OrgContext) -> None:
+    if assignment.respondent_user_id == ctx.principal.user.id:
+        return
+    if has_permission(ctx.role, "manage_gap"):
+        return
+    raise HTTPException(status.HTTP_403_FORBIDDEN, "Apenas o responsavel atribuido pode assinar esta conducao.")
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -226,6 +330,86 @@ def submit_assignment(
     return _to_response(assignment)
 
 
+@router.post("/{assignment_id}/sign", response_model=AssignmentSignResponse)
+def sign_assignment(
+    assignment_id: uuid.UUID,
+    db: db_dep,
+    ctx: sign_dep,
+    request: Request,
+):
+    """Assina a conducao submetida e congela uma baseline versionada do Gap Analysis."""
+    assignment = scoped_query(db, GapAssignment, ctx).filter(
+        GapAssignment.id == assignment_id
+    ).first()
+    if assignment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Atribuicao nao encontrada.")
+    if assignment.status == "signed":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Conducao ja assinada.")
+    if assignment.status != "submitted":
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Status atual: {assignment.status}. Apenas 'submitted' pode ser assinado.",
+        )
+    _assert_can_sign(assignment, ctx)
+
+    assessment = _get_assessment(db, ctx.tenant_id)
+    if assignment.assessment_id != assessment.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Atribuicao nao encontrada.")
+
+    signed_at = datetime.now(timezone.utc)
+    signed_content = _signed_content(db, assignment, assessment, signed_at)
+    content_hash = _content_hash(signed_content)
+    signer_name = ctx.principal.user.full_name or str(ctx.principal.user.id)
+    snapshot = {
+        "dashboard": signed_content["dashboard"],
+        "items": signed_content["items"],
+        "assignment": signed_content["assignment"],
+        "signed_content": signed_content,
+        "signature": {
+            "signer_user_id": str(ctx.principal.user.id),
+            "signer_name": signer_name,
+            "signer_email": ctx.principal.user.email,
+            "signed_at": signed_at.isoformat(),
+            "content_hash": content_hash,
+            "hash_algorithm": "sha256",
+            "level": "advanced",
+        },
+    }
+
+    if assessment.draft_status != DocStatus.in_review:
+        cds.submit_review(db, assessment)
+
+    assignment.status = "signed"
+    assignment.signed_at = signed_at
+    version = cds.approve_document(
+        db=db,
+        artifact=assessment,
+        doc_type=DocType.gap_baseline,
+        actor_id=ctx.principal.user.id,
+        classification=Classification.uso_interno,
+        next_review_at=None,
+        change_nature="Assinatura da conducao do Gap Analysis",
+        snapshot_factory=lambda: snapshot,
+    )
+    db.refresh(assignment)
+
+    AuditService.log_from_request(
+        request=request,
+        operation="SIGN",
+        entity_type="gap_assignment",
+        entity_id=str(assignment.id),
+        details={"baseline_version_number": version.version_number},
+        actor_user_id=ctx.principal.user.id,
+        tenant_id=ctx.tenant_id,
+    )
+    return AssignmentSignResponse(
+        assignment=_to_response(assignment),
+        baseline=_baseline_response(version),
+        content_hash=content_hash,
+        signed_at=signed_at,
+    )
+
+
 @router.post("/{assignment_id}/cancel", response_model=AssignmentResponse)
 def cancel_assignment(
     assignment_id: uuid.UUID,
@@ -239,7 +423,7 @@ def cancel_assignment(
     ).first()
     if assignment is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Atribuição não encontrada.")
-    if assignment.status in ("cancelled", "submitted"):
+    if assignment.status in ("cancelled", "submitted", "signed"):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             f"Atribuição já em status terminal: {assignment.status}.",

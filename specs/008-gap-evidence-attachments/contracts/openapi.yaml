@@ -1,0 +1,295 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus - Evidencias Anexadas no Gap Analysis (Feature 008)
+  version: 1.0.0
+  description: >
+    Contrato para anexar, listar, baixar, substituir, inativar e consultar historico de evidencias
+    documentais reais associadas a itens da Matriz do Gap Analysis. Todas as operacoes sao
+    tenant-scoped e respeitam RBAC/classificacao.
+
+servers:
+  - url: /
+
+paths:
+  /gap/assessment/items/{item_id}/evidences:
+    get:
+      operationId: listGapItemEvidences
+      tags: [gap-evidence]
+      summary: Lista evidencias ativas/correntes anexadas ao item
+      description: >
+        Retorna metadados das evidencias ativas/correntes do item. Esta listagem nao gera audit log
+        por si so. `include_history=true` exige manage_gap e pode incluir inativas/versoes anteriores.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+        - name: include_history
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Lista de evidencias do item.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/GapEvidenceSummary' }
+        '401': { description: Nao autenticado. }
+        '403': { description: Permissao insuficiente. }
+        '404': { description: Item nao encontrado ou fora do tenant ativo. }
+
+    post:
+      operationId: uploadGapItemEvidence
+      tags: [gap-evidence]
+      summary: Anexa nova evidencia ao item
+      description: >
+        Exige manage_gap. Upload valido cria evidencia, versao 1, evento de cadeia de custodia e audit
+        log. Conteudo do arquivo, storage_key e path interno nao aparecem no audit.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, classification]
+              properties:
+                file: { type: string, format: binary }
+                title: { type: string, maxLength: 255 }
+                description: { type: string, maxLength: 1000 }
+                classification: { $ref: '#/components/schemas/Classification' }
+      responses:
+        '201':
+          description: Evidencia anexada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GapEvidenceSummary' }
+        '400': { description: Arquivo vazio, invalido ou nao permitido. }
+        '401': { description: Nao autenticado. }
+        '403': { description: Permissao insuficiente. }
+        '404': { description: Item nao encontrado ou fora do tenant ativo. }
+        '413': { description: Arquivo acima do limite configurado. }
+
+  /gap/assessment/items/{item_id}/evidences/{evidence_id}/download:
+    get:
+      operationId: downloadGapEvidence
+      tags: [gap-evidence]
+      summary: Baixa o conteudo da versao corrente da evidencia
+      description: >
+        Conteudo de evidencias publico/uso_interno exige view_gap; confidencial/restrito exige
+        manage_gap. Acesso concedido ou negado gera audit log; tentativas cross-tenant retornam
+        resposta generica.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/EvidenceId'
+      responses:
+        '200':
+          description: Arquivo binario.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { description: Nao autenticado. }
+        '403': { description: Permissao insuficiente para classificacao. }
+        '404': { description: Evidencia nao encontrada ou fora do tenant ativo. }
+
+  /gap/assessment/items/{item_id}/evidences/{evidence_id}/versions:
+    post:
+      operationId: replaceGapEvidence
+      tags: [gap-evidence]
+      summary: Substitui evidencia por nova versao
+      description: >
+        Exige manage_gap. Cria nova versao imutavel, marca como corrente, preserva a anterior no
+        historico e gera audit/evento.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/EvidenceId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, classification]
+              properties:
+                file: { type: string, format: binary }
+                description: { type: string, maxLength: 1000 }
+                classification: { $ref: '#/components/schemas/Classification' }
+      responses:
+        '200':
+          description: Evidencia com nova versao corrente.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GapEvidenceSummary' }
+        '400': { description: Arquivo vazio, invalido ou nao permitido. }
+        '403': { description: Permissao insuficiente. }
+        '404': { description: Evidencia nao encontrada ou fora do tenant ativo. }
+        '413': { description: Arquivo acima do limite configurado. }
+
+  /gap/assessment/items/{item_id}/evidences/{evidence_id}:
+    delete:
+      operationId: inactivateGapEvidence
+      tags: [gap-evidence]
+      summary: Inativa evidencia sem apagar fisicamente
+      description: >
+        Exige manage_gap. A evidencia deixa de aparecer na lista principal, mas continua no historico
+        para manage_gap.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/EvidenceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InactivateEvidenceRequest' }
+      responses:
+        '204': { description: Evidencia inativada. }
+        '403': { description: Permissao insuficiente. }
+        '404': { description: Evidencia nao encontrada ou fora do tenant ativo. }
+
+  /gap/assessment/items/{item_id}/evidences/{evidence_id}/history:
+    get:
+      operationId: getGapEvidenceHistory
+      tags: [gap-evidence]
+      summary: Consulta historico, versoes anteriores e eventos da evidencia
+      description: Exige manage_gap. Usuarios com apenas view_gap nao visualizam historico/inativas.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/EvidenceId'
+      responses:
+        '200':
+          description: Historico da evidencia.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GapEvidenceHistory' }
+        '403': { description: Permissao insuficiente. }
+        '404': { description: Evidencia nao encontrada ou fora do tenant ativo. }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: UUID da organizacao ativa.
+    ItemId:
+      name: item_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EvidenceId:
+      name: evidence_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    Classification:
+      type: string
+      enum: [publico, uso_interno, confidencial, restrito]
+      default: uso_interno
+
+    GapEvidenceStatus:
+      type: string
+      enum: [active, inactive]
+
+    GapEvidenceSummary:
+      type: object
+      required:
+        - id
+        - assessment_item_id
+        - title
+        - classification
+        - status
+        - current_version_id
+        - file_name
+        - size_bytes
+        - content_hash
+        - hash_algorithm
+        - uploaded_by
+        - uploaded_at
+        - created_at
+        - can_download
+      properties:
+        id: { type: string, format: uuid }
+        assessment_item_id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: [string, "null"] }
+        classification: { $ref: '#/components/schemas/Classification' }
+        status: { $ref: '#/components/schemas/GapEvidenceStatus' }
+        current_version_id: { type: string, format: uuid }
+        file_name: { type: string }
+        mime_type: { type: [string, "null"] }
+        extension: { type: string }
+        size_bytes: { type: integer, minimum: 1 }
+        content_hash: { type: string, minLength: 64, maxLength: 64 }
+        hash_algorithm: { type: string, enum: [sha256] }
+        uploaded_by: { type: string, format: uuid }
+        uploaded_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        can_download: { type: boolean }
+
+    GapEvidenceVersionSummary:
+      type: object
+      required: [id, version_number, classification, file_name, size_bytes, content_hash, hash_algorithm, uploaded_by, uploaded_at]
+      properties:
+        id: { type: string, format: uuid }
+        version_number: { type: integer, minimum: 1 }
+        classification: { $ref: '#/components/schemas/Classification' }
+        file_name: { type: string }
+        mime_type: { type: [string, "null"] }
+        extension: { type: string }
+        size_bytes: { type: integer, minimum: 1 }
+        content_hash: { type: string }
+        hash_algorithm: { type: string }
+        uploaded_by: { type: string, format: uuid }
+        uploaded_at: { type: string, format: date-time }
+        is_current: { type: boolean }
+
+    GapEvidenceEventSummary:
+      type: object
+      required: [id, event_type, outcome, occurred_at]
+      properties:
+        id: { type: string, format: uuid }
+        event_type:
+          type: string
+          enum: [uploaded, content_viewed, downloaded, replaced, inactivated, access_denied]
+        outcome: { type: string, enum: [success, denied] }
+        actor_id: { type: [string, "null"], format: uuid }
+        version_id: { type: [string, "null"], format: uuid }
+        occurred_at: { type: string, format: date-time }
+        details:
+          type: object
+          additionalProperties: true
+
+    GapEvidenceHistory:
+      type: object
+      required: [evidence, versions, events]
+      properties:
+        evidence: { $ref: '#/components/schemas/GapEvidenceSummary' }
+        versions:
+          type: array
+          items: { $ref: '#/components/schemas/GapEvidenceVersionSummary' }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/GapEvidenceEventSummary' }
+
+    InactivateEvidenceRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 300 }

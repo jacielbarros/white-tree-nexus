@@ -75,6 +75,7 @@ FIELD_ENCRYPTION_KEY=     # Fernet (urlsafe-b64 32B) p/ cifrar campos sensíveis
 # --- Storage de evidências (escolher na feature de Evidências) ---
 EVIDENCE_STORAGE_DIR=./evidence_store/   # local; trocar por S3/objeto em produção
 EVIDENCE_MAX_FILE_BYTES=20971520          # 20 MB
+EVIDENCE_ALLOWED_EXTENSIONS=.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.7z
 # --- Recursos de IA (Módulo 10, opt-in por organização) ---
 AI_FEATURES_ENABLED=false
 ANTHROPIC_API_KEY=
@@ -262,14 +263,16 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
-**Feature 001 — Fundação Multi-Tenant** (`001-fundacao-multi-tenant`)
-- Plano: `specs/001-fundacao-multi-tenant/plan.md`
-- Spec: `specs/001-fundacao-multi-tenant/spec.md` · Research: `.../research.md` ·
-  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml`
-- Decisões-chave: shared-DB + `tenant_id` com escopo central (`helpers/tenant_scope.py`) +
-  RLS (defesa em profundidade); JWT HS512 + `jti` em Redis (fail-open) +
-  `password_changed_at`; Argon2id; bloqueio com auto-expiração/desbloqueio manual/reset;
-  bootstrap guardado por `BOOTSTRAP_TOKEN`; contexto de org via header `X-Org-Context`;
-  cross-tenant ⇒ 404 genérico.
+**Feature 008 — Anexos/Evidências na Matriz do Gap Analysis** (`008-gap-evidence-attachments`)
+- Plano: `specs/008-gap-evidence-attachments/plan.md`
+- Spec: `specs/008-gap-evidence-attachments/spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+  Quickstart: `.../quickstart.md`
+- Decisões-chave: evidências anexadas são dados tenant-scoped (`tenant_id` + `scoped_query` +
+  RLS); metadados em PostgreSQL e arquivo em storage local configurável por `EVIDENCE_STORAGE_DIR`,
+  cifrado em repouso via `FIELD_ENCRYPTION_KEY`; integridade por SHA-256; lista principal mostra
+  apenas evidências ativas/correntes; histórico, versões anteriores e inativas exigem `manage_gap`;
+  download de `publico`/`uso_interno` exige `view_gap`, enquanto `confidencial`/`restrito` exige
+  `manage_gap`; upload/download/substituição/inativação/tentativas negadas geram audit sem conteúdo,
+  storage_key ou path interno.
 <!-- SPECKIT END -->
-

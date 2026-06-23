@@ -320,6 +320,65 @@ export interface GapAssignmentItem {
   token?: string | null;
 }
 
+export type GapEvidenceStatus = 'active' | 'inactive';
+export type GapEvidenceEventType =
+  | 'uploaded'
+  | 'content_viewed'
+  | 'downloaded'
+  | 'replaced'
+  | 'inactivated'
+  | 'access_denied';
+
+export interface GapEvidenceSummary {
+  id: string;
+  assessment_item_id: string;
+  title: string;
+  description: string | null;
+  classification: Classification;
+  status: GapEvidenceStatus;
+  current_version_id: string;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  created_at: string;
+  can_download: boolean;
+}
+
+export interface GapEvidenceVersionSummary {
+  id: string;
+  version_number: number;
+  classification: Classification;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  is_current: boolean;
+}
+
+export interface GapEvidenceEventSummary {
+  id: string;
+  event_type: GapEvidenceEventType;
+  outcome: string;
+  actor_id: string | null;
+  occurred_at: string;
+  details: Record<string, unknown> | null;
+}
+
+export interface GapEvidenceHistory {
+  evidence: GapEvidenceSummary;
+  versions: GapEvidenceVersionSummary[];
+  events: GapEvidenceEventSummary[];
+}
+
 // --- Statement of Applicability / SoA (Feature 005) ---
 
 export type SoaImplementationStatus =
