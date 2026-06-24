@@ -8,7 +8,7 @@ from wtnapp.models.scope_model import ScopeStatement
 from wtnapp.services import dashboard_service
 from wtnapp.services.dashboard_service import build_dashboard
 from wtnapp.services.gap_metrics_service import compute_dashboard
-from wtnapp.settings import Classification, DocStatus, DocType, GapPriority, Role
+from wtnapp.settings import Classification, DocStatus, DocType, GapPriority, GapStatus, Role
 
 
 def _ctx(user, org, role) -> OrgContext:
@@ -34,9 +34,11 @@ def test_dashboard_happy_path_and_kpis(client, soa_seed, org_headers, db):
     assert by_id["action_plan"]["placeholder"] is True
     assert by_id["evidence"]["placeholder"] is True
 
-    # KPIs batem com compute_dashboard chamado diretamente (SC-002)
+    # Gap metrics ainda mostram aderencia entre avaliados; o KPI executivo do dashboard
+    # considera controles nao avaliados como nao conformes para evitar falso 100%.
     metrics = compute_dashboard(db, seed["org"].id, assessment.id)
-    assert body["kpis"]["overall_adherence"] == metrics["overall_adherence"] == 0.75
+    assert metrics["overall_adherence"] == 0.75
+    assert body["kpis"]["overall_adherence"] == 0.0163
     assert body["kpis"]["controls_evaluated"] == 3      # 3 controles do Anexo A avaliados
     assert body["kpis"]["controls_total"] == 93         # Anexo A (C2)
     assert body["kpis"]["critical_gaps"] == 1           # priority==critical, não not_meet (C1)
@@ -47,6 +49,20 @@ def test_dashboard_happy_path_and_kpis(client, soa_seed, org_headers, db):
     assert by_id["gap"]["status"] == "draft"
     assert by_id["gap"]["not_started"] is False
     assert by_id["gap"]["progress_pct"] == round(metrics["completeness"] * 100, 1)
+
+
+def test_dashboard_compliance_penalizes_unassessed_controls(client, soa_seed, org_headers, db):
+    """Dois controles Atende e o restante Nao avaliado nao podem virar 100% no dashboard executivo."""
+    seed = soa_seed("dash-unassessed")
+    annex = seed["annex_items"]
+    annex[0].status = annex[1].status = GapStatus.meets
+    annex[2].status = GapStatus.not_filled
+    db.commit()
+
+    body = client.get("/dashboard", headers=org_headers(seed["admin"].email, seed["org"].id)).json()
+
+    assert compute_dashboard(db, seed["org"].id, seed["assessment"].id)["overall_adherence"] == 1.0
+    assert body["kpis"]["overall_adherence"] == 0.0215
 
 
 def test_critical_gaps_counts_priority_not_status(client, soa_seed, org_headers, db):

@@ -35,6 +35,27 @@ def sha256_canonical(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def signature_appearance_policy(version: PrintTemplateVersion) -> dict[str, Any]:
+    """Resolve the visual signature policy embedded in the template version."""
+    policy = dict((version.layout_schema or {}).get("signature_appearance") or {})
+    return {
+        "default_page": policy.get("default_page", "last"),
+        "default_anchor": policy.get("default_anchor", "bottom_right"),
+        "default_margin_points": float(policy.get("default_margin_points", 36)),
+        "default_width_points": float(policy.get("default_width_points", 180)),
+        "default_height_points": float(policy.get("default_height_points", 54)),
+        "min_width_points": float(policy.get("min_width_points", 96)),
+        "min_height_points": float(policy.get("min_height_points", 32)),
+        "max_width_points": float(policy.get("max_width_points", 260)),
+        "max_height_points": float(policy.get("max_height_points", 96)),
+        "blocked_areas": list(policy.get("blocked_areas") or []),
+    }
+
+
+def signature_policy_hash(version: PrintTemplateVersion) -> str:
+    return sha256_canonical(signature_appearance_policy(version))
+
+
 def template_content_hash(
     *,
     layout_schema: dict[str, Any],

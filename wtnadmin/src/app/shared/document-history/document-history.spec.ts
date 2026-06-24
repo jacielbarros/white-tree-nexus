@@ -4,8 +4,25 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiService } from '@app/core/api.service';
-import { IntegrityVerification, SignedDocument } from '@app/core/models';
+import { IntegrityVerification, SignedDocument, SignedSignaturePlacement } from '@app/core/models';
 import { DocumentHistory } from './document-history';
+
+const SIGNED_PLACEMENT: SignedSignaturePlacement = {
+  id: 'signed-placement-1',
+  signed_document_id: 'signed-1',
+  placement_id: 'placement-1',
+  page_number: 1,
+  x_points: 626,
+  y_points: 36,
+  width_points: 180,
+  height_points: 54,
+  page_width_points: 842,
+  page_height_points: 595,
+  coordinate_system: 'pdf_points_bottom_left',
+  origin: 'user',
+  placement_hash: 'p'.repeat(64),
+  created_at: '2026-06-23T17:10:00Z',
+};
 
 const SIGNED: SignedDocument = {
   id: 'signed-1',
@@ -21,6 +38,9 @@ const SIGNED: SignedDocument = {
   size_bytes: 4096,
   signed_by: 'user-1',
   signed_at: '2026-06-23T17:10:00Z',
+  signature_method: 'internal_electronic_signature',
+  visual_signature_present: true,
+  signature_placement: SIGNED_PLACEMENT,
 };
 
 const VERIFY: IntegrityVerification = {
@@ -68,6 +88,8 @@ describe('DocumentHistory', () => {
     expect(api.listSignedDocuments).toHaveBeenCalledWith('soa_report', 'soa-1');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('WTN-SOA-0002');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Obsoleto');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Assinatura eletronica interna');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(SIGNED_PLACEMENT.placement_hash.slice(0, 12));
   });
 
   it('downloads a signed PDF from history', () => {

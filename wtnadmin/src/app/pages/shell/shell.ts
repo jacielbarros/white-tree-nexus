@@ -498,7 +498,11 @@ export class Shell implements OnInit {
   }
 
   protected onOrgChange(orgId: string): void {
+    if (this.store.activeOrgId() === orgId) {
+      return;
+    }
     this.store.setActiveOrg(orgId);
+    void this.router.navigateByUrl(this.router.url);
   }
 
   protected canManagePrintTemplates(): boolean {

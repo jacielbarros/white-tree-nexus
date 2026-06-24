@@ -27,9 +27,11 @@ from wtnapp.models.print_document_model import (
     DocumentAccessEvent,
     DocumentPreview,
     DocumentSignature,
+    DocumentSignaturePlacement,
     PrintTemplate,
     PrintTemplateVersion,
     SignedDocument,
+    SignedDocumentSignaturePlacement,
     SignedDocumentSnapshot,
 )
 from wtnapp.models.scope_model import ScopeItem, ScopeStatement
@@ -71,9 +73,11 @@ __all__ = [
     "DocumentAccessEvent",
     "DocumentPreview",
     "DocumentSignature",
+    "DocumentSignaturePlacement",
     "PrintTemplate",
     "PrintTemplateVersion",
     "SignedDocument",
+    "SignedDocumentSignaturePlacement",
     "SignedDocumentSnapshot",
     "ScopeItem",
     "ScopeStatement",

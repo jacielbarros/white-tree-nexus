@@ -40,6 +40,13 @@ logger = logging.getLogger(__name__)
 
 ANNEX_A_CONTROLS = 93
 
+_COMPLIANCE_WEIGHT: dict[GapStatus, float] = {
+    GapStatus.meets: 1.0,
+    GapStatus.partial: 0.5,
+    GapStatus.not_meet: 0.0,
+    GapStatus.not_filled: 0.0,
+}
+
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,6 +81,14 @@ def _earliest_deadline(rows) -> tuple[str | None, date | None]:
     future = [r for r in dated if _as_date(r.deadline) >= today]
     chosen = min(future or dated, key=lambda r: _as_date(r.deadline))
     return chosen.responsible, _as_date(chosen.deadline)
+
+
+def _annex_compliance(items: list[GapAssessmentItem]) -> float | None:
+    applicable = [i for i in items if i.status != GapStatus.not_applicable]
+    if not applicable:
+        return None
+    score = sum(_COMPLIANCE_WEIGHT.get(i.status, 0.0) for i in applicable)
+    return round(score / len(applicable), 4)
 
 
 def _current_version(db: Session, version_id) -> DocumentVersion | None:
@@ -149,7 +164,7 @@ def _gap_card(db: Session, ctx: OrgContext, kpis: DashboardKpis) -> ModuleCard:
         )
         .all()
     )
-    kpis.overall_adherence = metrics["overall_adherence"]
+    kpis.overall_adherence = _annex_compliance(annex_items)
     kpis.controls_evaluated = sum(1 for i in annex_items if i.status != GapStatus.not_filled)
     kpis.controls_total = ANNEX_A_CONTROLS
     gaps = list_gaps(db, ctx.tenant_id, assessment.id)

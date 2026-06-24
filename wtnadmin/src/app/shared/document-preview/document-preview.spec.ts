@@ -5,8 +5,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
-import { DocumentPreview as Preview, SignedDocument } from '@app/core/models';
+import {
+  DocumentPreview as Preview,
+  PreviewLayout,
+  SignaturePlacement,
+  SignedDocument,
+  SignedSignaturePlacement,
+} from '@app/core/models';
 import { DocumentPreview } from './document-preview';
+
+const DEFAULT_PLACEMENT = {
+  page_number: 1,
+  x_points: 626,
+  y_points: 36,
+  width_points: 180,
+  height_points: 54,
+  page_width_points: 842,
+  page_height_points: 595,
+  coordinate_system: 'pdf_points_bottom_left' as const,
+  origin: 'default' as const,
+};
 
 const PREVIEW: Preview = {
   id: 'preview-1',
@@ -20,6 +38,27 @@ const PREVIEW: Preview = {
   expires_at: '2026-06-23T18:00:00Z',
   created_at: '2026-06-23T17:00:00Z',
   warnings: [],
+  pdf_page_metrics: [{ page_number: 1, width_points: 842, height_points: 595, rotation: 0 }],
+  default_signature_placement: DEFAULT_PLACEMENT,
+};
+
+const LAYOUT: PreviewLayout = {
+  preview_id: PREVIEW.id,
+  document_type: PREVIEW.document_type,
+  snapshot_hash: PREVIEW.snapshot_hash,
+  page_metrics: PREVIEW.pdf_page_metrics,
+  blocked_areas: [],
+  default_placement: DEFAULT_PLACEMENT,
+  latest_placement: null,
+};
+
+const SIGNED_PLACEMENT: SignedSignaturePlacement = {
+  ...DEFAULT_PLACEMENT,
+  id: 'signed-placement-1',
+  signed_document_id: 'signed-1',
+  placement_id: 'placement-1',
+  placement_hash: 'p'.repeat(64),
+  created_at: '2026-06-23T17:10:00Z',
 };
 
 const SIGNED: SignedDocument = {
@@ -36,12 +75,26 @@ const SIGNED: SignedDocument = {
   size_bytes: 1200,
   signed_by: 'user-1',
   signed_at: '2026-06-23T17:10:00Z',
+  signature_method: 'internal_electronic_signature',
+  visual_signature_present: true,
+  signature_placement: SIGNED_PLACEMENT,
 };
 
 function apiStub() {
   return {
     createDocumentPreview: vi.fn(() => of(PREVIEW)),
     downloadPreviewPdf: vi.fn(() => of(new Blob(['preview'], { type: 'application/pdf' }))),
+    openPreviewInlinePdf: vi.fn(() => of(new Blob(['preview'], { type: 'application/pdf' }))),
+    getPreviewLayout: vi.fn(() => of(LAYOUT)),
+    confirmSignaturePlacement: vi.fn((_previewId: string, placement: typeof DEFAULT_PLACEMENT) => of({
+      ...placement,
+      id: 'placement-1',
+      preview_id: PREVIEW.id,
+      placement_revision: 1,
+      placement_hash: 'p'.repeat(64),
+      created_by: 'user-1',
+      created_at: '2026-06-23T17:05:00Z',
+    } satisfies SignaturePlacement)),
     signDocumentPreview: vi.fn(() => of(SIGNED)),
     downloadSignedPdf: vi.fn(() => of(new Blob(['signed'], { type: 'application/pdf' }))),
   };
@@ -87,6 +140,8 @@ describe('DocumentPreview', () => {
       source_artifact_id: 'context-1',
       classification: 'uso_interno',
     });
+    expect(api.openPreviewInlinePdf).toHaveBeenCalledWith('preview-1');
+    expect(api.getPreviewLayout).toHaveBeenCalledWith('preview-1');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Preview ativo');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Template template');
   });

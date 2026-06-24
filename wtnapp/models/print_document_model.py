@@ -25,6 +25,9 @@ from wtnapp.settings import (
     PrintTemplateScope,
     PrintTemplateStatus,
     PrintableDocumentType,
+    SignatureCoordinateSystem,
+    SignatureMethod,
+    SignaturePlacementOrigin,
     SignedDocumentStatus,
 )
 
@@ -143,8 +146,62 @@ class DocumentPreview(Base):
     preview_storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
     snapshot_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     rendered_variables: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    pdf_page_metrics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    signature_policy_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    default_signature_placement: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     warnings: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+
+
+class DocumentSignaturePlacement(Base):
+    """Append-only confirmed visual seal placement for a preview."""
+
+    __tablename__ = "document_signature_placements"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "preview_id", "placement_revision", name="uq_document_signature_placement_revision"),
+        Index("ix_document_signature_placements_tenant_id", "tenant_id"),
+        Index("ix_document_signature_placements_preview_id", "preview_id"),
+        Index("ix_document_signature_placements_document_type", "document_type"),
+        Index("ix_document_signature_placements_created_by", "created_by"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    preview_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("document_previews.id"), nullable=False
+    )
+    document_type: Mapped[PrintableDocumentType] = mapped_column(
+        SAEnum(PrintableDocumentType, native_enum=False, length=40), nullable=False
+    )
+    source_artifact_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_artifact_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    placement_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    x_points: Mapped[float] = mapped_column(nullable=False)
+    y_points: Mapped[float] = mapped_column(nullable=False)
+    width_points: Mapped[float] = mapped_column(nullable=False)
+    height_points: Mapped[float] = mapped_column(nullable=False)
+    page_width_points: Mapped[float] = mapped_column(nullable=False)
+    page_height_points: Mapped[float] = mapped_column(nullable=False)
+    coordinate_system: Mapped[SignatureCoordinateSystem] = mapped_column(
+        SAEnum(SignatureCoordinateSystem, native_enum=False, length=40),
+        default=SignatureCoordinateSystem.pdf_points_bottom_left,
+        nullable=False,
+    )
+    origin: Mapped[SignaturePlacementOrigin] = mapped_column(
+        SAEnum(SignaturePlacementOrigin, native_enum=False, length=20),
+        default=SignaturePlacementOrigin.user,
+        nullable=False,
+    )
+    template_version_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("print_template_versions.id"), nullable=False
+    )
+    snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    artifact_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    signature_policy_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    placement_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
@@ -253,6 +310,51 @@ class DocumentSignature(Base):
     auth_context: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    signature_method: Mapped[SignatureMethod] = mapped_column(
+        SAEnum(SignatureMethod, native_enum=False, length=40),
+        default=SignatureMethod.internal_electronic_signature,
+        nullable=False,
+    )
+    signature_provider: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    visual_signature_present: Mapped[bool] = mapped_column(default=True, nullable=False)
+    provider_reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    provider_payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class SignedDocumentSignaturePlacement(Base):
+    """Immutable snapshot of the exact seal placement used in a signed document."""
+
+    __tablename__ = "signed_document_signature_placements"
+    __table_args__ = (
+        UniqueConstraint("signed_document_id", name="uq_signed_document_signature_placement_document"),
+        Index("ix_signed_document_signature_placements_tenant_id", "tenant_id"),
+        Index("ix_signed_document_signature_placements_document_id", "signed_document_id"),
+        Index("ix_signed_document_signature_placements_placement_id", "placement_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
+    signed_document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("signed_documents.id"), nullable=False
+    )
+    placement_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("document_signature_placements.id"), nullable=False
+    )
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    x_points: Mapped[float] = mapped_column(nullable=False)
+    y_points: Mapped[float] = mapped_column(nullable=False)
+    width_points: Mapped[float] = mapped_column(nullable=False)
+    height_points: Mapped[float] = mapped_column(nullable=False)
+    page_width_points: Mapped[float] = mapped_column(nullable=False)
+    page_height_points: Mapped[float] = mapped_column(nullable=False)
+    coordinate_system: Mapped[SignatureCoordinateSystem] = mapped_column(
+        SAEnum(SignatureCoordinateSystem, native_enum=False, length=40), nullable=False
+    )
+    origin: Mapped[SignaturePlacementOrigin] = mapped_column(
+        SAEnum(SignaturePlacementOrigin, native_enum=False, length=20), nullable=False
+    )
+    placement_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
 
 class DocumentAccessEvent(Base):
@@ -282,7 +384,9 @@ _APPEND_ONLY_TABLES = (
     "print_template_versions",
     "signed_documents",
     "signed_document_snapshots",
+    "document_signature_placements",
     "document_signatures",
+    "signed_document_signature_placements",
     "document_access_events",
 )
 
@@ -339,6 +443,16 @@ def _signed_snapshot_append_only(target, connection, **kw):  # pragma: no cover 
 @event.listens_for(DocumentSignature.__table__, "after_create")
 def _document_signature_append_only(target, connection, **kw):  # pragma: no cover - infra
     _install_append_only("document_signatures", connection)
+
+
+@event.listens_for(DocumentSignaturePlacement.__table__, "after_create")
+def _document_signature_placement_append_only(target, connection, **kw):  # pragma: no cover - infra
+    _install_append_only("document_signature_placements", connection)
+
+
+@event.listens_for(SignedDocumentSignaturePlacement.__table__, "after_create")
+def _signed_document_signature_placement_append_only(target, connection, **kw):  # pragma: no cover - infra
+    _install_append_only("signed_document_signature_placements", connection)
 
 
 @event.listens_for(DocumentAccessEvent.__table__, "after_create")

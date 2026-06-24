@@ -272,16 +272,13 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
-**Feature 009 - Documentos Imprimiveis, Pre-visualizaveis e Assinaveis** (`009-signable-print-documents`)
-- Plano: `specs/009-signable-print-documents/plan.md`
-- Spec: `specs/009-signable-print-documents/spec.md` . Research: `.../research.md` .
+**Feature 010 - Preview Interativo e Posicionamento Visual de Assinatura em PDF** (`010-interactive-pdf-signature`)
+- Plano: `specs/010-interactive-pdf-signature/plan.md`
+- Spec: `specs/010-interactive-pdf-signature/spec.md` . Research: `.../research.md` .
   Data model: `.../data-model.md` . Contracts: `.../contracts/openapi.yaml` .
   Quickstart: `.../quickstart.md`
-- Decisoes-chave: capacidade transversal em `/print-documents`; Contexto consolidado, Gap Analysis e
-  SoA continuam donos dos dados e permissoes; assinatura usa permissoes de aprovacao existentes
-  (`approve_context_document`, `approve_gap_baseline`, `approve_soa`); previews criam snapshot
-  temporario e so podem ser assinados se artefato/template nao mudaram; PDFs usam ReportLab e storage
-  local cifrado por `DOCUMENT_STORAGE_DIR` + `FIELD_ENCRYPTION_KEY`; templates sao versionados com
-  secoes/variaveis controladas; documentos assinados preservam template versionado, PDF final, hash,
-  assinante, tenant e trilha de auditoria sem conteudo sensivel.
+- Decisoes-chave: estende a Feature 009 com preview inline controlado, `pdfjs-dist` no frontend,
+  coordenadas canonicas em pontos PDF com origem inferior esquerda, posicoes confirmadas append-only
+  no preview e congeladas no documento assinado, areas bloqueadas por template/politica e metadados
+  `signature_method` para preparar PAdES/ICP-Brasil sem implementar assinatura digital no MVP.
 <!-- SPECKIT END -->

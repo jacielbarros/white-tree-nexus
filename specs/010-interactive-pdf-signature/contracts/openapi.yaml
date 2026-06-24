@@ -1,0 +1,372 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus - Interactive PDF Signature Preview
+  version: 0.1.0
+paths:
+  /print-documents/previews/{preview_id}/inline-pdf:
+    get:
+      summary: Open preview PDF inline
+      description: Returns preview PDF bytes for an inline viewer and records a sanitized view event.
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: PDF content for inline rendering
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Permission or classification denied
+        '404':
+          description: Preview not found in the active tenant context
+        '409':
+          description: Preview expired or stale
+
+  /print-documents/previews/{preview_id}/layout:
+    get:
+      summary: Get PDF layout and signature policy
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Page metrics, default placement, blocked areas, and latest placement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewLayoutResponse'
+        '403':
+          description: Permission or classification denied
+        '404':
+          description: Preview not found in the active tenant context
+        '409':
+          description: Preview expired or stale
+
+  /print-documents/previews/{preview_id}/signature-placements:
+    get:
+      summary: List confirmed placement revisions for a preview
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      responses:
+        '200':
+          description: Placement history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SignaturePlacementResponse'
+    post:
+      summary: Confirm a visual signature placement
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignaturePlacementCreate'
+      responses:
+        '201':
+          description: Placement revision confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignaturePlacementResponse'
+        '400':
+          description: Invalid coordinates, dimensions, page, or blocked area intersection
+        '403':
+          description: Permission denied
+        '404':
+          description: Preview not found in the active tenant context
+        '409':
+          description: Preview expired, stale, or incompatible
+
+  /print-documents/previews/{preview_id}/sign:
+    post:
+      summary: Sign preview using a confirmed placement
+      parameters:
+        - $ref: '#/components/parameters/PreviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignPreviewWithPlacementRequest'
+      responses:
+        '201':
+          description: Signed document created with frozen visual placement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedDocumentResponse'
+        '400':
+          description: Placement invalid or missing
+        '403':
+          description: Permission denied
+        '404':
+          description: Preview or placement not found in the active tenant context
+        '409':
+          description: Preview stale, expired, or placement no longer valid
+
+  /print-documents/signed/{document_id}/signature-placement:
+    get:
+      summary: Get frozen placement for a signed document
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Frozen placement snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedPlacementResponse'
+        '403':
+          description: Permission or classification denied
+        '404':
+          description: Signed document not found in the active tenant context
+
+components:
+  parameters:
+    PreviewId:
+      name: preview_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    PageMetric:
+      type: object
+      required: [page_number, width_points, height_points, rotation]
+      properties:
+        page_number:
+          type: integer
+          minimum: 1
+        width_points:
+          type: number
+          minimum: 1
+        height_points:
+          type: number
+          minimum: 1
+        rotation:
+          type: integer
+          enum: [0, 90, 180, 270]
+
+    BlockedArea:
+      type: object
+      required: [page, x_points, y_points, width_points, height_points]
+      properties:
+        page:
+          oneOf:
+            - type: integer
+              minimum: 1
+            - type: string
+              enum: [all]
+        x_points:
+          type: number
+        y_points:
+          type: number
+        width_points:
+          type: number
+          minimum: 1
+        height_points:
+          type: number
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 160
+
+    SignaturePlacementBase:
+      type: object
+      required:
+        - page_number
+        - x_points
+        - y_points
+        - width_points
+        - height_points
+        - page_width_points
+        - page_height_points
+        - coordinate_system
+      properties:
+        page_number:
+          type: integer
+          minimum: 1
+        x_points:
+          type: number
+          minimum: 0
+        y_points:
+          type: number
+          minimum: 0
+        width_points:
+          type: number
+          minimum: 1
+        height_points:
+          type: number
+          minimum: 1
+        page_width_points:
+          type: number
+          minimum: 1
+        page_height_points:
+          type: number
+          minimum: 1
+        coordinate_system:
+          type: string
+          enum: [pdf_points_bottom_left]
+        origin:
+          type: string
+          enum: [default, user, template]
+
+    SignaturePlacementCreate:
+      allOf:
+        - $ref: '#/components/schemas/SignaturePlacementBase'
+        - type: object
+          required: [confirm_snapshot_hash]
+          properties:
+            confirm_snapshot_hash:
+              type: string
+              minLength: 64
+              maxLength: 64
+
+    SignaturePlacementResponse:
+      allOf:
+        - $ref: '#/components/schemas/SignaturePlacementBase'
+        - type: object
+          required:
+            - id
+            - preview_id
+            - placement_revision
+            - placement_hash
+            - created_by
+            - created_at
+          properties:
+            id:
+              type: string
+              format: uuid
+            preview_id:
+              type: string
+              format: uuid
+            placement_revision:
+              type: integer
+              minimum: 1
+            placement_hash:
+              type: string
+            created_by:
+              type: string
+              format: uuid
+            created_at:
+              type: string
+              format: date-time
+
+    PreviewLayoutResponse:
+      type: object
+      required:
+        - preview_id
+        - document_type
+        - snapshot_hash
+        - page_metrics
+        - blocked_areas
+        - default_placement
+      properties:
+        preview_id:
+          type: string
+          format: uuid
+        document_type:
+          type: string
+        snapshot_hash:
+          type: string
+        page_metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/PageMetric'
+        blocked_areas:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockedArea'
+        default_placement:
+          $ref: '#/components/schemas/SignaturePlacementBase'
+        latest_placement:
+          $ref: '#/components/schemas/SignaturePlacementResponse'
+
+    SignPreviewWithPlacementRequest:
+      type: object
+      description: >
+        Signs a preview using the confirmed placement when provided. If confirmed_placement_id is
+        omitted, the backend must validate and materialize the default placement as an auditable
+        placement revision before signing.
+      required: [confirm_snapshot_hash]
+      properties:
+        confirm_snapshot_hash:
+          type: string
+          minLength: 64
+          maxLength: 64
+        confirmed_placement_id:
+          type: string
+          format: uuid
+          description: Optional confirmed placement revision. Omit to use a backend-materialized default placement.
+
+    SignedDocumentResponse:
+      type: object
+      required:
+        - id
+        - identifier
+        - document_type
+        - version_number
+        - signature_method
+        - visual_signature_present
+        - signature_placement
+        - pdf_hash
+        - snapshot_hash
+        - signed_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        identifier:
+          type: string
+        document_type:
+          type: string
+        version_number:
+          type: integer
+        signature_method:
+          type: string
+          enum: [internal_electronic_signature, pades, icp_brasil, external_certificate_provider]
+        visual_signature_present:
+          type: boolean
+        signature_placement:
+          $ref: '#/components/schemas/SignedPlacementResponse'
+        pdf_hash:
+          type: string
+        snapshot_hash:
+          type: string
+        signed_at:
+          type: string
+          format: date-time
+
+    SignedPlacementResponse:
+      allOf:
+        - $ref: '#/components/schemas/SignaturePlacementBase'
+        - type: object
+          required: [id, signed_document_id, placement_id, placement_hash, created_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            signed_document_id:
+              type: string
+              format: uuid
+            placement_id:
+              type: string
+              format: uuid
+            placement_hash:
+              type: string
+            created_at:
+              type: string
+              format: date-time

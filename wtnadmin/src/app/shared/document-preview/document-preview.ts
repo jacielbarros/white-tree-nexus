@@ -3,11 +3,21 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { forkJoin } from 'rxjs';
 
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
-import { Classification, DocumentPreview as Preview, PrintableDocumentType, SignedDocument } from '@app/core/models';
+import {
+  Classification,
+  DocumentPreview as Preview,
+  PreviewLayout,
+  PrintableDocumentType,
+  SignaturePlacement,
+  SignaturePlacementBase,
+  SignedDocument,
+} from '@app/core/models';
 import { hasPermission } from '@app/core/permissions';
+import { PdfSignatureViewer } from '@app/shared/pdf-signature-viewer/pdf-signature-viewer';
 
 const SIGN_PERMISSION: Record<PrintableDocumentType, string> = {
   context_report: 'approve_context_document',
@@ -27,7 +37,7 @@ const CLASSIFICATION_OPTIONS: { label: string; value: Classification }[] = [
 @Component({
   selector: 'app-document-preview',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, ReactiveFormsModule, SelectModule],
+  imports: [ButtonModule, PdfSignatureViewer, ReactiveFormsModule, SelectModule],
   template: `
     <section class="doc-preview">
       <div class="doc-preview__head">
@@ -104,6 +114,27 @@ const CLASSIFICATION_OPTIONS: { label: string; value: Classification }[] = [
           [loading]="downloadingSigned()"
         />
       </div>
+
+      @if (loadingInline()) {
+        <div class="doc-preview__empty">Carregando preview inline...</div>
+      }
+
+      @if (previewPdf() && previewLayout()) {
+        <app-pdf-signature-viewer
+          [pdf]="previewPdf()"
+          [layout]="previewLayout()"
+          (placementConfirmed)="confirmPlacement($event)"
+        />
+      }
+
+      @if (confirmedPlacement(); as placement) {
+        <div class="doc-preview__placement">
+          <strong>Posicao confirmada</strong>
+          <span>rev. {{ placement.placement_revision }} - {{ shortHash(placement.placement_hash) }}</span>
+        </div>
+      } @else if (previewLayout()) {
+        <div class="doc-preview__empty">Nenhuma posicao confirmada. Ao assinar, o sistema usara a posicao padrao validada.</div>
+      }
     </section>
   `,
   styles: `
@@ -187,6 +218,23 @@ const CLASSIFICATION_OPTIONS: { label: string; value: Classification }[] = [
       padding: 8px 10px;
     }
 
+    .doc-preview__placement {
+      border-left: 3px solid var(--wtn-primary);
+      color: var(--wtn-primary);
+      display: grid;
+      gap: 2px;
+      padding: 4px 0 4px 10px;
+    }
+
+    .doc-preview__placement strong {
+      font-size: 12px;
+    }
+
+    .doc-preview__placement span {
+      color: var(--wtn-text-2);
+      font-size: 11.5px;
+    }
+
     .doc-preview__actions {
       display: flex;
       flex-wrap: wrap;
@@ -205,8 +253,13 @@ export class DocumentPreview {
 
   protected readonly classification = new FormControl<Classification>('uso_interno', { nonNullable: true });
   protected readonly preview = signal<Preview | null>(null);
+  protected readonly previewPdf = signal<Blob | null>(null);
+  protected readonly previewLayout = signal<PreviewLayout | null>(null);
+  protected readonly confirmedPlacement = signal<SignaturePlacement | null>(null);
   protected readonly signed = signal<SignedDocument | null>(null);
   protected readonly loading = signal(false);
+  protected readonly loadingInline = signal(false);
+  protected readonly confirmingPlacement = signal(false);
   protected readonly signing = signal(false);
   protected readonly downloadingPreview = signal(false);
   protected readonly downloadingSigned = signal(false);
@@ -225,8 +278,12 @@ export class DocumentPreview {
     }).subscribe({
       next: (preview) => {
         this.preview.set(preview);
+        this.previewPdf.set(null);
+        this.previewLayout.set(null);
+        this.confirmedPlacement.set(null);
         this.signed.set(null);
         this.loading.set(false);
+        this.loadInlinePreview(preview);
         this.messages.add({ severity: 'success', summary: 'Preview gerado', life: 2500 });
       },
       error: (e) => {
@@ -256,7 +313,7 @@ export class DocumentPreview {
     const preview = this.preview();
     if (!preview) return;
     this.signing.set(true);
-    this.api.signDocumentPreview(preview.id, preview.snapshot_hash).subscribe({
+    this.api.signDocumentPreview(preview.id, preview.snapshot_hash, this.confirmedPlacement()?.id ?? null).subscribe({
       next: (doc) => {
         this.signed.set(doc);
         this.preview.update((p) => p ? { ...p, status: 'signed' } : p);
@@ -266,6 +323,24 @@ export class DocumentPreview {
       error: (e) => {
         this.messages.add({ severity: 'error', summary: 'Erro ao assinar', detail: this.errorDetail(e) });
         this.signing.set(false);
+      },
+    });
+  }
+
+  protected confirmPlacement(placement: SignaturePlacementBase): void {
+    const preview = this.preview();
+    if (!preview) return;
+    this.confirmingPlacement.set(true);
+    this.api.confirmSignaturePlacement(preview.id, placement, preview.snapshot_hash).subscribe({
+      next: (saved) => {
+        this.confirmedPlacement.set(saved);
+        this.previewLayout.update((layout) => layout ? { ...layout, latest_placement: saved } : layout);
+        this.confirmingPlacement.set(false);
+        this.messages.add({ severity: 'success', summary: 'Posicao confirmada', life: 2500 });
+      },
+      error: (e) => {
+        this.messages.add({ severity: 'error', summary: 'Posicao invalida', detail: this.errorDetail(e) });
+        this.confirmingPlacement.set(false);
       },
     });
   }
@@ -311,6 +386,25 @@ export class DocumentPreview {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(value));
+  }
+
+  private loadInlinePreview(preview: Preview): void {
+    this.loadingInline.set(true);
+    forkJoin({
+      pdf: this.api.openPreviewInlinePdf(preview.id),
+      layout: this.api.getPreviewLayout(preview.id),
+    }).subscribe({
+      next: ({ pdf, layout }) => {
+        this.previewPdf.set(pdf);
+        this.previewLayout.set(layout);
+        this.confirmedPlacement.set(layout.latest_placement);
+        this.loadingInline.set(false);
+      },
+      error: (e) => {
+        this.messages.add({ severity: 'error', summary: 'Erro ao abrir preview', detail: this.errorDetail(e) });
+        this.loadingInline.set(false);
+      },
+    });
   }
 
   private downloadBlob(blob: Blob, filename: string): void {

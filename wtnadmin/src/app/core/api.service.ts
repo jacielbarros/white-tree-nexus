@@ -18,12 +18,16 @@ import {
   Me,
   MembershipRow,
   Organization,
+  PreviewLayout,
   PrintableDocumentType,
   PrintTemplate,
   PrintTemplateVersion,
   Role,
   ScopeStatement,
+  SignaturePlacement,
+  SignaturePlacementBase,
   SignaturePolicy,
+  SignedSignaturePlacement,
   SignedDocument,
   Stakeholder,
   StakeholderMap,
@@ -320,10 +324,43 @@ export class ApiService {
     });
   }
 
-  signDocumentPreview(previewId: string, snapshotHash?: string): Observable<SignedDocument> {
-    return this.http.post<SignedDocument>(`${this.base}/print-documents/previews/${previewId}/sign`, {
-      confirm_snapshot_hash: snapshotHash ?? null,
+  openPreviewInlinePdf(previewId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/print-documents/previews/${previewId}/inline-pdf`, {
+      responseType: 'blob',
     });
+  }
+
+  getPreviewLayout(previewId: string): Observable<PreviewLayout> {
+    return this.http.get<PreviewLayout>(`${this.base}/print-documents/previews/${previewId}/layout`);
+  }
+
+  listSignaturePlacements(previewId: string): Observable<SignaturePlacement[]> {
+    return this.http.get<SignaturePlacement[]>(`${this.base}/print-documents/previews/${previewId}/signature-placements`);
+  }
+
+  confirmSignaturePlacement(
+    previewId: string,
+    placement: SignaturePlacementBase,
+    snapshotHash: string,
+  ): Observable<SignaturePlacement> {
+    return this.http.post<SignaturePlacement>(`${this.base}/print-documents/previews/${previewId}/signature-placements`, {
+      ...placement,
+      confirm_snapshot_hash: snapshotHash,
+    });
+  }
+
+  signDocumentPreview(
+    previewId: string,
+    snapshotHash?: string,
+    confirmedPlacementId?: string | null,
+  ): Observable<SignedDocument> {
+    const body: Record<string, string | null> = {
+      confirm_snapshot_hash: snapshotHash ?? null,
+    };
+    if (confirmedPlacementId) {
+      body['confirmed_placement_id'] = confirmedPlacementId;
+    }
+    return this.http.post<SignedDocument>(`${this.base}/print-documents/previews/${previewId}/sign`, body);
   }
 
   listSignedDocuments(
@@ -348,6 +385,12 @@ export class ApiService {
 
   verifySignedDocument(documentId: string): Observable<IntegrityVerification> {
     return this.http.post<IntegrityVerification>(`${this.base}/print-documents/signed/${documentId}/verify`, {});
+  }
+
+  getSignedSignaturePlacement(documentId: string): Observable<SignedSignaturePlacement | null> {
+    return this.http.get<SignedSignaturePlacement | null>(
+      `${this.base}/print-documents/signed/${documentId}/signature-placement`,
+    );
   }
 
   // --- Atalhos genéricos (para módulos sem métodos nomeados no service) ---

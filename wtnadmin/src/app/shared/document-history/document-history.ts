@@ -3,7 +3,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 
 import { ApiService } from '@app/core/api.service';
-import { PrintableDocumentType, SignedDocument } from '@app/core/models';
+import { PrintableDocumentType, SignatureMethod, SignedDocument } from '@app/core/models';
 
 @Component({
   selector: 'app-document-history',
@@ -36,8 +36,14 @@ import { PrintableDocumentType, SignedDocument } from '@app/core/models';
               <div>
                 <strong>{{ doc.identifier }}</strong>
                 <span>
-                  v{{ doc.version_number }} · {{ statusLabel(doc.status) }} · {{ formatDate(doc.signed_at) }}
+                  v{{ doc.version_number }} - {{ statusLabel(doc.status) }} - {{ formatDate(doc.signed_at) }}
                 </span>
+                <small>
+                  {{ signatureMethodLabel(doc.signature_method) }}
+                  @if (doc.signature_placement) {
+                    - selo {{ shortHash(doc.signature_placement.placement_hash) }}
+                  }
+                </small>
                 <small>{{ shortHash(doc.pdf_hash) }}</small>
               </div>
               <div class="doc-history__actions">
@@ -198,6 +204,16 @@ export class DocumentHistory implements OnInit {
 
   protected statusLabel(value: string): string {
     return value === 'obsolete' ? 'Obsoleto' : 'Assinado';
+  }
+
+  protected signatureMethodLabel(value: SignatureMethod): string {
+    const labels: Record<SignatureMethod, string> = {
+      internal_electronic_signature: 'Assinatura eletronica interna',
+      pades: 'PAdES',
+      icp_brasil: 'ICP-Brasil',
+      external_certificate_provider: 'Provedor externo',
+    };
+    return labels[value] ?? value;
   }
 
   protected shortHash(value: string): string {

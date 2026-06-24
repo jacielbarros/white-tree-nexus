@@ -1,5 +1,10 @@
 from wtnapp.models.audit_log_model import AuditLog
-from wtnapp.test.print_document_helpers import configure_document_storage, headers_for, seed_context
+from wtnapp.test.print_document_helpers import (
+    configure_document_storage,
+    default_placement_payload,
+    headers_for,
+    seed_context,
+)
 from wtnapp.settings import Role
 
 
@@ -11,6 +16,7 @@ def test_preview_and_signed_documents_are_tenant_scoped(client, db, factory, org
     hb = headers_for(org_headers, b["admin"], b["org"])
 
     preview = client.post("/print-documents/previews", headers=ha, json={"document_type": "context_report"}).json()
+    layout = client.get(f"/print-documents/previews/{preview['id']}/layout", headers=ha).json()
     signed = client.post(
         f"/print-documents/previews/{preview['id']}/sign",
         headers=ha,
@@ -18,8 +24,17 @@ def test_preview_and_signed_documents_are_tenant_scoped(client, db, factory, org
     ).json()
 
     assert client.get(f"/print-documents/previews/{preview['id']}", headers=hb).status_code == 404
+    assert client.get(f"/print-documents/previews/{preview['id']}/inline-pdf", headers=hb).status_code == 404
+    assert client.get(f"/print-documents/previews/{preview['id']}/layout", headers=hb).status_code == 404
+    assert client.get(f"/print-documents/previews/{preview['id']}/signature-placements", headers=hb).status_code == 404
+    assert client.post(
+        f"/print-documents/previews/{preview['id']}/signature-placements",
+        headers=hb,
+        json=default_placement_payload(preview, layout),
+    ).status_code == 404
     assert client.get(f"/print-documents/signed/{signed['id']}", headers=hb).status_code == 404
     assert client.get(f"/print-documents/signed/{signed['id']}/pdf", headers=hb).status_code == 404
+    assert client.get(f"/print-documents/signed/{signed['id']}/signature-placement", headers=hb).status_code == 404
 
 
 def test_super_admin_requires_explicit_org_context(client, db, factory, org_headers, monkeypatch, tmp_path):

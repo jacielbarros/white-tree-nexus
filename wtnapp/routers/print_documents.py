@@ -21,8 +21,12 @@ from wtnapp.schemas.print_document_schema import (
     PrintTemplateResponse,
     PrintTemplateVersionCreate,
     PrintTemplateVersionResponse,
+    PreviewLayoutResponse,
     SignPreviewRequest,
+    SignaturePlacementCreate,
+    SignaturePlacementResponse,
     SignedDocumentResponse,
+    SignedPlacementResponse,
 )
 from wtnapp.services import document_signature_service as signatures
 from wtnapp.services import print_template_service as templates
@@ -96,12 +100,13 @@ def _classification_guard(
         raise
 
 
-def _pdf_response(content: bytes, filename: str) -> Response:
+def _pdf_response(content: bytes, filename: str, *, inline: bool = False) -> Response:
     encoded = quote(filename)
+    disposition = "inline" if inline else "attachment"
     return Response(
         content=content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
+        headers={"Content-Disposition": f"{disposition}; filename*=UTF-8''{encoded}"},
     )
 
 
@@ -275,6 +280,123 @@ def download_preview_pdf(
     return _pdf_response(content, f"{preview.document_type.value}-preview.pdf")
 
 
+@router.get("/previews/{preview_id}/inline-pdf")
+def inline_preview_pdf(
+    preview_id: uuid.UUID,
+    request: Request,
+    db: db_dep,
+    ctx: ctx_dep,
+):
+    preview = signatures.get_preview(db, ctx, preview_id)
+    _classification_guard(
+        db,
+        ctx,
+        request,
+        classification=preview.classification,
+        entity_type="document_preview",
+        entity_id=preview.id,
+        operation="OPEN_INLINE_DOCUMENT_PREVIEW_DENIED",
+    )
+    try:
+        preview, content = signatures.read_preview_pdf(db, ctx, preview_id, inline=True)
+    except HTTPException as exc:
+        _audit_denied(request, ctx, "OPEN_INLINE_DOCUMENT_PREVIEW_DENIED", exc)
+        raise
+    _audit(
+        request,
+        ctx=ctx,
+        operation="OPEN_INLINE_DOCUMENT_PREVIEW",
+        entity_type="document_preview",
+        entity_id=preview.id,
+        details={"document_type": preview.document_type.value, "classification": preview.classification.value},
+    )
+    return _pdf_response(content, f"{preview.document_type.value}-preview.pdf", inline=True)
+
+
+@router.get("/previews/{preview_id}/layout", response_model=PreviewLayoutResponse)
+def preview_layout(
+    preview_id: uuid.UUID,
+    request: Request,
+    db: db_dep,
+    ctx: ctx_dep,
+):
+    preview = signatures.get_preview(db, ctx, preview_id)
+    _classification_guard(
+        db,
+        ctx,
+        request,
+        classification=preview.classification,
+        entity_type="document_preview",
+        entity_id=preview.id,
+        operation="GET_DOCUMENT_PREVIEW_LAYOUT_DENIED",
+    )
+    try:
+        layout = signatures.preview_layout(db, ctx, preview_id)
+    except HTTPException as exc:
+        _audit_denied(request, ctx, "GET_DOCUMENT_PREVIEW_LAYOUT_DENIED", exc)
+        raise
+    _audit(
+        request,
+        ctx=ctx,
+        operation="GET_DOCUMENT_PREVIEW_LAYOUT",
+        entity_type="document_preview",
+        entity_id=preview.id,
+        details={"document_type": preview.document_type.value},
+    )
+    return layout
+
+
+@router.get("/previews/{preview_id}/signature-placements", response_model=list[SignaturePlacementResponse])
+def list_signature_placements(
+    preview_id: uuid.UUID,
+    request: Request,
+    db: db_dep,
+    ctx: ctx_dep,
+):
+    try:
+        placements = signatures.list_signature_placements(db, ctx, preview_id)
+    except HTTPException as exc:
+        _audit_denied(request, ctx, "LIST_SIGNATURE_PLACEMENTS_DENIED", exc)
+        raise
+    _audit(
+        request,
+        ctx=ctx,
+        operation="LIST_SIGNATURE_PLACEMENTS",
+        entity_type="document_preview",
+        entity_id=preview_id,
+        details={"count": len(placements)},
+    )
+    return [signatures.placement_response_dict(row) for row in placements]
+
+
+@router.post(
+    "/previews/{preview_id}/signature-placements",
+    response_model=SignaturePlacementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_signature_placement(
+    preview_id: uuid.UUID,
+    payload: SignaturePlacementCreate,
+    request: Request,
+    db: db_dep,
+    ctx: ctx_dep,
+):
+    try:
+        placement = signatures.confirm_signature_placement(db, ctx, preview_id, payload)
+    except HTTPException as exc:
+        _audit_denied(request, ctx, "CONFIRM_SIGNATURE_PLACEMENT_DENIED", exc)
+        raise
+    _audit(
+        request,
+        ctx=ctx,
+        operation="CONFIRM_SIGNATURE_PLACEMENT",
+        entity_type="document_signature_placement",
+        entity_id=placement.id,
+        details={"preview_id": str(preview_id), "placement_hash": placement.placement_hash},
+    )
+    return signatures.placement_response_dict(placement)
+
+
 @router.post("/previews/{preview_id}/sign", response_model=SignedDocumentResponse, status_code=status.HTTP_201_CREATED)
 def sign_preview(
     preview_id: uuid.UUID,
@@ -377,6 +499,38 @@ def download_signed_pdf(
         details={"document_type": document.document_type.value, "version_number": document.version_number},
     )
     return _pdf_response(content, f"{document.identifier}.pdf")
+
+
+@router.get("/signed/{document_id}/signature-placement", response_model=SignedPlacementResponse | None)
+def get_signed_signature_placement(
+    document_id: uuid.UUID,
+    request: Request,
+    db: db_dep,
+    ctx: ctx_dep,
+):
+    try:
+        document = signatures.get_signed_document(db, ctx, document_id)
+        _classification_guard(
+            db,
+            ctx,
+            request,
+            classification=document.classification,
+            entity_type="signed_document",
+            entity_id=document.id,
+            operation="GET_SIGNED_SIGNATURE_PLACEMENT_DENIED",
+        )
+        placement = signatures.get_signed_placement(db, ctx, document_id)
+    except HTTPException as exc:
+        _audit_denied(request, ctx, "GET_SIGNED_SIGNATURE_PLACEMENT_DENIED", exc)
+        raise
+    _audit(
+        request,
+        ctx=ctx,
+        operation="GET_SIGNED_SIGNATURE_PLACEMENT",
+        entity_type="signed_document",
+        entity_id=document_id,
+    )
+    return signatures.signed_placement_response_dict(placement)
 
 
 @router.post("/signed/{document_id}/verify", response_model=IntegrityVerificationResponse)

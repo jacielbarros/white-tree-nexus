@@ -216,9 +216,28 @@ class SignedDocumentStatus(str, Enum):
     obsolete = "obsolete"
 
 
+class SignatureCoordinateSystem(str, Enum):
+    pdf_points_bottom_left = "pdf_points_bottom_left"
+
+
+class SignaturePlacementOrigin(str, Enum):
+    default = "default"
+    user = "user"
+    template = "template"
+
+
+class SignatureMethod(str, Enum):
+    internal_electronic_signature = "internal_electronic_signature"
+    pades = "pades"
+    icp_brasil = "icp_brasil"
+    external_certificate_provider = "external_certificate_provider"
+
+
 class DocumentAccessEventType(str, Enum):
     preview_created = "preview_created"
     preview_downloaded = "preview_downloaded"
+    preview_inline_viewed = "preview_inline_viewed"
+    placement_confirmed = "placement_confirmed"
     signed = "signed"
     signed_downloaded = "signed_downloaded"
     verified = "verified"

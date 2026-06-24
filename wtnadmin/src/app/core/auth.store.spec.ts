@@ -54,4 +54,29 @@ describe('AuthStore', () => {
     expect(store.isAuthenticated()).toBe(false);
     expect(store.activeOrgId()).toBeNull();
   });
+
+  it('incrementa a versao do contexto apenas quando a organizacao ativa muda', () => {
+    expect(store.orgContextVersion()).toBe(0);
+
+    store.setActiveOrg('t1');
+    expect(store.activeOrgId()).toBe('t1');
+    expect(store.orgContextVersion()).toBe(1);
+
+    store.setActiveOrg('t1');
+    expect(store.orgContextVersion()).toBe(1);
+
+    store.setActiveOrg('t2');
+    expect(store.activeOrgId()).toBe('t2');
+    expect(store.orgContextVersion()).toBe(2);
+  });
+
+  it('clear() tambem invalida o contexto de organizacao', () => {
+    store.setActiveOrg('t1');
+    const version = store.orgContextVersion();
+
+    store.clear();
+
+    expect(store.activeOrgId()).toBeNull();
+    expect(store.orgContextVersion()).toBe(version + 1);
+  });
 });

@@ -27,6 +27,23 @@ def headers_for(org_headers, user, org):
     return org_headers(user.email, org.id)
 
 
+def create_preview(client, headers, document_type="context_report", classification="uso_interno"):
+    resp = client.post(
+        "/print-documents/previews",
+        headers=headers,
+        json={"document_type": document_type, "classification": classification},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def default_placement_payload(preview: dict, layout: dict | None = None) -> dict:
+    placement = dict((layout or {}).get("default_placement") or preview["default_signature_placement"])
+    placement["confirm_snapshot_hash"] = preview["snapshot_hash"]
+    placement["origin"] = "user"
+    return placement
+
+
 def seed_context(db, factory, slug="print-context"):
     org = factory.org(slug, f"Print {slug}")
     admin = factory.user(f"admin@{slug}.com", full_name=f"Admin {slug}")

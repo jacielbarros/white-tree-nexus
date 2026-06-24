@@ -11,6 +11,7 @@ export class AuthStore {
   readonly token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
   readonly me = signal<Me | null>(null);
   readonly activeOrgId = signal<string | null>(localStorage.getItem(ORG_KEY));
+  readonly orgContextVersion = signal(0);
 
   readonly isAuthenticated = computed(() => this.token() !== null);
   readonly isSuperAdmin = computed(() => this.me()?.is_super_admin ?? false);
@@ -43,7 +44,11 @@ export class AuthStore {
   }
 
   setActiveOrg(orgId: string | null): void {
+    if (this.activeOrgId() === orgId) {
+      return;
+    }
     this.activeOrgId.set(orgId);
+    this.orgContextVersion.update((value) => value + 1);
     if (orgId) {
       localStorage.setItem(ORG_KEY, orgId);
     } else {
@@ -55,6 +60,7 @@ export class AuthStore {
     this.token.set(null);
     this.me.set(null);
     this.activeOrgId.set(null);
+    this.orgContextVersion.update((value) => value + 1);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ORG_KEY);
   }

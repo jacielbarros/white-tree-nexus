@@ -87,6 +87,68 @@ export type PrintTemplateScope = 'system' | 'tenant';
 export type PrintTemplateStatus = 'draft' | 'active' | 'inactive';
 export type DocumentPreviewStatus = 'active' | 'expired' | 'stale' | 'signed';
 export type SignedDocumentStatus = 'signed' | 'obsolete';
+export type SignatureCoordinateSystem = 'pdf_points_bottom_left';
+export type SignaturePlacementOrigin = 'default' | 'user' | 'template';
+export type SignatureMethod =
+  | 'internal_electronic_signature'
+  | 'pades'
+  | 'icp_brasil'
+  | 'external_certificate_provider';
+
+export interface PdfPageMetric {
+  page_number: number;
+  width_points: number;
+  height_points: number;
+  rotation: 0 | 90 | 180 | 270;
+}
+
+export interface SignatureBlockedArea {
+  page: number | 'all';
+  x_points: number;
+  y_points: number;
+  width_points: number;
+  height_points: number;
+  reason?: string | null;
+}
+
+export interface SignaturePlacementBase {
+  page_number: number;
+  x_points: number;
+  y_points: number;
+  width_points: number;
+  height_points: number;
+  page_width_points: number;
+  page_height_points: number;
+  coordinate_system: SignatureCoordinateSystem;
+  origin: SignaturePlacementOrigin;
+}
+
+export interface SignaturePlacement extends SignaturePlacementBase {
+  id: string;
+  preview_id: string;
+  placement_revision: number;
+  placement_hash: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface SignedSignaturePlacement extends SignaturePlacementBase {
+  id: string;
+  signed_document_id: string;
+  placement_id: string;
+  placement_hash: string;
+  created_at: string;
+}
+
+export interface PreviewLayout {
+  preview_id: string;
+  document_type: PrintableDocumentType;
+  snapshot_hash: string;
+  page_metrics: PdfPageMetric[];
+  blocked_areas: SignatureBlockedArea[];
+  default_placement: SignaturePlacementBase;
+  latest_placement: SignaturePlacement | null;
+}
 
 export interface PrintTemplate {
   id: string;
@@ -127,6 +189,8 @@ export interface DocumentPreview {
   expires_at: string;
   created_at: string;
   warnings: string[];
+  pdf_page_metrics: PdfPageMetric[];
+  default_signature_placement: SignaturePlacementBase | null;
 }
 
 export interface SignedDocument {
@@ -143,6 +207,9 @@ export interface SignedDocument {
   size_bytes: number;
   signed_by: string;
   signed_at: string;
+  signature_method: SignatureMethod;
+  visual_signature_present: boolean;
+  signature_placement: SignedSignaturePlacement | null;
 }
 
 export interface IntegrityVerification {

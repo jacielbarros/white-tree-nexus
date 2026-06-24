@@ -12,6 +12,9 @@ from wtnapp.settings import (
     PrintTemplateScope,
     PrintTemplateStatus,
     PrintableDocumentType,
+    SignatureCoordinateSystem,
+    SignatureMethod,
+    SignaturePlacementOrigin,
     SignedDocumentStatus,
 )
 
@@ -81,6 +84,8 @@ class DocumentPreviewResponse(BaseModel):
     expires_at: datetime
     created_at: datetime
     warnings: list[str] = Field(default_factory=list)
+    pdf_page_metrics: list[dict[str, Any]] = Field(default_factory=list)
+    default_signature_placement: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -88,6 +93,72 @@ class DocumentPreviewResponse(BaseModel):
 
 class SignPreviewRequest(BaseModel):
     confirm_snapshot_hash: str | None = None
+    confirmed_placement_id: uuid.UUID | None = None
+
+
+class PdfPageMetric(BaseModel):
+    page_number: int = Field(ge=1)
+    width_points: float = Field(gt=0)
+    height_points: float = Field(gt=0)
+    rotation: int = 0
+
+
+class SignatureBlockedArea(BaseModel):
+    page: int | str
+    x_points: float
+    y_points: float
+    width_points: float = Field(gt=0)
+    height_points: float = Field(gt=0)
+    reason: str | None = Field(default=None, max_length=160)
+
+
+class SignaturePlacementBase(BaseModel):
+    page_number: int = Field(ge=1)
+    x_points: float = Field(ge=0)
+    y_points: float = Field(ge=0)
+    width_points: float = Field(gt=0)
+    height_points: float = Field(gt=0)
+    page_width_points: float = Field(gt=0)
+    page_height_points: float = Field(gt=0)
+    coordinate_system: SignatureCoordinateSystem = SignatureCoordinateSystem.pdf_points_bottom_left
+    origin: SignaturePlacementOrigin = SignaturePlacementOrigin.user
+
+
+class SignaturePlacementCreate(SignaturePlacementBase):
+    confirm_snapshot_hash: str = Field(min_length=64, max_length=64)
+
+
+class SignaturePlacementResponse(SignaturePlacementBase):
+    id: uuid.UUID
+    preview_id: uuid.UUID
+    placement_revision: int
+    placement_hash: str
+    created_by: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PreviewLayoutResponse(BaseModel):
+    preview_id: uuid.UUID
+    document_type: PrintableDocumentType
+    snapshot_hash: str
+    page_metrics: list[PdfPageMetric]
+    blocked_areas: list[SignatureBlockedArea] = Field(default_factory=list)
+    default_placement: SignaturePlacementBase
+    latest_placement: SignaturePlacementResponse | None = None
+
+
+class SignedPlacementResponse(SignaturePlacementBase):
+    id: uuid.UUID
+    signed_document_id: uuid.UUID
+    placement_id: uuid.UUID
+    placement_hash: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class SignedDocumentResponse(BaseModel):
@@ -104,6 +175,9 @@ class SignedDocumentResponse(BaseModel):
     size_bytes: int
     signed_by: uuid.UUID
     signed_at: datetime
+    signature_method: SignatureMethod = SignatureMethod.internal_electronic_signature
+    visual_signature_present: bool = True
+    signature_placement: SignedPlacementResponse | None = None
 
     class Config:
         from_attributes = True

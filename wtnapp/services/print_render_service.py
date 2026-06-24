@@ -25,6 +25,87 @@ class DocumentRenderError(RuntimeError):
     """Raised when rendering fails before producing a valid PDF."""
 
 
+def _pagesize_for_document(document_type: str | None) -> tuple[float, float]:
+    pagesize = landscape(A4) if document_type in {"gap_report", "soa_report"} else A4
+    return float(pagesize[0]), float(pagesize[1])
+
+
+def extract_page_metrics(pdf: bytes, document_type: str | None) -> list[dict[str, Any]]:
+    """Return stable page metrics for PDFs rendered by this service.
+
+    ReportLab uses a single pagesize for each document type in this renderer. Counting page objects
+    is enough for the controlled PDFs we generate and avoids adding another backend dependency.
+    """
+    width, height = _pagesize_for_document(document_type)
+    page_count = max(1, pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages"))
+    return [
+        {"page_number": page, "width_points": width, "height_points": height, "rotation": 0}
+        for page in range(1, page_count + 1)
+    ]
+
+
+def default_signature_placement(
+    *,
+    page_metrics: list[dict[str, Any]],
+    policy: dict[str, Any],
+) -> dict[str, Any]:
+    if not page_metrics:
+        raise DocumentRenderError("Metricas de pagina indisponiveis.")
+    default_page = policy.get("default_page", "last")
+    if default_page == "last":
+        page = page_metrics[-1]
+    else:
+        page_number = int(default_page)
+        page = next((p for p in page_metrics if int(p["page_number"]) == page_number), page_metrics[-1])
+    margin = float(policy.get("default_margin_points", 36))
+    width = float(policy.get("default_width_points", 180))
+    height = float(policy.get("default_height_points", 54))
+    page_width = float(page["width_points"])
+    page_height = float(page["height_points"])
+    anchor = str(policy.get("default_anchor", "bottom_right"))
+    x = margin
+    y = margin
+    if "right" in anchor:
+        x = page_width - width - margin
+    if "top" in anchor:
+        y = page_height - height - margin
+    return {
+        "page_number": int(page["page_number"]),
+        "x_points": round(max(0, x), 2),
+        "y_points": round(max(0, y), 2),
+        "width_points": width,
+        "height_points": height,
+        "page_width_points": page_width,
+        "page_height_points": page_height,
+        "coordinate_system": "pdf_points_bottom_left",
+        "origin": "template" if policy.get("default_page") not in (None, "last") else "default",
+    }
+
+
+def _draw_signature_seal(canvas, doc, signature_meta: dict[str, Any], placement: dict[str, Any] | None) -> None:
+    if not placement or canvas.getPageNumber() != int(placement.get("page_number", 0)):
+        return
+    x = float(placement["x_points"])
+    y = float(placement["y_points"])
+    width = float(placement["width_points"])
+    height = float(placement["height_points"])
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#13715f"))
+    canvas.setFillColor(colors.HexColor("#f1fbf8"))
+    canvas.roundRect(x, y, width, height, 5, stroke=1, fill=1)
+    canvas.setFillColor(colors.HexColor("#10231f"))
+    canvas.setFont("Helvetica-Bold", 7.5)
+    canvas.drawString(x + 8, y + height - 13, "Assinatura eletronica interna")
+    canvas.setFont("Helvetica", 6.6)
+    signer = str(signature_meta.get("signer_name") or "Nao informado")[:42]
+    signed_at = str(signature_meta.get("signed_at") or "")[:28]
+    identifier = str(signature_meta.get("identifier") or "")[:42]
+    canvas.drawString(x + 8, y + height - 25, signer)
+    canvas.drawString(x + 8, y + height - 36, signed_at)
+    canvas.drawString(x + 8, y + 8, identifier)
+    canvas.restoreState()
+
+
 def _escape(value: Any) -> str:
     if value is None:
         return "Nao informado"
@@ -245,6 +326,7 @@ def render_pdf(
     variables: dict[str, Any],
     is_preview: bool,
     signature_meta: dict[str, Any] | None = None,
+    signature_placement: dict[str, Any] | None = None,
 ) -> bytes:
     start = time.monotonic()
     title = str(variables.get("document_title") or template_version.layout_schema.get("title") or "Documento SGSI")
@@ -280,7 +362,13 @@ def render_pdf(
         else:
             elements.append(_paragraph(source, styles["BodyText"]))
         _check_timeout(start)
-        doc.build(elements)
+        if signature_meta and signature_placement:
+            def _seal(canvas, built_doc):
+                _draw_signature_seal(canvas, built_doc, signature_meta, signature_placement)
+
+            doc.build(elements, onFirstPage=_seal, onLaterPages=_seal)
+        else:
+            doc.build(elements)
         _check_timeout(start)
     except DocumentRenderTimeout:
         raise
