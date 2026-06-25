@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from wtnapp.models.base import Base
 from wtnapp.models.context_common import now_utc
-from wtnapp.settings import DocStatus, IssueFramework, IssueOrigin, Level
+from wtnapp.settings import DocStatus, IssueFramework, IssueNature, IssueOrigin, Level
 
 
 class ContextAnalysis(Base):
@@ -41,6 +41,9 @@ class ContextIssue(Base):
     origin: Mapped[IssueOrigin] = mapped_column(SAEnum(IssueOrigin, native_enum=False, length=20), nullable=False)
     framework: Mapped[IssueFramework] = mapped_column(
         SAEnum(IssueFramework, native_enum=False, length=20), nullable=False
+    )
+    nature: Mapped[IssueNature] = mapped_column(
+        SAEnum(IssueNature, native_enum=False, length=20), default=IssueNature.contextual, nullable=False
     )
     category: Mapped[str] = mapped_column(String(80), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)

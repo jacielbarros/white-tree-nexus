@@ -22,7 +22,7 @@ from wtnapp.schemas.context_schema import (
 )
 from wtnapp.services import controlled_document_service as cds
 from wtnapp.services.audit_service import AuditService
-from wtnapp.settings import AuditOutcome, DocType, IssueFramework, IssueOrigin
+from wtnapp.settings import AuditOutcome, DocType, IssueFramework, IssueNature, IssueOrigin
 
 router = APIRouter(prefix="/context/analysis", tags=["context"])
 _NOT_FOUND = HTTPException(status.HTTP_404_NOT_FOUND, "Recurso nao encontrado.")
@@ -59,10 +59,17 @@ def _snapshot(db: Session, analysis: ContextAnalysis) -> dict:
 def _validate_issue(payload: ContextIssueCreate | ContextIssueUpdate) -> None:
     origin = getattr(payload, "origin", None)
     framework = getattr(payload, "framework", None)
-    if origin == IssueOrigin.external and framework != IssueFramework.pestel:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Questoes externas usam PESTEL.")
-    if origin == IssueOrigin.internal and framework != IssueFramework.swot:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Questoes internas usam SWOT.")
+    nature = getattr(payload, "nature", None) or IssueNature.contextual
+    if framework == IssueFramework.pestel and origin != IssueOrigin.external:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "PESTEL deve representar questoes externas.")
+    if framework == IssueFramework.pestel and nature in {IssueNature.strength, IssueNature.weakness}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Forcas e fraquezas devem ser internas.")
+    if framework == IssueFramework.swot and nature in {IssueNature.strength, IssueNature.weakness} and origin != IssueOrigin.internal:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Forcas e fraquezas devem usar origem interna.")
+    if framework == IssueFramework.swot and nature in {IssueNature.opportunity, IssueNature.threat} and origin != IssueOrigin.external:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Oportunidades e ameacas devem usar origem externa.")
+    if framework == IssueFramework.swot and origin == IssueOrigin.external and nature not in {IssueNature.opportunity, IssueNature.threat}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "SWOT externo deve ser classificado como oportunidade ou ameaca.")
 
 
 @router.get("", response_model=ContextAnalysisResponse)

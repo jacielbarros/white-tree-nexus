@@ -143,6 +143,14 @@ class IssueFramework(str, Enum):
     swot = "swot"
 
 
+class IssueNature(str, Enum):
+    contextual = "contextual"
+    strength = "strength"
+    weakness = "weakness"
+    opportunity = "opportunity"
+    threat = "threat"
+
+
 class Level(str, Enum):
     alto = "alto"
     medio = "medio"

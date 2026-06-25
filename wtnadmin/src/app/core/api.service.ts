@@ -139,6 +139,10 @@ export class ApiService {
     return this.http.post(`${this.base}/context/analysis/issues`, payload);
   }
 
+  deleteContextIssue(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/context/analysis/issues/${id}`);
+  }
+
   submitContextAnalysis(): Observable<ContextAnalysis> {
     return this.http.post<ContextAnalysis>(`${this.base}/context/analysis/submit-review`, {});
   }

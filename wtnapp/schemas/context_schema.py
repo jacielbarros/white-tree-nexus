@@ -5,12 +5,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from wtnapp.settings import Classification, DocStatus, IssueFramework, IssueOrigin, Level
+from wtnapp.settings import Classification, DocStatus, IssueFramework, IssueNature, IssueOrigin, Level
 
 
 class ContextIssueBase(BaseModel):
     origin: IssueOrigin
     framework: IssueFramework
+    nature: IssueNature = IssueNature.contextual
     category: str
     description: str
     impact: Level
@@ -23,6 +24,7 @@ class ContextIssueCreate(ContextIssueBase):
 class ContextIssueUpdate(BaseModel):
     origin: IssueOrigin | None = None
     framework: IssueFramework | None = None
+    nature: IssueNature | None = None
     category: str | None = None
     description: str | None = None
     impact: Level | None = None

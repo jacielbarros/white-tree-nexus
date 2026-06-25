@@ -230,6 +230,7 @@ export interface ContextIssue {
   id: string;
   origin: 'internal' | 'external';
   framework: 'pestel' | 'swot';
+  nature: 'contextual' | 'strength' | 'weakness' | 'opportunity' | 'threat';
   category: string;
   description: string;
   impact: Level;
