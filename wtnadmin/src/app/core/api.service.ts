@@ -21,6 +21,7 @@ import {
   PreviewLayout,
   PrintableDocumentType,
   PrintTemplate,
+  PrintTemplateVariable,
   PrintTemplateVersion,
   Role,
   ScopeStatement,
@@ -277,6 +278,52 @@ export class ApiService {
     return this.http.get<PrintTemplate[]>(`${this.base}/print-documents/templates`, {
       params: documentType ? { document_type: documentType } : {},
     });
+  }
+
+  listPrintTemplateVariables(
+    documentType?: PrintableDocumentType,
+    includeInactive = false,
+  ): Observable<PrintTemplateVariable[]> {
+    const params: Record<string, string> = {};
+    if (documentType) {
+      params['document_type'] = documentType;
+    }
+    if (includeInactive) {
+      params['include_inactive'] = 'true';
+    }
+    return this.http.get<PrintTemplateVariable[]>(`${this.base}/print-documents/template-variables`, { params });
+  }
+
+  createPrintTemplateVariable(payload: {
+    document_type: PrintableDocumentType;
+    variable_key: string;
+    label: string;
+    description?: string | null;
+    value_type?: string;
+    required_by_default?: boolean;
+    optional_by_default?: boolean;
+    sort_order?: number;
+  }): Observable<PrintTemplateVariable> {
+    return this.http.post<PrintTemplateVariable>(`${this.base}/print-documents/template-variables`, payload);
+  }
+
+  updatePrintTemplateVariable(
+    variableId: string,
+    payload: Partial<{
+      label: string;
+      description: string | null;
+      value_type: string;
+      required_by_default: boolean;
+      optional_by_default: boolean;
+      status: 'active' | 'inactive';
+      sort_order: number;
+    }>,
+  ): Observable<PrintTemplateVariable> {
+    return this.http.patch<PrintTemplateVariable>(`${this.base}/print-documents/template-variables/${variableId}`, payload);
+  }
+
+  deactivatePrintTemplateVariable(variableId: string): Observable<PrintTemplateVariable> {
+    return this.http.delete<PrintTemplateVariable>(`${this.base}/print-documents/template-variables/${variableId}`);
   }
 
   createPrintTemplate(payload: {

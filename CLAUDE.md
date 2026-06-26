@@ -313,6 +313,32 @@ Enriquece a matriz do Gap (Módulo 2) com orientação por item. Spec/plano em `
   `gap-analysis.spec.ts`/`gap-guidance-admin.spec.ts` (104 no admin). **Pendente**: E2E browser +
   `alembic upgrade` no Postgres real.
 
+#### Módulo 3 — Gestão de Ativos / Processos / Escopo (Feature 011 — implementada)
+Inventário tenant-scoped de ativos, processos e elementos de escopo do SGSI — base dos próximos
+módulos (ameaças → vulnerabilidades → riscos → tratamento → SoA definitivo → evidências). Spec/plano
+em `specs/011-asset-process-scope/`.
+- **Backend** (`wtnapp/`): domínio `asset_*` com 4 tabelas (`asset_items`, `asset_relationships`,
+  `asset_gap_links`, `asset_item_events`), todas `tenant_id`+RLS; trilha de item append-only (triggers
+  SQLite+PG). Router `routers/assets.py` (`/assets`): CRUD + arquivamento lógico, `summary`/`dashboard`,
+  `context-sources`, relacionamentos, `gap-links`, `history`. Serviços `services/asset_service.py`
+  (geração de código por tipo imutável, criticidade `max(C,I,A)` com override+divergência, derivação de
+  revisão, validações condicionais de escopo, diffing+eventos com justificativa nas mudanças críticas)
+  e `services/asset_metrics_service.py` (KPIs + distribuições, exclui arquivados). Enums + `ASSET_CODE_
+  PREFIXES`/`ASSET_REVIEW_DUE_SOON_DAYS` em `settings.py`. Permissões `view_asset`/`manage_asset`.
+  **Sem cifragem de campo** (clarificação): proteção por RBAC + isolamento + "sem PII bruta". O módulo
+  Gap **não** é alterado (exibição reversa deferida). Registrado em `main.py`.
+- **Frontend** (`wtnadmin/`): `pages/assets/` (lista + cards + filtros/busca + criar + "criar a partir
+  do contexto"), `pages/asset-detail/` (dados/CIA/escopo/responsáveis/relacionamentos/gaps/placeholders
+  de módulos futuros/histórico/edição/arquivamento) e `pages/assets-dashboard/` (distribuições). Rotas
+  `assets`/`assets/:id`/`assets-dashboard` com `permissionGuard('view_asset')`; links no shell;
+  `view_asset`/`manage_asset` espelhados em `core/permissions.ts`.
+- **Testes**: `test_assets.py`, `test_tenant_isolation_assets.py`, `test_asset_relationships.py`,
+  `test_asset_gap_links.py`, `test_asset_history.py`, `test_asset_metrics.py`,
+  `test_asset_context_sources.py` (35 testes, todos passando) e `assets.spec.ts`/`asset-detail.spec.ts`/
+  `assets-dashboard.spec.ts` (154 no admin). **Pendente**: E2E browser + `alembic upgrade` no Postgres real.
+- **Migration**: `wtnapp/alembic/versions/b1c2d3e4f015_asset_process_scope_module.py`
+  (`down_revision="a6b7c8d9e014"`, idempotente, RLS + triggers append-only).
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -452,6 +478,31 @@ specify em `docs/README.md`).
 
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
+
+**Feature 011 — Gestão de Ativos / Processos / Escopo** (`011-asset-process-scope`) — **planejada**
+(spec + clarify + plano prontos; implementação pendente). Módulo 3 do MVP.
+- Plano: `specs/011-asset-process-scope/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: inventário tenant-scoped de ativos/sistemas/bases/processos/fornecedores/pessoas/infra/
+  documentos/serviços do SGSI — base dos próximos módulos (ameaças → vulnerabilidades → riscos →
+  tratamento → SoA definitivo → evidências). CRUD + arquivamento lógico; classificação CIA (4 níveis)
+  + criticidade (`max(C,I,A)` com override registrado); escopo dentro/fora/em análise com validações
+  condicionais; relacionamentos flexíveis entre itens; vínculo a gaps do **catálogo da própria org**;
+  "criar item a partir do contexto"; histórico append-only por item; revisão periódica derivada;
+  lista+filtros+busca, cards de resumo e dashboard; placeholders no detalhe p/ módulos futuros.
+- Decisões-chave (clarify 2026-06-26 + research): (1) responsável/dono/custodiante = referência a
+  **membros da org**; (2) integração Gap = vínculo + "Gaps relacionados" no item, **exibição reversa
+  na tela do Gap deferida** (módulo Gap não é alterado); (3) **sem cifragem de campo** no MVP — RBAC +
+  isolamento + "sem PII bruta" (guarda indicadores, não o dado pessoal); (4) código interno = **prefixo
+  por tipo + sequência por tipo**, imutável (ex.: ATV-0001). 3 conceitos de status distintos
+  (`record_status` manual, `scope_status` manual, `review_status` **derivado** de `next_review_at`).
+- Arquitetura: domínio novo `asset_*` (4 tabelas: `asset_items`, `asset_relationships`,
+  `asset_gap_links`, `asset_item_events`), todas com `tenant_id` + RLS; histórico append-only (triggers
+  SQLite+PG). Router `assets.py` (`/assets`) em `main.py`; serviços `asset_service` + `asset_metrics_
+  service`; enums + `ASSET_CODE_PREFIXES`/`ASSET_REVIEW_DUE_SOON_DAYS` em `settings.py`. Novas
+  permissões `view_asset`/`manage_asset`. Migration `b1c2d3e4f015` (`down_revision="a6b7c8d9e014"`,
+  idempotente). Frontend: `pages/assets`, `pages/asset-detail`, `pages/assets-dashboard`
+  (`permissionGuard('view_asset')`). **Sem novas dependências.**
 
 **Feature 007 — Orientação de Avaliação por Item (Gap Analysis)** (`007-gap-item-guidance`) —
 **implementada** (10 testes backend dedicados + suíte completa verde; 104 testes frontend; E2E

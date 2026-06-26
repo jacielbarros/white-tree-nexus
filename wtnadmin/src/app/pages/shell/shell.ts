@@ -235,6 +235,26 @@ interface OrgOption { label: string; value: string; }
               }
             </div>
 
+            <!-- Ativos e Processos -->
+            <div class="wtn-nav-group">
+              @if (!collapsed()) { <div class="wtn-nav-label">Ativos e Processos</div> }
+              <a class="wtn-nav-item" routerLink="assets" routerLinkActive="active" [title]="collapsed() ? 'Inventário' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3.3 7 12 12l8.7-5M12 22V12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Inventário</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="assets-dashboard" routerLinkActive="active" [title]="collapsed() ? 'Dashboard Ativos' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 3v18h18M7 14l3-3 3 3 5-6"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Dashboard</span> }
+              </a>
+            </div>
+
             <!-- SoA -->
             <div class="wtn-nav-group">
               @if (!collapsed()) { <div class="wtn-nav-label">SoA</div> }

@@ -253,6 +253,9 @@ class DocumentAccessEventType(str, Enum):
     template_version_created = "template_version_created"
     template_activated = "template_activated"
     template_deactivated = "template_deactivated"
+    template_variable_created = "template_variable_created"
+    template_variable_updated = "template_variable_updated"
+    template_variable_deactivated = "template_variable_deactivated"
     access_denied = "access_denied"
 
 
@@ -405,3 +408,100 @@ GAP_TO_SOA_STATUS: dict[GapStatus, "SoaImplementationStatus | None"] = {
     GapStatus.not_applicable: SoaImplementationStatus.not_applicable,
     GapStatus.not_filled: None,
 }
+
+
+# --- Gestão de Ativos / Processos / Escopo (Feature 011) ---
+
+class AssetType(str, Enum):
+    information_asset = "information_asset"
+    system = "system"
+    database = "database"
+    business_process = "business_process"
+    infrastructure = "infrastructure"
+    service = "service"
+    supplier = "supplier"
+    document = "document"
+    person_team = "person_team"
+    physical_environment = "physical_environment"
+    other = "other"
+
+
+class CiaLevel(str, Enum):
+    """Confidencialidade/Integridade/Disponibilidade + criticidade — ordenado para o `max`."""
+
+    baixa = "baixa"
+    media = "media"
+    alta = "alta"
+    critica = "critica"
+
+
+# Ordem crescente para o cálculo de criticidade (maior valor entre C, I e A).
+CIA_ORDER: list[CiaLevel] = [CiaLevel.baixa, CiaLevel.media, CiaLevel.alta, CiaLevel.critica]
+
+
+class AssetScopeStatus(str, Enum):
+    in_scope = "in_scope"
+    out_of_scope = "out_of_scope"
+    under_analysis = "under_analysis"
+
+
+class AssetRecordStatus(str, Enum):
+    active = "active"
+    in_review = "in_review"
+    archived = "archived"
+
+
+class AssetRelationshipType(str, Enum):
+    depends_on = "depends_on"
+    supports = "supports"
+    uses = "uses"
+    stores = "stores"
+    processes = "processes"
+    responsible_for = "responsible_for"
+    operated_by = "operated_by"
+    regulated_by = "regulated_by"
+    linked_to = "linked_to"
+    replaces = "replaces"
+    other = "other"
+
+
+class AssetReviewStatus(str, Enum):
+    """Derivado de `next_review_at` (não persistido)."""
+
+    up_to_date = "up_to_date"
+    due_soon = "due_soon"
+    overdue = "overdue"
+    undefined = "undefined"
+
+
+class AssetItemEventType(str, Enum):
+    created = "CREATE"
+    updated = "UPDATE"
+    scope_change = "SCOPE_CHANGE"
+    scope_exclusion = "SCOPE_EXCLUSION"
+    criticality_change = "CRITICALITY_CHANGE"
+    responsible_change = "RESPONSIBLE_CHANGE"
+    archived = "ARCHIVE"
+    relationship_add = "RELATIONSHIP_ADD"
+    relationship_remove = "RELATIONSHIP_REMOVE"
+    gap_link = "GAP_LINK"
+    gap_unlink = "GAP_UNLINK"
+
+
+# Prefixo do código interno por tipo (ex.: ATV-0001). Sequência por tipo dentro da organização.
+ASSET_CODE_PREFIXES: dict[AssetType, str] = {
+    AssetType.information_asset: "ATV",
+    AssetType.system: "SIS",
+    AssetType.database: "BD",
+    AssetType.business_process: "PROC",
+    AssetType.infrastructure: "INFRA",
+    AssetType.service: "SVC",
+    AssetType.supplier: "FORN",
+    AssetType.document: "DOC",
+    AssetType.person_team: "PESS",
+    AssetType.physical_environment: "AMB",
+    AssetType.other: "OUTRO",
+}
+
+# Janela (dias) em que a próxima revisão é considerada "próxima do vencimento".
+ASSET_REVIEW_DUE_SOON_DAYS = _int("ASSET_REVIEW_DUE_SOON_DAYS", 30)

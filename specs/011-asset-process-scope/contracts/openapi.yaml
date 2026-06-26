@@ -1,0 +1,275 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Gestão de Ativos / Processos / Escopo (Feature 011)
+  version: 0.1.0
+  description: >
+    Inventário tenant-scoped de ativos, processos e elementos de escopo do SGSI.
+    Todos os endpoints exigem JWT (Bearer) e o header X-Org-Context (organização-alvo).
+    Leitura: permissão `view_asset`. Escrita: `manage_asset`. Acesso cross-tenant ⇒ 404 genérico.
+
+servers:
+  - url: /
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    CiaLevel: { type: string, enum: [baixa, media, alta, critica] }
+    AssetType:
+      type: string
+      enum: [information_asset, system, database, business_process, infrastructure, service, supplier, document, person_team, physical_environment, other]
+    AssetScopeStatus: { type: string, enum: [in_scope, out_of_scope, under_analysis] }
+    AssetRecordStatus: { type: string, enum: [active, in_review, archived] }
+    AssetReviewStatus: { type: string, enum: [up_to_date, due_soon, overdue, undefined] }
+    AssetRelationshipType:
+      type: string
+      enum: [depends_on, supports, uses, stores, processes, responsible_for, operated_by, regulated_by, linked_to, replaces, other]
+
+    AssetItemCreate:
+      type: object
+      required: [name, item_type, scope_status]
+      properties:
+        name: { type: string }
+        item_type: { $ref: '#/components/schemas/AssetType' }
+        description: { type: string, nullable: true }
+        business_unit: { type: string, nullable: true }
+        responsible_user_id: { type: string, format: uuid, nullable: true }
+        owner_user_id: { type: string, format: uuid, nullable: true }
+        custodian_user_id: { type: string, format: uuid, nullable: true }
+        record_status: { $ref: '#/components/schemas/AssetRecordStatus' }
+        scope_status: { $ref: '#/components/schemas/AssetScopeStatus' }
+        scope_justification: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        related_system_id: { type: string, format: uuid, nullable: true }
+        related_process_id: { type: string, format: uuid, nullable: true }
+        related_supplier_id: { type: string, format: uuid, nullable: true }
+        has_personal_data: { type: boolean, default: false }
+        has_sensitive_data: { type: boolean, default: false }
+        compliance_notes: { type: string, nullable: true }
+        confidentiality: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        integrity: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        availability: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        criticality: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        criticality_is_manual: { type: boolean, default: false }
+        last_review_at: { type: string, format: date-time, nullable: true }
+        next_review_at: { type: string, format: date-time, nullable: true }
+        context_origin_type: { type: string, nullable: true }
+        context_origin_id: { type: string, format: uuid, nullable: true }
+        allow_duplicate: { type: boolean, default: false, description: "Permite nome repetido no mesmo tipo" }
+        reason: { type: string, nullable: true, description: "Justificativa (duplicidade/escopo/criticidade)" }
+
+    AssetItemUpdate:
+      allOf:
+        - $ref: '#/components/schemas/AssetItemCreate'
+      description: Mesmos campos do create (exceto code, sempre imutável). reason exigido em mudanças críticas.
+
+    AssetItemResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, description: "Imutável, ex.: ATV-0001" }
+        name: { type: string }
+        item_type: { $ref: '#/components/schemas/AssetType' }
+        scope_status: { $ref: '#/components/schemas/AssetScopeStatus' }
+        record_status: { $ref: '#/components/schemas/AssetRecordStatus' }
+        confidentiality: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        integrity: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        availability: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        criticality: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        criticality_is_manual: { type: boolean }
+        criticality_computed: { $ref: '#/components/schemas/CiaLevel', nullable: true }
+        criticality_divergent: { type: boolean }
+        review_status: { $ref: '#/components/schemas/AssetReviewStatus' }
+        cia_complete: { type: boolean }
+        pending_fields: { type: array, items: { type: string } }
+        responsible_user_id: { type: string, format: uuid, nullable: true }
+        # ... demais campos do modelo (ver data-model.md)
+      required: [id, code, name, item_type, scope_status, record_status, review_status]
+
+    RelationshipCreate:
+      type: object
+      required: [relationship_type, target_item_id]
+      properties:
+        relationship_type: { $ref: '#/components/schemas/AssetRelationshipType' }
+        target_item_id: { type: string, format: uuid }
+        description: { type: string, nullable: true }
+
+    GapLinkCreate:
+      type: object
+      required: [gap_catalog_item_id]
+      properties:
+        gap_catalog_item_id: { type: string, format: uuid }
+        note: { type: string, nullable: true }
+
+    ArchiveRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+    Error:
+      type: object
+      properties:
+        detail: { type: string }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /assets:
+    get:
+      summary: Listar itens (filtros + busca, paginado)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: item_type, in: query, schema: { $ref: '#/components/schemas/AssetType' } }
+        - { name: record_status, in: query, schema: { $ref: '#/components/schemas/AssetRecordStatus' } }
+        - { name: scope_status, in: query, schema: { $ref: '#/components/schemas/AssetScopeStatus' } }
+        - { name: responsible_user_id, in: query, schema: { type: string, format: uuid } }
+        - { name: criticality, in: query, schema: { $ref: '#/components/schemas/CiaLevel' } }
+        - { name: confidentiality, in: query, schema: { $ref: '#/components/schemas/CiaLevel' } }
+        - { name: integrity, in: query, schema: { $ref: '#/components/schemas/CiaLevel' } }
+        - { name: availability, in: query, schema: { $ref: '#/components/schemas/CiaLevel' } }
+        - { name: has_personal_data, in: query, schema: { type: boolean } }
+        - { name: has_sensitive_data, in: query, schema: { type: boolean } }
+        - { name: review_status, in: query, schema: { $ref: '#/components/schemas/AssetReviewStatus' } }
+        - { name: without_responsible, in: query, schema: { type: boolean } }
+        - { name: cia_incomplete, in: query, schema: { type: boolean } }
+        - { name: linked_gap, in: query, schema: { type: boolean } }
+        - { name: q, in: query, schema: { type: string }, description: "Busca em nome/descrição/área/responsável/observações" }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200': { description: Lista paginada, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AssetItemResponse' } } } } }
+        '403': { description: Sem permissão, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    post:
+      summary: Criar item (manage_asset)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssetItemCreate' } } } }
+      responses:
+        '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/AssetItemResponse' } } } }
+        '409': { description: Duplicidade de nome no tipo / validação de escopo, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '422': { description: Validação condicional (CIA/responsável/justificativa) }
+
+  /assets/summary:
+    get:
+      summary: Cards de resumo (KPIs) — view_asset
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses:
+        '200':
+          description: KPIs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  assets: { type: integer }
+                  processes: { type: integer }
+                  suppliers: { type: integer }
+                  in_scope: { type: integer }
+                  critical: { type: integer }
+                  without_responsible: { type: integer }
+                  cia_incomplete: { type: integer }
+
+  /assets/dashboard:
+    get:
+      summary: Distribuições do dashboard — view_asset
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses:
+        '200':
+          description: Distribuições (por tipo, criticidade, escopo, revisão; dados pessoais; críticos sem revisão; sem responsável)
+          content: { application/json: { schema: { type: object } } }
+
+  /assets/context-sources:
+    get:
+      summary: Elementos de Contexto compatíveis para "criar item a partir do contexto" — view_asset
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses:
+        '200': { description: Sugestões de origem (partes interessadas, issues, escopo preliminar), content: { application/json: { schema: { type: array, items: { type: object } } } } }
+
+  /assets/{id}:
+    get:
+      summary: Detalhe do item (inclui relacionamentos, gap links)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Item, content: { application/json: { schema: { $ref: '#/components/schemas/AssetItemResponse' } } } }
+        '404': { description: Não encontrado (inclui cross-tenant), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    put:
+      summary: Atualizar item (manage_asset); reason exigido em mudança de escopo/criticidade
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AssetItemUpdate' } } } }
+      responses:
+        '200': { description: Atualizado, content: { application/json: { schema: { $ref: '#/components/schemas/AssetItemResponse' } } } }
+        '422': { description: Validação condicional / justificativa ausente }
+
+  /assets/{id}/archive:
+    post:
+      summary: Arquivamento lógico (manage_asset) — exige justificativa
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ArchiveRequest' } } } }
+      responses:
+        '200': { description: Arquivado }
+        '422': { description: Justificativa ausente }
+
+  /assets/{id}/history:
+    get:
+      summary: Histórico append-only do item — view_asset
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Eventos em ordem cronológica, content: { application/json: { schema: { type: array, items: { type: object } } } } }
+
+  /assets/{id}/relationships:
+    post:
+      summary: Criar relacionamento de saída (manage_asset)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RelationshipCreate' } } } }
+      responses:
+        '201': { description: Criado }
+        '422': { description: self-relacionamento ou alvo inválido }
+
+  /assets/{id}/relationships/{rel_id}:
+    delete:
+      summary: Remover relacionamento (manage_asset)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rel_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido }
+
+  /assets/{id}/gap-links:
+    post:
+      summary: Vincular item a um gap do catálogo da org (manage_asset)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/GapLinkCreate' } } } }
+      responses:
+        '201': { description: Vinculado }
+        '409': { description: Vínculo já existe }
+
+  /assets/{id}/gap-links/{link_id}:
+    delete:
+      summary: Remover vínculo com gap (manage_asset)
+      parameters:
+        - $ref: '#/components/parameters/OrgContext'
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: link_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removido }

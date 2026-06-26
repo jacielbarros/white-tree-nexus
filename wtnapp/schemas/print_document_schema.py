@@ -48,6 +48,47 @@ class PrintTemplateVersionResponse(BaseModel):
         from_attributes = True
 
 
+class PrintTemplateVariableCreate(BaseModel):
+    document_type: PrintableDocumentType
+    variable_key: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9_]{0,79}$")
+    label: str = Field(min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    value_type: str = Field(default="string", max_length=30)
+    required_by_default: bool = False
+    optional_by_default: bool = True
+    sort_order: int = Field(default=100, ge=0, le=10000)
+
+
+class PrintTemplateVariableUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    value_type: str | None = Field(default=None, max_length=30)
+    required_by_default: bool | None = None
+    optional_by_default: bool | None = None
+    status: str | None = Field(default=None, pattern=r"^(active|inactive)$")
+    sort_order: int | None = Field(default=None, ge=0, le=10000)
+
+
+class PrintTemplateVariableResponse(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID | None
+    scope: str
+    document_type: PrintableDocumentType
+    variable_key: str
+    label: str
+    description: str | None
+    value_type: str
+    required_by_default: bool
+    optional_by_default: bool
+    status: str
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
 class PrintTemplateResponse(BaseModel):
     id: uuid.UUID
     tenant_id: uuid.UUID | None

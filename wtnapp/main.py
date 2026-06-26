@@ -19,6 +19,7 @@ from wtnapp.database.database import engine
 from wtnapp.limiter import limiter
 from wtnapp.models import Base
 from wtnapp.routers import (
+    assets,
     auth,
     bootstrap,
     context_analysis,
@@ -148,3 +149,4 @@ app.include_router(gap_evidence.router)
 app.include_router(gap_guidance.router)
 app.include_router(soa.router)
 app.include_router(dashboard.router)
+app.include_router(assets.router)

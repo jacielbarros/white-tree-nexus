@@ -106,6 +106,41 @@ class PrintTemplateVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
 
 
+class PrintTemplateVariable(Base):
+    """Variable available for building printable template versions."""
+
+    __tablename__ = "print_template_variables"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "document_type", "variable_key", name="uq_print_template_variable_key"),
+        Index("ix_print_template_variables_tenant_id", "tenant_id"),
+        Index("ix_print_template_variables_document_type", "document_type"),
+        Index("ix_print_template_variables_scope", "scope"),
+        Index("ix_print_template_variables_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id"), nullable=True
+    )
+    scope: Mapped[str] = mapped_column(String(20), nullable=False, default="tenant")
+    document_type: Mapped[PrintableDocumentType] = mapped_column(
+        SAEnum(PrintableDocumentType, native_enum=False, length=40), nullable=False
+    )
+    variable_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    value_type: Mapped[str] = mapped_column(String(30), default="string", nullable=False)
+    required_by_default: Mapped[bool] = mapped_column(default=False, nullable=False)
+    optional_by_default: Mapped[bool] = mapped_column(default=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
+    )
+
+
 class DocumentPreview(Base):
     """Temporary snapshot/PDF reviewed before an electronic signature."""
 

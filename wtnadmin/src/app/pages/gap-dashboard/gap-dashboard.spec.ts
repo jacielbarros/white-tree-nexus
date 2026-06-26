@@ -21,7 +21,11 @@ describe('GapDashboardPage', () => {
   // acesso a membros protegidos (computeds/helpers da UI) nos testes
   let view: {
     totalControls(): number;
+    scoredControls(): number;
     evaluatedControls(): number;
+    completenessPercentLabel(): string;
+    conservativeAdherenceRatio(): number | null;
+    conservativePercentLabel(): string;
     statusViews(): { key: string; count: number; percent: number }[];
     dimensionViews(): { key: string; value: number | null }[];
     percentLabel(v: number | null): string;
@@ -60,6 +64,26 @@ describe('GapDashboardPage', () => {
     component.dashboard.set(DASH as never);
     expect(view.totalControls()).toBe(10);
     expect(view.evaluatedControls()).toBe(4); // 10 - 6 não avaliados
+    expect(view.scoredControls()).toBe(4); // meets + partial + not_meet
+    expect(view.completenessPercentLabel()).toBe('40%');
+  });
+
+  it('calculates conservative adherence with not evaluated as zero evidence', () => {
+    component.dashboard.set(DASH as never);
+
+    expect(view.conservativeAdherenceRatio()).toBe(0.25);
+    expect(view.conservativePercentLabel()).toBe('25%');
+  });
+
+  it('excludes N/A but includes not evaluated in conservative adherence denominator', () => {
+    component.dashboard.set({
+      ...DASH,
+      status_distribution: { meets: 1, partial: 1, not_meet: 1, not_applicable: 1, not_filled: 96 },
+    } as never);
+
+    expect(view.evaluatedControls()).toBe(4);
+    expect(view.scoredControls()).toBe(3);
+    expect(view.conservativePercentLabel()).toBe('2%');
   });
 
   it('builds status views with counts and percentages', () => {

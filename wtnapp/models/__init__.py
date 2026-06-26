@@ -1,5 +1,6 @@
 """Modelos ORM. Importados aqui para registrar em `Base.metadata` (create_all / Alembic)."""
 
+from wtnapp.models.asset_item_model import AssetGapLink, AssetItem, AssetItemEvent, AssetRelationship
 from wtnapp.models.audit_log_model import AuditLog
 from wtnapp.models.base import Base
 from wtnapp.models.classification_policy_model import ClassificationAccessPolicy
@@ -29,6 +30,7 @@ from wtnapp.models.print_document_model import (
     DocumentSignature,
     DocumentSignaturePlacement,
     PrintTemplate,
+    PrintTemplateVariable,
     PrintTemplateVersion,
     SignedDocument,
     SignedDocumentSignaturePlacement,
@@ -42,6 +44,10 @@ from wtnapp.models.user_model import User
 
 __all__ = [
     "Base",
+    "AssetItem",
+    "AssetRelationship",
+    "AssetGapLink",
+    "AssetItemEvent",
     "AuditLog",
     "ClassificationAccessPolicy",
     "ContextAnalysis",
@@ -75,6 +81,7 @@ __all__ = [
     "DocumentSignature",
     "DocumentSignaturePlacement",
     "PrintTemplate",
+    "PrintTemplateVariable",
     "PrintTemplateVersion",
     "SignedDocument",
     "SignedDocumentSignaturePlacement",

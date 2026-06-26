@@ -19,6 +19,9 @@ from wtnapp.schemas.print_document_schema import (
     IntegrityVerificationResponse,
     PrintTemplateCreate,
     PrintTemplateResponse,
+    PrintTemplateVariableCreate,
+    PrintTemplateVariableResponse,
+    PrintTemplateVariableUpdate,
     PrintTemplateVersionCreate,
     PrintTemplateVersionResponse,
     PreviewLayoutResponse,
@@ -117,6 +120,105 @@ def list_print_templates(
     document_type: PrintableDocumentType | None = Query(default=None),
 ):
     return templates.list_templates(db, ctx, document_type)
+
+
+@router.get("/template-variables", response_model=list[PrintTemplateVariableResponse])
+def list_print_template_variables(
+    db: db_dep,
+    ctx: template_admin_dep,
+    document_type: PrintableDocumentType | None = Query(default=None),
+    include_inactive: bool = Query(default=False),
+):
+    return templates.list_template_variables(db, ctx, document_type, include_inactive)
+
+
+@router.post(
+    "/template-variables",
+    response_model=PrintTemplateVariableResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_print_template_variable(
+    payload: PrintTemplateVariableCreate,
+    request: Request,
+    db: db_dep,
+    ctx: template_admin_dep,
+):
+    variable = templates.create_template_variable(db, ctx, payload)
+    signatures.log_event(
+        db,
+        ctx=ctx,
+        event_type=DocumentAccessEventType.template_variable_created,
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": payload.document_type.value, "variable_key": payload.variable_key},
+    )
+    db.commit()
+    _audit(
+        request,
+        ctx=ctx,
+        operation="CREATE_PRINT_TEMPLATE_VARIABLE",
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": payload.document_type.value, "variable_key": payload.variable_key},
+    )
+    return variable
+
+
+@router.patch("/template-variables/{variable_id}", response_model=PrintTemplateVariableResponse)
+def update_print_template_variable(
+    variable_id: uuid.UUID,
+    payload: PrintTemplateVariableUpdate,
+    request: Request,
+    db: db_dep,
+    ctx: template_admin_dep,
+):
+    variable = templates.update_template_variable(db, ctx, variable_id, payload)
+    signatures.log_event(
+        db,
+        ctx=ctx,
+        event_type=DocumentAccessEventType.template_variable_updated,
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": variable.document_type.value, "variable_key": variable.variable_key},
+    )
+    db.commit()
+    _audit(
+        request,
+        ctx=ctx,
+        operation="UPDATE_PRINT_TEMPLATE_VARIABLE",
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": variable.document_type.value, "variable_key": variable.variable_key},
+    )
+    return variable
+
+
+@router.delete("/template-variables/{variable_id}", response_model=PrintTemplateVariableResponse)
+def deactivate_print_template_variable(
+    variable_id: uuid.UUID,
+    request: Request,
+    db: db_dep,
+    ctx: template_admin_dep,
+):
+    variable = templates.deactivate_template_variable(db, ctx, variable_id)
+    signatures.log_event(
+        db,
+        ctx=ctx,
+        event_type=DocumentAccessEventType.template_variable_deactivated,
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": variable.document_type.value, "variable_key": variable.variable_key},
+    )
+    db.commit()
+    _audit(
+        request,
+        ctx=ctx,
+        operation="DEACTIVATE_PRINT_TEMPLATE_VARIABLE",
+        entity_type="print_template_variable",
+        entity_id=variable.id,
+        details={"document_type": variable.document_type.value, "variable_key": variable.variable_key},
+    )
+    return variable
 
 
 @router.post("/templates", response_model=PrintTemplateResponse, status_code=status.HTTP_201_CREATED)

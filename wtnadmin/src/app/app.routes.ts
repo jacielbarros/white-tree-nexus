@@ -119,6 +119,23 @@ export const routes: Routes = [
           import('@app/pages/gap-guidance-admin/gap-guidance-admin').then((m) => m.GapGuidanceAdminPage),
       },
       {
+        path: 'assets',
+        canActivate: [permissionGuard('view_asset')],
+        loadComponent: () => import('@app/pages/assets/assets').then((m) => m.AssetsPage),
+      },
+      {
+        path: 'assets-dashboard',
+        canActivate: [permissionGuard('view_asset')],
+        loadComponent: () =>
+          import('@app/pages/assets-dashboard/assets-dashboard').then((m) => m.AssetsDashboardPage),
+      },
+      {
+        path: 'assets/:id',
+        canActivate: [permissionGuard('view_asset')],
+        loadComponent: () =>
+          import('@app/pages/asset-detail/asset-detail').then((m) => m.AssetDetailPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

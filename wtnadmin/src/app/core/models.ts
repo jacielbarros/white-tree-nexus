@@ -177,6 +177,23 @@ export interface PrintTemplateVersion {
   created_at: string;
 }
 
+export interface PrintTemplateVariable {
+  id: string;
+  tenant_id: string | null;
+  scope: PrintTemplateScope;
+  document_type: PrintableDocumentType;
+  variable_key: string;
+  label: string;
+  description: string | null;
+  value_type: string;
+  required_by_default: boolean;
+  optional_by_default: boolean;
+  status: 'active' | 'inactive';
+  sort_order: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface DocumentPreview {
   id: string;
   document_type: PrintableDocumentType;
@@ -588,4 +605,151 @@ export interface SoaVersion {
   is_superseded: boolean;
   signed: boolean;
   created_at: string;
+}
+
+// --- Ativos / Processos / Escopo (Feature 011) ---
+
+export type AssetType =
+  | 'information_asset'
+  | 'system'
+  | 'database'
+  | 'business_process'
+  | 'infrastructure'
+  | 'service'
+  | 'supplier'
+  | 'document'
+  | 'person_team'
+  | 'physical_environment'
+  | 'other';
+
+export type CiaLevel = 'baixa' | 'media' | 'alta' | 'critica';
+export type AssetScopeStatus = 'in_scope' | 'out_of_scope' | 'under_analysis';
+export type AssetRecordStatus = 'active' | 'in_review' | 'archived';
+export type AssetReviewStatus = 'up_to_date' | 'due_soon' | 'overdue' | 'undefined';
+export type AssetRelationshipType =
+  | 'depends_on'
+  | 'supports'
+  | 'uses'
+  | 'stores'
+  | 'processes'
+  | 'responsible_for'
+  | 'operated_by'
+  | 'regulated_by'
+  | 'linked_to'
+  | 'replaces'
+  | 'other';
+
+export interface AssetItem {
+  id: string;
+  code: string;
+  name: string;
+  item_type: AssetType;
+  description: string | null;
+  business_unit: string | null;
+  responsible_user_id: string | null;
+  owner_user_id: string | null;
+  custodian_user_id: string | null;
+  record_status: AssetRecordStatus;
+  scope_status: AssetScopeStatus;
+  scope_justification: string | null;
+  location: string | null;
+  related_system_id: string | null;
+  related_process_id: string | null;
+  related_supplier_id: string | null;
+  has_personal_data: boolean;
+  has_sensitive_data: boolean;
+  compliance_notes: string | null;
+  confidentiality: CiaLevel | null;
+  integrity: CiaLevel | null;
+  availability: CiaLevel | null;
+  criticality: CiaLevel | null;
+  criticality_is_manual: boolean;
+  last_review_at: string | null;
+  next_review_at: string | null;
+  context_origin_type: string | null;
+  context_origin_id: string | null;
+  archived_at: string | null;
+  archive_reason: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+  review_status: AssetReviewStatus;
+  criticality_computed: CiaLevel | null;
+  criticality_divergent: boolean;
+  cia_complete: boolean;
+  pending_fields: string[];
+}
+
+export interface AssetRelationship {
+  id: string;
+  source_item_id: string;
+  relationship_type: AssetRelationshipType;
+  target_item_id: string;
+  description: string | null;
+  created_at: string;
+  source_code: string | null;
+  source_name: string | null;
+  target_code: string | null;
+  target_name: string | null;
+  direction: 'outgoing' | 'incoming' | null;
+}
+
+export interface AssetGapLink {
+  id: string;
+  item_id: string;
+  gap_catalog_item_id: string;
+  note: string | null;
+  created_at: string;
+  gap_ref_code: string | null;
+  gap_name: string | null;
+  gap_is_discontinued: boolean | null;
+}
+
+export interface AssetItemEvent {
+  id: string;
+  item_id: string;
+  event_type: string;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  reason: string | null;
+  actor_id: string | null;
+  occurred_at: string;
+  details: Record<string, unknown> | null;
+}
+
+export interface AssetItemDetail {
+  item: AssetItem;
+  relationships: AssetRelationship[];
+  gap_links: AssetGapLink[];
+}
+
+export interface AssetSummary {
+  total: number;
+  assets: number;
+  processes: number;
+  suppliers: number;
+  in_scope: number;
+  critical: number;
+  without_responsible: number;
+  cia_incomplete: number;
+}
+
+export interface AssetDashboard {
+  by_type: Record<string, number>;
+  by_criticality: Record<string, number>;
+  by_scope: Record<string, number>;
+  by_review_status: Record<string, number>;
+  with_personal_data: number;
+  critical_without_review: number;
+  without_responsible: number;
+}
+
+export interface AssetContextSource {
+  origin_type: string;
+  origin_id: string;
+  label: string;
+  description: string | null;
+  suggested_item_type: AssetType | null;
 }

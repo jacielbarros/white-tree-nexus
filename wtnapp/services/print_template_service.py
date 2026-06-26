@@ -13,10 +13,16 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from wtnapp.data.print_template_variable_seed import default_template_variables
 from wtnapp.data.print_template_seed import default_templates
 from wtnapp.helpers.tenant_scope import OrgContext
-from wtnapp.models.print_document_model import PrintTemplate, PrintTemplateVersion
-from wtnapp.schemas.print_document_schema import PrintTemplateCreate, PrintTemplateVersionCreate
+from wtnapp.models.print_document_model import PrintTemplate, PrintTemplateVariable, PrintTemplateVersion
+from wtnapp.schemas.print_document_schema import (
+    PrintTemplateCreate,
+    PrintTemplateVariableCreate,
+    PrintTemplateVariableUpdate,
+    PrintTemplateVersionCreate,
+)
 from wtnapp.settings import (
     Classification,
     PrintTemplateScope,
@@ -106,6 +112,41 @@ def _normalize_variable_names(allowed_variables: dict[str, Any]) -> tuple[list[s
     return required_names, optional_names
 
 
+def _visible_variable_query(db: Session, ctx: OrgContext, document_type: PrintableDocumentType | None = None):
+    query = db.query(PrintTemplateVariable).filter(
+        or_(PrintTemplateVariable.tenant_id == ctx.tenant_id, PrintTemplateVariable.tenant_id.is_(None))
+    )
+    if document_type is not None:
+        query = query.filter(PrintTemplateVariable.document_type == document_type)
+    return query
+
+
+def _visible_active_variable_keys(db: Session, ctx: OrgContext, document_type: PrintableDocumentType) -> set[str]:
+    ensure_system_variables(db)
+    return {
+        row.variable_key
+        for row in _visible_variable_query(db, ctx, document_type)
+        .filter(PrintTemplateVariable.status == "active")
+        .all()
+    }
+
+
+def _validate_catalog_variables(
+    db: Session,
+    ctx: OrgContext,
+    document_type: PrintableDocumentType,
+    allowed_variables: dict[str, Any],
+) -> None:
+    required, optional = _normalize_variable_names(allowed_variables)
+    visible_keys = _visible_active_variable_keys(db, ctx, document_type)
+    unknown = sorted({*required, *optional} - visible_keys)
+    if unknown:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {"detail": "Variaveis fora do catalogo do template.", "unknown_variables": unknown},
+        )
+
+
 def _validate_layout(layout_schema: dict[str, Any], required_sections: list[str]) -> None:
     if not isinstance(layout_schema, dict):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Layout de template invalido.")
@@ -129,8 +170,11 @@ def _new_version(
     allowed_variables: dict[str, Any],
     required_sections: list[str],
     created_by: uuid.UUID | None,
+    ctx: OrgContext | None = None,
 ) -> PrintTemplateVersion:
     _normalize_variable_names(allowed_variables)
+    if ctx is not None:
+        _validate_catalog_variables(db, ctx, template.document_type, allowed_variables)
     _validate_layout(layout_schema, required_sections)
     version = PrintTemplateVersion(
         tenant_id=template.tenant_id,
@@ -211,6 +255,152 @@ def ensure_system_templates(db: Session) -> None:
             changed = True
     if changed:
         db.commit()
+
+
+def ensure_system_variables(db: Session) -> None:
+    """Create/update default system variable catalog idempotently."""
+    changed = False
+    now = _now()
+    for definition in default_template_variables():
+        document_type = PrintableDocumentType(definition["document_type"])
+        variable = (
+            db.query(PrintTemplateVariable)
+            .filter(
+                PrintTemplateVariable.tenant_id.is_(None),
+                PrintTemplateVariable.scope == "system",
+                PrintTemplateVariable.document_type == document_type,
+                PrintTemplateVariable.variable_key == definition["variable_key"],
+            )
+            .first()
+        )
+        if variable is None:
+            variable = PrintTemplateVariable(
+                tenant_id=None,
+                scope="system",
+                document_type=document_type,
+                variable_key=definition["variable_key"],
+                label=definition["label"],
+                description=definition.get("description"),
+                value_type=definition.get("value_type", "string"),
+                required_by_default=bool(definition.get("required_by_default", False)),
+                optional_by_default=bool(definition.get("optional_by_default", True)),
+                status="active",
+                sort_order=int(definition.get("sort_order", 100)),
+                created_by=None,
+            )
+            db.add(variable)
+            changed = True
+            continue
+
+        updates = {
+            "label": definition["label"],
+            "description": definition.get("description"),
+            "value_type": definition.get("value_type", "string"),
+            "required_by_default": bool(definition.get("required_by_default", False)),
+            "optional_by_default": bool(definition.get("optional_by_default", True)),
+            "status": "active",
+            "sort_order": int(definition.get("sort_order", 100)),
+        }
+        row_changed = False
+        for key, value in updates.items():
+            if getattr(variable, key) != value:
+                setattr(variable, key, value)
+                row_changed = True
+        if row_changed:
+            variable.updated_at = now
+            changed = True
+    if changed:
+        db.commit()
+
+
+def list_template_variables(
+    db: Session,
+    ctx: OrgContext,
+    document_type: PrintableDocumentType | None = None,
+    include_inactive: bool = False,
+) -> list[PrintTemplateVariable]:
+    ensure_system_variables(db)
+    query = _visible_variable_query(db, ctx, document_type)
+    if not include_inactive:
+        query = query.filter(PrintTemplateVariable.status == "active")
+    return query.order_by(
+        PrintTemplateVariable.document_type,
+        PrintTemplateVariable.scope.desc(),
+        PrintTemplateVariable.sort_order,
+        PrintTemplateVariable.label,
+    ).all()
+
+
+def create_template_variable(
+    db: Session,
+    ctx: OrgContext,
+    payload: PrintTemplateVariableCreate,
+) -> PrintTemplateVariable:
+    ensure_system_variables(db)
+    existing = (
+        _visible_variable_query(db, ctx, payload.document_type)
+        .filter(PrintTemplateVariable.variable_key == payload.variable_key)
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Variavel ja existe para este tipo documental.")
+    if payload.required_by_default and payload.optional_by_default:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Variavel nao pode ser obrigatoria e opcional ao mesmo tempo.")
+    variable = PrintTemplateVariable(
+        tenant_id=ctx.tenant_id,
+        scope="tenant",
+        document_type=payload.document_type,
+        variable_key=payload.variable_key,
+        label=payload.label.strip(),
+        description=payload.description.strip() if payload.description else None,
+        value_type=payload.value_type.strip() or "string",
+        required_by_default=payload.required_by_default,
+        optional_by_default=payload.optional_by_default,
+        status="active",
+        sort_order=payload.sort_order,
+        created_by=ctx.principal.user.id,
+    )
+    db.add(variable)
+    db.commit()
+    db.refresh(variable)
+    return variable
+
+
+def get_tenant_template_variable(db: Session, ctx: OrgContext, variable_id: uuid.UUID) -> PrintTemplateVariable:
+    variable = db.get(PrintTemplateVariable, variable_id)
+    if variable is None or variable.scope != "tenant" or variable.tenant_id != ctx.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurso nao encontrado.")
+    return variable
+
+
+def update_template_variable(
+    db: Session,
+    ctx: OrgContext,
+    variable_id: uuid.UUID,
+    payload: PrintTemplateVariableUpdate,
+) -> PrintTemplateVariable:
+    variable = get_tenant_template_variable(db, ctx, variable_id)
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("required_by_default") is True and data.get("optional_by_default", variable.optional_by_default) is True:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Variavel nao pode ser obrigatoria e opcional ao mesmo tempo.")
+    if data.get("optional_by_default") is True and data.get("required_by_default", variable.required_by_default) is True:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Variavel nao pode ser obrigatoria e opcional ao mesmo tempo.")
+    for key, value in data.items():
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(variable, key, value)
+    db.commit()
+    db.refresh(variable)
+    return variable
+
+
+def deactivate_template_variable(db: Session, ctx: OrgContext, variable_id: uuid.UUID) -> PrintTemplateVariable:
+    variable = get_tenant_template_variable(db, ctx, variable_id)
+    variable.status = "inactive"
+    variable.updated_at = _now()
+    db.commit()
+    db.refresh(variable)
+    return variable
 
 
 def list_templates(
@@ -363,6 +553,7 @@ def create_template_version(
         allowed_variables=payload.allowed_variables,
         required_sections=payload.required_sections,
         created_by=ctx.principal.user.id,
+        ctx=ctx,
     )
     if template.current_version_id is None:
         template.current_version_id = version.id

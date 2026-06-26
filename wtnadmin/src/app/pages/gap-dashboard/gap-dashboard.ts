@@ -102,7 +102,7 @@ interface DimensionView {
       <div>
         <h1 class="wtn-page-title">Gap Analysis — Dashboard</h1>
         <p class="wtn-page-desc">
-          Aderência aos {{ totalControls() || 93 }} controles do Anexo A
+          Aderência dos controles avaliados - {{ evaluatedControls() }} de {{ totalControls() }} itens preenchidos
         </p>
       </div>
       <div class="wtn-page-actions">
@@ -115,7 +115,7 @@ interface DimensionView {
     @if (loading()) {
       <div class="gap-dashboard-grid">
         <div class="wtn-card dashboard-card adherence-card">
-          <div class="wtn-card-title">Aderência geral</div>
+          <div class="wtn-card-title">Aderência dos avaliados</div>
           <div class="loading-orb"></div>
         </div>
         <div class="wtn-card dashboard-card distribution-card">
@@ -139,8 +139,8 @@ interface DimensionView {
     } @else {
       <section class="gap-dashboard-grid">
         <article class="wtn-card dashboard-card adherence-card">
-          <div class="wtn-card-title">Aderência geral</div>
-          <div class="donut-wrap" aria-label="Aderência geral">
+          <div class="wtn-card-title">Aderência dos avaliados</div>
+          <div class="donut-wrap" aria-label="Aderência dos avaliados">
             <svg class="donut" viewBox="0 0 150 150" aria-hidden="true">
               <circle cx="75" cy="75" r="60" class="donut-track" />
               <circle
@@ -153,7 +153,17 @@ interface DimensionView {
             </svg>
             <div class="donut-center">
               <strong>{{ overallPercentLabel() }}</strong>
-              <span>{{ evaluatedControls() }} / {{ totalControls() }}</span>
+              <span>{{ scoredControls() }} avaliados aplicáveis</span>
+            </div>
+          </div>
+          <div class="metric-list">
+            <div class="metric-row">
+              <span>Completude da avaliação</span>
+              <strong>{{ evaluatedControls() }} / {{ totalControls() }} - {{ completenessPercentLabel() }}</strong>
+            </div>
+            <div class="metric-row metric-row--conservative">
+              <span>Conformidade consolidada</span>
+              <strong>{{ conservativePercentLabel() }}</strong>
             </div>
           </div>
         </article>
@@ -183,7 +193,7 @@ interface DimensionView {
         </article>
 
         <article class="wtn-card dashboard-card dimensions-card">
-          <div class="wtn-card-title">Aderência por dimensão</div>
+          <div class="wtn-card-title">Aderência dos avaliados por dimensão</div>
           <div class="dimension-list">
             @for (dim of dimensionViews(); track dim.key) {
               <div class="dimension-row">
@@ -275,12 +285,7 @@ interface DimensionView {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-height: 230px;
-    }
-
-    .adherence-card .wtn-card-title {
-      align-self: stretch;
-      margin-bottom: 10px;
+      min-height: 300px;
     }
 
     .donut-wrap {
@@ -326,6 +331,35 @@ interface DimensionView {
       font-weight: 700;
       letter-spacing: 0;
       line-height: 1;
+    }
+
+    .metric-list {
+      align-self: stretch;
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .metric-row {
+      align-items: center;
+      border-top: 1px solid var(--wtn-surface-2);
+      display: flex;
+      justify-content: space-between;
+      padding-top: 8px;
+    }
+
+    .metric-row span {
+      color: var(--wtn-text-2);
+      font-size: 11px;
+    }
+
+    .metric-row strong {
+      color: var(--wtn-text);
+      font-size: 13px;
+    }
+
+    .metric-row--conservative strong {
+      color: var(--wtn-primary);
     }
 
     .distribution-card {
@@ -393,15 +427,6 @@ interface DimensionView {
       font-size: 12.5px;
       justify-content: space-between;
       margin-bottom: 6px;
-    }
-
-    .dimension-row-head span,
-    .dimension-row-head strong {
-      color: var(--wtn-text);
-    }
-
-    .dimension-row-head strong {
-      font-weight: 700;
     }
 
     .dimension-track {
@@ -561,10 +586,26 @@ export class GapDashboardPage implements OnInit {
     return Object.values(distribution).reduce((sum, count) => sum + count, 0);
   });
 
+  protected readonly scoredControls = computed(() =>
+    this.statusCount('meets') + this.statusCount('partial') + this.statusCount('not_meet'),
+  );
+
   protected readonly evaluatedControls = computed(() => {
     const total = this.totalControls();
-    const notFilled = this.dashboard()?.status_distribution['not_filled'] ?? 0;
+    const notFilled = this.statusCount('not_filled');
     return Math.max(total - notFilled, 0);
+  });
+
+  protected readonly completenessRatio = computed(() => {
+    const total = this.totalControls();
+    return total ? this.evaluatedControls() / total : 0;
+  });
+
+  protected readonly conservativeAdherenceRatio = computed<number | null>(() => {
+    const denominator = this.totalControls() - this.statusCount('not_applicable');
+    if (denominator <= 0) return null;
+    const score = this.statusCount('meets') + (this.statusCount('partial') * 0.5);
+    return score / denominator;
   });
 
   protected readonly adherenceRatio = computed(() => {
@@ -641,6 +682,15 @@ export class GapDashboardPage implements OnInit {
     return value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`;
   }
 
+  protected completenessPercentLabel(): string {
+    return `${Math.round(this.completenessRatio() * 100)}%`;
+  }
+
+  protected conservativePercentLabel(): string {
+    const value = this.conservativeAdherenceRatio();
+    return value === null ? '—' : `${Math.round(value * 100)}%`;
+  }
+
   protected percentLabel(value: number | null): string {
     return value === null ? '—' : `${Math.round(value * 100)}%`;
   }
@@ -667,5 +717,9 @@ export class GapDashboardPage implements OnInit {
 
   private priorityRank(priority: GapPriority | null): number {
     return priority ? PRIORITY_RANK[priority] : 9;
+  }
+
+  private statusCount(status: GapStatus): number {
+    return this.dashboard()?.status_distribution[status] ?? 0;
   }
 }

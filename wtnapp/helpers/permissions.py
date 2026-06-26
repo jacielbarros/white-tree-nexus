@@ -34,6 +34,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_soa",
         "manage_soa",
         "approve_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
+        "manage_asset",
     },
     Role.org_admin: {
         "invite_users",
@@ -57,6 +60,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_soa",
         "manage_soa",
         "approve_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
+        "manage_asset",
     },
     Role.consultant: {
         "invite_users",
@@ -74,6 +80,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         # SoA (Feature 005)
         "view_soa",
         "manage_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
+        "manage_asset",
     },
     Role.client: {
         "view_organization",
@@ -86,6 +95,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_gap",
         # SoA (Feature 005)
         "view_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
     },
     Role.manager: {
         "view_organization",
@@ -98,6 +109,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_gap",
         # SoA (Feature 005)
         "view_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
     },
     Role.process_owner: {
         "view_organization",
@@ -110,9 +123,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_gap",
         # SoA (Feature 005)
         "view_soa",
+        # Ativos / Processos / Escopo (Feature 011)
+        "view_asset",
     },
-    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap", "view_soa"},
-    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap", "view_soa"},
+    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset"},
+    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset"},
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 
