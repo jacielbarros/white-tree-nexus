@@ -102,7 +102,7 @@ interface DimensionView {
       <div>
         <h1 class="wtn-page-title">Gap Analysis — Dashboard</h1>
         <p class="wtn-page-desc">
-          Aderência dos controles avaliados - {{ evaluatedControls() }} de {{ totalControls() }} itens preenchidos
+          Conformidade consolidada da jornada (cláusulas 4–10 + Anexo A) — {{ evaluatedControls() }} de {{ totalControls() }} itens avaliados
         </p>
       </div>
       <div class="wtn-page-actions">
@@ -139,8 +139,8 @@ interface DimensionView {
     } @else {
       <section class="gap-dashboard-grid">
         <article class="wtn-card dashboard-card adherence-card">
-          <div class="wtn-card-title">Aderência dos avaliados</div>
-          <div class="donut-wrap" aria-label="Aderência dos avaliados">
+          <div class="wtn-card-title">Conformidade consolidada</div>
+          <div class="donut-wrap" aria-label="Conformidade consolidada da jornada completa">
             <svg class="donut" viewBox="0 0 150 150" aria-hidden="true">
               <circle cx="75" cy="75" r="60" class="donut-track" />
               <circle
@@ -152,18 +152,22 @@ interface DimensionView {
               />
             </svg>
             <div class="donut-center">
-              <strong>{{ overallPercentLabel() }}</strong>
-              <span>{{ scoredControls() }} avaliados aplicáveis</span>
+              <strong>{{ consolidatedPercentLabel() }}</strong>
+              <span>{{ evaluatedControls() }} de {{ totalControls() }} avaliados</span>
             </div>
           </div>
           <div class="metric-list">
             <div class="metric-row">
-              <span>Completude da avaliação</span>
-              <strong>{{ evaluatedControls() }} / {{ totalControls() }} - {{ completenessPercentLabel() }}</strong>
+              <span>Cláusulas 4–10</span>
+              <strong>{{ dimLabel('clause') }}</strong>
             </div>
-            <div class="metric-row metric-row--conservative">
-              <span>Conformidade consolidada</span>
-              <strong>{{ conservativePercentLabel() }}</strong>
+            <div class="metric-row">
+              <span>Anexo A · controles</span>
+              <strong>{{ dimLabel('annex_a') }}</strong>
+            </div>
+            <div class="metric-row metric-row--support">
+              <span>Aderência dos avaliados</span>
+              <strong>{{ overallPercentLabel() }} <small>· só {{ scoredControls() }}</small></strong>
             </div>
           </div>
         </article>
@@ -358,8 +362,14 @@ interface DimensionView {
       font-size: 13px;
     }
 
-    .metric-row--conservative strong {
-      color: var(--wtn-primary);
+    .metric-row--support span,
+    .metric-row--support strong {
+      color: var(--wtn-muted);
+    }
+
+    .metric-row--support small {
+      font-weight: 400;
+      color: var(--wtn-muted);
     }
 
     .distribution-card {
@@ -672,9 +682,26 @@ export class GapDashboardPage implements OnInit {
     });
   }
 
+  protected readonly consolidatedRatio = computed(() => {
+    const v = this.dashboard()?.consolidated_conformance;
+    return v === null || v === undefined ? 0 : v;
+  });
+
   protected donutDash(): string {
     const circumference = 377;
-    return `${(this.adherenceRatio() * circumference).toFixed(1)} ${circumference}`;
+    return `${(this.consolidatedRatio() * circumference).toFixed(1)} ${circumference}`;
+  }
+
+  protected consolidatedPercentLabel(): string {
+    const v = this.dashboard()?.consolidated_conformance;
+    return v === null || v === undefined ? '—' : `${Math.round(v * 100)}%`;
+  }
+
+  protected dimLabel(key: string): string {
+    const d = this.dashboard()?.dimensions?.[key];
+    if (!d || d.total === 0) return '—';
+    const conf = d.conformance === null || d.conformance === undefined ? '—' : `${Math.round(d.conformance * 100)}%`;
+    return `${conf} · ${d.evaluated}/${d.total}`;
   }
 
   protected overallPercentLabel(): string {

@@ -439,7 +439,18 @@ export interface GapAssessment {
   items: GapAssessmentItem[];
 }
 
+export interface GapDimensionMetric {
+  conformance: number | null;
+  adherence_evaluated: number | null;
+  evaluated: number;
+  total: number;
+}
+
 export interface GapDashboard {
+  consolidated_conformance: number | null;
+  total_items: number;
+  evaluated_items: number;
+  dimensions: Record<string, GapDimensionMetric>;
   overall_adherence: number | null;
   by_dimension: Record<string, number | null>;
   by_clause: Record<string, number | null>;

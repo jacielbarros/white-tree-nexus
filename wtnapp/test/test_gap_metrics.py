@@ -72,6 +72,34 @@ def test_adherence_weights(client, login, gap_org, gap_seed):
     assert data["completeness"] == pytest.approx(3 / 100, abs=0.001)
 
 
+def test_consolidated_conformance_and_decomposition(client, login, gap_org, gap_seed):
+    """Conformidade consolidada (jornada completa) penaliza não-avaliados e decompõe por dimensão."""
+    h = headers_for(login, "admin@gap-metrics.com", gap_org["org"].id)
+    client.post("/gap/catalog/adopt", json={"seed_version": "2022.1"}, headers=h)
+    items = client.get("/gap/assessment", headers=h).json()["items"]
+
+    ids = [items[0]["id"], items[1]["id"], items[2]["id"]]
+    client.put(f"/gap/assessment/items/{ids[0]}", json={"status": "meets"}, headers=h)
+    client.put(f"/gap/assessment/items/{ids[1]}", json={"status": "partial"}, headers=h)
+    client.put(f"/gap/assessment/items/{ids[2]}", json={"status": "not_meet"}, headers=h)
+
+    data = client.get("/gap/assessment/dashboard", headers=h).json()
+
+    # Consolidada: (1.0 + 0.5 + 0.0) / 100 itens = 0.015 — bem abaixo da aderência dos avaliados (0.5).
+    assert data["consolidated_conformance"] == pytest.approx(0.015, abs=0.0005)
+    assert data["consolidated_conformance"] < data["overall_adherence"]
+    assert data["total_items"] == 100
+    assert data["evaluated_items"] == 3
+
+    # Decomposição: cláusulas + Anexo A somam o todo, sem mascarar uma na outra.
+    dims = data["dimensions"]
+    assert "annex_a" in dims
+    assert sum(d["total"] for d in dims.values()) == 100
+    assert sum(d["evaluated"] for d in dims.values()) == 3
+    for d in dims.values():
+        assert set(d) == {"conformance", "adherence_evaluated", "evaluated", "total"}
+
+
 def test_not_applicable_excluded_from_denominator(client, login, gap_org, gap_seed):
     """N/A não conta no denominador da aderência."""
     h = headers_for(login, "admin@gap-metrics.com", gap_org["org"].id)

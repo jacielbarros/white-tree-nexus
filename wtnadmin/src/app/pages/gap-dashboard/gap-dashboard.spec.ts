@@ -9,6 +9,13 @@ import { GapDashboardPage } from './gap-dashboard';
 import { AuthStore } from '@app/core/auth.store';
 
 const DASH = {
+  consolidated_conformance: 0.3,
+  total_items: 10,
+  evaluated_items: 4,
+  dimensions: {
+    clause: { conformance: 0.5, adherence_evaluated: 1, evaluated: 2, total: 4 },
+    annex_a: { conformance: 0.17, adherence_evaluated: 0.33, evaluated: 2, total: 6 },
+  },
   overall_adherence: 0.5,
   completeness: 0.4,
   status_distribution: { meets: 2, partial: 1, not_meet: 1, not_applicable: 0, not_filled: 6 },
@@ -30,6 +37,9 @@ describe('GapDashboardPage', () => {
     dimensionViews(): { key: string; value: number | null }[];
     percentLabel(v: number | null): string;
     statusTagClass(s: string): string;
+    consolidatedPercentLabel(): string;
+    dimLabel(key: string): string;
+    overallPercentLabel(): string;
   };
 
   beforeEach(async () => {
@@ -107,5 +117,18 @@ describe('GapDashboardPage', () => {
   it('statusTagClass maps to wtn-tag modifiers', () => {
     expect(view.statusTagClass('meets')).toBe('wtn-tag--success');
     expect(view.statusTagClass('not_meet')).toBe('wtn-tag--danger');
+  });
+
+  it('leads with consolidated conformance, not adherence of evaluated', () => {
+    component.dashboard.set(DASH as never);
+    expect(view.consolidatedPercentLabel()).toBe('30%');
+    expect(view.overallPercentLabel()).toBe('50%');
+  });
+
+  it('decomposes conformance by dimension with coverage', () => {
+    component.dashboard.set(DASH as never);
+    expect(view.dimLabel('clause')).toBe('50% · 2/4');
+    expect(view.dimLabel('annex_a')).toBe('17% · 2/6');
+    expect(view.dimLabel('missing')).toBe('—');
   });
 });

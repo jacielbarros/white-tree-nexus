@@ -13,7 +13,9 @@ const DASHBOARD = {
   kpis: {
     overall_adherence: 0.62,
     controls_evaluated: 30,
-    controls_total: 93,
+    controls_total: 100,
+    conformance_clause: 0.8,
+    conformance_annex: 0.55,
     critical_gaps: 5,
     modules_approved: 1,
     modules_total: 3,
@@ -136,5 +138,15 @@ describe('DashboardPage', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.wtn-sparkline')).toBeTruthy();
+  });
+
+  it('decomposes conformance into clauses and Annex A, with whole-journey coverage', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Cláusulas 4–10 80%');
+    expect(text).toContain('Anexo A 55%');
+    expect(text).toContain('Itens avaliados');
+    expect(text).toContain('/ 100');
   });
 });

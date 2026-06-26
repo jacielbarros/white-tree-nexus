@@ -18,7 +18,6 @@ from wtnapp.helpers.tenant_scope import OrgContext
 from wtnapp.models.context_analysis_model import ContextAnalysis
 from wtnapp.models.document_version_model import DocumentVersion
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
-from wtnapp.models.gap_catalog_model import GapCatalogItem
 from wtnapp.models.organization_model import Organization
 from wtnapp.models.scope_model import ScopeStatement
 from wtnapp.models.soa_model import Soa, SoaItem
@@ -34,18 +33,9 @@ from wtnapp.schemas.dashboard_schema import (
 )
 from wtnapp.services import controlled_document_service as cds
 from wtnapp.services.gap_metrics_service import compute_dashboard, list_gaps
-from wtnapp.settings import DocStatus, DocType, GapDimension, GapPriority, GapStatus
+from wtnapp.settings import DocStatus, DocType, GapPriority
 
 logger = logging.getLogger(__name__)
-
-ANNEX_A_CONTROLS = 93
-
-_COMPLIANCE_WEIGHT: dict[GapStatus, float] = {
-    GapStatus.meets: 1.0,
-    GapStatus.partial: 0.5,
-    GapStatus.not_meet: 0.0,
-    GapStatus.not_filled: 0.0,
-}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,14 +71,6 @@ def _earliest_deadline(rows) -> tuple[str | None, date | None]:
     future = [r for r in dated if _as_date(r.deadline) >= today]
     chosen = min(future or dated, key=lambda r: _as_date(r.deadline))
     return chosen.responsible, _as_date(chosen.deadline)
-
-
-def _annex_compliance(items: list[GapAssessmentItem]) -> float | None:
-    applicable = [i for i in items if i.status != GapStatus.not_applicable]
-    if not applicable:
-        return None
-    score = sum(_COMPLIANCE_WEIGHT.get(i.status, 0.0) for i in applicable)
-    return round(score / len(applicable), 4)
 
 
 def _current_version(db: Session, version_id) -> DocumentVersion | None:
@@ -152,21 +134,15 @@ def _gap_card(db: Session, ctx: OrgContext, kpis: DashboardKpis) -> ModuleCard:
 
     metrics = compute_dashboard(db, ctx.tenant_id, assessment.id)
 
-    # KPIs do Anexo A: "controles avaliados / 93" refere-se aos 93 controles do Anexo A
-    # (não às cláusulas 4–10). Contamos só itens da dimensão annex_a (C2).
-    annex_items = (
-        db.query(GapAssessmentItem)
-        .join(GapCatalogItem, GapAssessmentItem.catalog_item_id == GapCatalogItem.id)
-        .filter(
-            GapAssessmentItem.tenant_id == ctx.tenant_id,
-            GapAssessmentItem.assessment_id == assessment.id,
-            GapCatalogItem.dimension == GapDimension.annex_a,
-        )
-        .all()
-    )
-    kpis.overall_adherence = _annex_compliance(annex_items)
-    kpis.controls_evaluated = sum(1 for i in annex_items if i.status != GapStatus.not_filled)
-    kpis.controls_total = ANNEX_A_CONTROLS
+    # Conformidade consolidada da JORNADA COMPLETA (cláusulas 4–10 + Anexo A) — fonte única
+    # compartilhada com o dashboard do Gap (decisão 1a + 2i). Antes o KPI da home era escopado
+    # só ao Anexo A (0/93), divergindo da tela do Gap; agora as duas telas batem.
+    dims = metrics.get("dimensions", {})
+    kpis.overall_adherence = metrics["consolidated_conformance"]
+    kpis.controls_evaluated = metrics["evaluated_items"]
+    kpis.controls_total = metrics["total_items"]
+    kpis.conformance_clause = (dims.get("clause") or {}).get("conformance")
+    kpis.conformance_annex = (dims.get("annex_a") or {}).get("conformance")
     gaps = list_gaps(db, ctx.tenant_id, assessment.id)
     kpis.critical_gaps = sum(1 for g in gaps if g.priority == GapPriority.critical)
 
@@ -298,7 +274,7 @@ def _adherence_trend(db: Session, ctx: OrgContext) -> list[AdherencePoint] | Non
 
 def build_dashboard(db: Session, ctx: OrgContext) -> DashboardResponse:
     org = db.get(Organization, ctx.tenant_id)
-    kpis = DashboardKpis(controls_total=ANNEX_A_CONTROLS)
+    kpis = DashboardKpis()
     cards: list[ModuleCard] = []
 
     # Gating por permissão de módulo (não eleva permissões) + fail-open por card.

@@ -34,13 +34,18 @@ def test_dashboard_happy_path_and_kpis(client, soa_seed, org_headers, db):
     assert by_id["action_plan"]["placeholder"] is True
     assert by_id["evidence"]["placeholder"] is True
 
-    # Gap metrics ainda mostram aderencia entre avaliados; o KPI executivo do dashboard
-    # considera controles nao avaliados como nao conformes para evitar falso 100%.
+    # Gap metrics ainda mostram aderencia DOS AVALIADOS; o KPI executivo do dashboard usa a
+    # conformidade CONSOLIDADA da jornada completa (cláusulas + Anexo A) p/ evitar falso 100%.
     metrics = compute_dashboard(db, seed["org"].id, assessment.id)
-    assert metrics["overall_adherence"] == 0.75
-    assert body["kpis"]["overall_adherence"] == 0.0163
-    assert body["kpis"]["controls_evaluated"] == 3      # 3 controles do Anexo A avaliados
-    assert body["kpis"]["controls_total"] == 93         # Anexo A (C2)
+    assert metrics["overall_adherence"] == 0.75          # aderência dos avaliados (apoio)
+    # Âncora honesta = consolidada da jornada completa (mesma fonte do dashboard do Gap).
+    assert body["kpis"]["overall_adherence"] == metrics["consolidated_conformance"]
+    assert body["kpis"]["overall_adherence"] < 0.05      # cobertura baixa puxa p/ baixo (não 75%)
+    assert body["kpis"]["controls_evaluated"] == metrics["evaluated_items"] == 3
+    assert body["kpis"]["controls_total"] == metrics["total_items"]   # jornada completa (não 93)
+    # Decomposição reconciliada: Anexo A e Cláusulas separados.
+    assert body["kpis"]["conformance_annex"] == metrics["dimensions"]["annex_a"]["conformance"]
+    assert body["kpis"]["conformance_clause"] == metrics["dimensions"]["clause"]["conformance"]
     assert body["kpis"]["critical_gaps"] == 1           # priority==critical, não not_meet (C1)
     assert body["kpis"]["modules_total"] == 3
     assert body["kpis"]["modules_approved"] == 0
@@ -61,8 +66,11 @@ def test_dashboard_compliance_penalizes_unassessed_controls(client, soa_seed, or
 
     body = client.get("/dashboard", headers=org_headers(seed["admin"].email, seed["org"].id)).json()
 
-    assert compute_dashboard(db, seed["org"].id, seed["assessment"].id)["overall_adherence"] == 1.0
-    assert body["kpis"]["overall_adherence"] == 0.0215
+    metrics = compute_dashboard(db, seed["org"].id, seed["assessment"].id)
+    assert metrics["overall_adherence"] == 1.0           # aderência dos avaliados: 2/2 = 100%
+    # KPI executivo NÃO pode virar 100% — consolidada da jornada completa penaliza não-avaliados.
+    assert body["kpis"]["overall_adherence"] == metrics["consolidated_conformance"]
+    assert body["kpis"]["overall_adherence"] < 0.05
 
 
 def test_critical_gaps_counts_priority_not_status(client, soa_seed, org_headers, db):
@@ -88,7 +96,7 @@ def test_modules_not_started(client, gap_seed_factory, org_headers):
         assert by_id[mod]["progress_pct"] is None
         assert by_id[mod]["responsible"] is None
         assert by_id[mod]["deadline"] is None
-    assert body["kpis"]["controls_total"] == 93
+    assert body["kpis"]["controls_total"] == 0   # sem gap adotado ⇒ jornada sem itens
     assert body["kpis"]["controls_evaluated"] == 0
     assert body["adherence_trend"] is None
 

@@ -33,11 +33,36 @@ _PRIORITY_ORDER = {
 
 
 def _adherence(items: list[GapAssessmentItem]) -> Optional[float]:
+    """Aderência DOS AVALIADOS: exclui N/A e não-preenchidos do denominador.
+
+    Métrica de qualidade do que já foi avaliado — pode "parecer" alta com baixa cobertura.
+    """
     applicable = [i for i in items if i.status in _WEIGHT]
     if not applicable:
         return None
     total = sum(_WEIGHT[i.status] for i in applicable)
     return round(total / len(applicable), 4)
+
+
+def _consolidated(items: list[GapAssessmentItem]) -> Optional[float]:
+    """Conformidade CONSOLIDADA: denominador = total exceto N/A; não-preenchido conta como 0.
+
+    Número honesto da postura — cobertura baixa puxa o valor para baixo (não mascara).
+    """
+    applicable = [i for i in items if i.status != GapStatus.not_applicable]
+    if not applicable:
+        return None
+    score = sum(_WEIGHT.get(i.status, 0.0) for i in applicable)
+    return round(score / len(applicable), 4)
+
+
+def _dimension_metric(items: list[GapAssessmentItem]) -> dict:
+    return {
+        "conformance": _consolidated(items),
+        "adherence_evaluated": _adherence(items),
+        "evaluated": sum(1 for i in items if i.status != GapStatus.not_filled),
+        "total": len(items),
+    }
 
 
 def compute_dashboard(db: Session, tenant_id: uuid.UUID, assessment_id: uuid.UUID) -> dict:
@@ -53,6 +78,10 @@ def compute_dashboard(db: Session, tenant_id: uuid.UUID, assessment_id: uuid.UUI
     if not items:
         return {
             "overall_adherence": None,
+            "consolidated_conformance": None,
+            "total_items": 0,
+            "evaluated_items": 0,
+            "dimensions": {},
             "by_dimension": {},
             "by_clause": {},
             "by_theme": {},
@@ -89,6 +118,13 @@ def compute_dashboard(db: Session, tenant_id: uuid.UUID, assessment_id: uuid.UUI
     completeness = round(filled / len(items), 4) if items else 0.0
 
     return {
+        # Âncora honesta: conformidade consolidada sobre a JORNADA COMPLETA (cláusulas + Anexo A).
+        "consolidated_conformance": _consolidated(items),
+        "total_items": len(items),
+        "evaluated_items": filled,
+        # Decomposição por dimensão (cláusulas 4–10 vs Anexo A): conformância + cobertura.
+        "dimensions": {k: _dimension_metric(v) for k, v in by_dim.items()},
+        # Aderência DOS AVALIADOS (métrica de apoio, demovida no frontend).
         "overall_adherence": _adherence(items),
         "by_dimension": {k: _adherence(v) for k, v in by_dim.items()},
         "by_clause": {k: _adherence(v) for k, v in by_clause.items()},

@@ -54,7 +54,20 @@ class AssessmentItemUpdate(BaseModel):
     effort_estimate: Optional[str] = None
 
 
+class DimensionMetric(BaseModel):
+    conformance: Optional[float] = None       # consolidada (denom = total - N/A)
+    adherence_evaluated: Optional[float] = None  # só dos avaliados
+    evaluated: int = 0
+    total: int = 0
+
+
 class DashboardResponse(BaseModel):
+    # Âncora honesta (jornada completa = cláusulas + Anexo A).
+    consolidated_conformance: Optional[float] = None
+    total_items: int = 0
+    evaluated_items: int = 0
+    dimensions: dict[str, DimensionMetric] = {}
+    # Aderência dos avaliados (apoio) + distribuições já existentes.
     overall_adherence: Optional[float] = None
     by_dimension: dict[str, Optional[float]] = {}
     by_clause: dict[str, Optional[float]] = {}

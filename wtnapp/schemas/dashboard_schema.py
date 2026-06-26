@@ -53,9 +53,13 @@ class ModuleCard(BaseModel):
 
 
 class DashboardKpis(BaseModel):
+    # Conformidade consolidada da JORNADA COMPLETA (cláusulas 4–10 + Anexo A) — número-âncora.
     overall_adherence: Optional[float] = None  # 0–1
-    controls_evaluated: int = 0
-    controls_total: int = 0
+    controls_evaluated: int = 0                 # itens avaliados (jornada completa)
+    controls_total: int = 0                     # total de itens da jornada
+    # Decomposição da conformidade consolidada por dimensão (para não mascarar).
+    conformance_clause: Optional[float] = None
+    conformance_annex: Optional[float] = None
     critical_gaps: int = 0
     modules_approved: int = 0
     modules_total: int = 0

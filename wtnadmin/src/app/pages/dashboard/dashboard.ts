@@ -29,6 +29,8 @@ interface DashboardKpis {
   overall_adherence: number | null;
   controls_evaluated: number;
   controls_total: number;
+  conformance_clause: number | null;
+  conformance_annex: number | null;
   critical_gaps: number;
   modules_approved: number;
   modules_total: number;
@@ -105,13 +107,16 @@ const STATUS_CLASS: Record<string, string> = {
               </svg>
             }
           </div>
-          <div class="wtn-kpi-sub">Gap Analysis · Anexo A</div>
+          <div class="wtn-kpi-sub">
+            Cláusulas 4–10 {{ pct(kpis().conformance_clause) }} · Anexo A {{ pct(kpis().conformance_annex) }}
+          </div>
         </div>
         <div class="wtn-kpi-card">
-          <div class="wtn-kpi-label">Controles avaliados</div>
+          <div class="wtn-kpi-label">Itens avaliados</div>
           <div class="wtn-kpi-value">
             {{ kpis().controls_evaluated }}<span class="wtn-kpi-total"> / {{ kpis().controls_total }}</span>
           </div>
+          <div class="wtn-kpi-sub">cláusulas + Anexo A</div>
         </div>
         <div class="wtn-kpi-card">
           <div class="wtn-kpi-label">Lacunas críticas</div>
@@ -333,6 +338,8 @@ export class DashboardPage implements OnInit {
     overall_adherence: null,
     controls_evaluated: 0,
     controls_total: 0,
+    conformance_clause: null,
+    conformance_annex: null,
     critical_gaps: 0,
     modules_approved: 0,
     modules_total: 0,
@@ -370,6 +377,10 @@ export class DashboardPage implements OnInit {
         this.trend.set(res.adherence_trend);
         this.loading.set(false);
       });
+  }
+
+  protected pct(v: number | null): string {
+    return v === null || v === undefined ? '—' : `${Math.round(v * 100)}%`;
   }
 
   protected statusLabel(status: string): string {
