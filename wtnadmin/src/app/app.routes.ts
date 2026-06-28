@@ -136,6 +136,41 @@ export const routes: Routes = [
           import('@app/pages/asset-detail/asset-detail').then((m) => m.AssetDetailPage),
       },
       {
+        path: 'risk-methodology',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () =>
+          import('@app/pages/risk-methodology/risk-methodology').then((m) => m.RiskMethodologyPage),
+      },
+      {
+        path: 'risk-catalog',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () =>
+          import('@app/pages/risk-catalog/risk-catalog').then((m) => m.RiskCatalogPage),
+      },
+      {
+        path: 'risks',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () => import('@app/pages/risks/risks').then((m) => m.RisksPage),
+      },
+      {
+        path: 'risk-detail/:id',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () =>
+          import('@app/pages/risk-detail/risk-detail').then((m) => m.RiskDetailPage),
+      },
+      {
+        path: 'risk-treatment-plan',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () =>
+          import('@app/pages/risk-treatment-plan/risk-treatment-plan').then((m) => m.RiskTreatmentPlanPage),
+      },
+      {
+        path: 'risk-dashboard',
+        canActivate: [permissionGuard('view_risk')],
+        loadComponent: () =>
+          import('@app/pages/risk-dashboard/risk-dashboard').then((m) => m.RiskDashboardPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

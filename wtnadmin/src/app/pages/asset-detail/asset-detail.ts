@@ -158,13 +158,37 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
           }
         </article>
 
-        <!-- Seções futuras (placeholders) -->
+        <!-- Riscos (Feature 012): ameaças/vulnerabilidades/riscos/controles vinculados -->
         <article class="wtn-card pad span2">
-          <div class="wtn-card-title">Próximos módulos</div>
+          <div class="wtn-card-title">Riscos vinculados</div>
+          @if (riskLinks(); as rl) {
+            <div class="risk-links">
+              <div class="rl-col">
+                <h4>Ameaças</h4>
+                @for (t of rl.threats; track t.id) { <div class="rl-item">{{ t.code }} · {{ t.name }}</div> }
+                @empty { <p class="muted">Nenhuma.</p> }
+              </div>
+              <div class="rl-col">
+                <h4>Vulnerabilidades</h4>
+                @for (v of rl.vulnerabilities; track v.id) { <div class="rl-item">{{ v.code }} · {{ v.name }}</div> }
+                @empty { <p class="muted">Nenhuma.</p> }
+              </div>
+              <div class="rl-col">
+                <h4>Riscos</h4>
+                @for (r of rl.risks; track r.id) {
+                  <a class="rl-item rl-link" [routerLink]="['../../risk-detail', r.id]">{{ r.code }} · {{ r.title }}</a>
+                }
+                @empty { <p class="muted">Nenhum.</p> }
+              </div>
+              <div class="rl-col">
+                <h4>Controles relacionados</h4>
+                @for (c of rl.controls; track c.id) { <div class="rl-item">{{ c.custom_control_label || 'Controle do Anexo A' }}</div> }
+                @empty { <p class="muted">Nenhum.</p> }
+              </div>
+            </div>
+          } @else { <p class="muted">Carregando vínculos de risco…</p> }
           <div class="future">
-            @for (s of futureSections; track s) {
-              <div class="future-box"><span>{{ s }}</span><em>Será preenchido nos módulos seguintes</em></div>
-            }
+            <div class="future-box"><span>Evidências</span><em>Será preenchido no Módulo 5</em></div>
           </div>
         </article>
 
@@ -265,6 +289,10 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
     .mono { font-family: var(--wtn-font-mono); font-size: 11.5px; color: var(--wtn-muted); }
     .link-del { background: none; border: none; color: var(--wtn-danger); cursor: pointer; font-size: 11.5px; margin-left: auto; }
     .inline-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .risk-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .rl-col h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--wtn-muted); margin: 0 0 8px; }
+    .rl-item { font-size: 12.5px; color: var(--wtn-text-2); padding: 4px 0; border-bottom: 1px solid var(--wtn-border); display: block; text-decoration: none; }
+    .rl-link { color: var(--wtn-primary); cursor: pointer; }
     .future { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
     .future-box { border: 1px dashed var(--wtn-border-strong); border-radius: var(--wtn-r-md); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
     .future-box span { font-size: 12.5px; color: var(--wtn-text-2); font-weight: 600; }
@@ -302,6 +330,12 @@ export class AssetDetailPage implements OnInit {
   readonly errorMsg = signal<string | null>(null);
 
   readonly futureSections = FUTURE_SECTIONS;
+  readonly riskLinks = signal<{
+    threats: { id: string; code: string; name: string }[];
+    vulnerabilities: { id: string; code: string; name: string }[];
+    risks: { id: string; code: string; title: string; inherent_level_key: string | null }[];
+    controls: { id: string; custom_control_label: string | null; gap_catalog_item_id: string | null }[];
+  } | null>(null);
 
   newRelType: AssetRelationshipType = 'uses';
   newRelTarget: string | null = null;
@@ -351,6 +385,9 @@ export class AssetDetailPage implements OnInit {
     this.api.listUsers().subscribe({ next: (r) => this.members.set(r as unknown as MemberRow[]), error: () => {} });
     this.api.get<GapCatalogRow[]>('/gap/catalog').subscribe({ next: (g) => this.gapCatalog.set(g), error: () => {} });
     this.api.get<AssetItem[]>('/assets').subscribe({ next: (i) => this.allItems.set(i), error: () => {} });
+    this.api.get<NonNullable<ReturnType<typeof this.riskLinks>>>(`/risk/assets/${this.itemId}/links`).subscribe({
+      next: (l) => this.riskLinks.set(l), error: () => {},
+    });
   }
 
   private load(): void {

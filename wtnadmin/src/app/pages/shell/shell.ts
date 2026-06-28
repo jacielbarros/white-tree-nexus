@@ -255,6 +255,48 @@ interface OrgOption { label: string; value: string; }
               </a>
             </div>
 
+            <!-- Gestão de Riscos -->
+            <div class="wtn-nav-group">
+              @if (!collapsed()) { <div class="wtn-nav-label">Gestão de Riscos</div> }
+              <a class="wtn-nav-item" routerLink="risk-catalog" routerLinkActive="active" [title]="collapsed() ? 'Ameaças e Vulnerabilidades' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Ameaças e Vulns</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="risks" routerLinkActive="active" [title]="collapsed() ? 'Avaliação' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/>
+                </svg>
+                @if (!collapsed()) { <span>Avaliação</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="risk-treatment-plan" routerLinkActive="active" [title]="collapsed() ? 'Plano de Tratamento' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3M9 12l2 2 4-4"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Plano de Tratamento</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="risk-dashboard" routerLinkActive="active" [title]="collapsed() ? 'Dashboard Riscos' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 3v18h18M7 14l3-3 3 3 5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Dashboard</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="risk-methodology" routerLinkActive="active" [title]="collapsed() ? 'Metodologia' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.5-6.5-1.5 1.5M6 18l1.5-1.5m11 1.5L17 16.5M6 6l1.5 1.5"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/>
+                </svg>
+                @if (!collapsed()) { <span>Metodologia</span> }
+              </a>
+            </div>
+
             <!-- SoA -->
             <div class="wtn-nav-group">
               @if (!collapsed()) { <div class="wtn-nav-label">SoA</div> }

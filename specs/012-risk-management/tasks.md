@@ -38,7 +38,7 @@ independentemente testável.
 - [X] T002 [P] Adicionar `view_risk`/`manage_risk`/`approve_risk_plan` à matriz `PERMISSIONS` em
   `wtnapp/helpers/permissions.py` (Super Admin+Admin: as 3; Consultor: view+manage; Gestor/Dono de
   processo/Dono de controle/Auditor/Cliente: view; Convidado: nenhuma).
-- [ ] T003 [P] Frontend: espelhar `view_risk`/`manage_risk`/`approve_risk_plan` em
+- [X] T003 [P] Frontend: espelhar `view_risk`/`manage_risk`/`approve_risk_plan` em
   `wtnadmin/src/app/core/permissions.ts`; adicionar tipos do módulo em `wtnadmin/src/app/core/models.ts`
   (Risk, Methodology, Threat, Vulnerability, Treatment, Control, RiskEvent + enums).
 
@@ -120,12 +120,12 @@ heat map distribuindo os riscos — tudo só no tenant ativo.
   `require_permission` + `AuditService` + 404 genérico cross-tenant.
 - [X] T020 [US1] Adicionar validações condicionais e mensagens de erro (sem vazar internals) +
   audit nos pontos sensíveis no router/serviço da US1.
-- [ ] T021 [P] [US1] Frontend `wtnadmin/src/app/pages/risks/` (lista + cards/filtros/busca + heat map +
+- [X] T021 [P] [US1] Frontend `wtnadmin/src/app/pages/risks/` (lista + cards/filtros/busca + heat map +
   criar cenário), Signals/OnPush/Reactive Forms; rota com `permissionGuard('view_risk')` em
   `app.routes.ts` + link no shell.
-- [ ] T022 [P] [US1] Frontend `wtnadmin/src/app/pages/risk-detail/` (cenário + avaliação: prob/impacto/
+- [X] T022 [P] [US1] Frontend `wtnadmin/src/app/pages/risk-detail/` (cenário + avaliação: prob/impacto/
   dono, exibição de nível/aceitação, divergência de impacto) + rota.
-- [ ] T023 [P] [US1] Specs frontend `risks.spec.ts` e `risk-detail.spec.ts`.
+- [X] T023 [P] [US1] Specs frontend `risks.spec.ts` e `risk-detail.spec.ts`.
 
 **Checkpoint**: Registro de Riscos avaliável, filtrável e com heat map — MVP funcional e isolado.
 
@@ -155,11 +155,11 @@ placeholders do detalhe do ativo; relacionar uma vulnerabilidade a um gap do cat
 - [X] T027 [US2] Endpoints em `wtnapp/routers/risk.py`: `POST/PUT /risk/threats`, `POST /risk/threats/{id}/archive`,
   `POST /risk/threats/{id}/assets`; análogos de `/risk/vulnerabilities`; `GET /risk/assets/{asset_id}/links`
   (ameaças/vulnerabilidades) — `manage_risk` + audit.
-- [ ] T028 [P] [US2] Frontend `wtnadmin/src/app/pages/risk-catalog/` (abas Ameaças e Vulnerabilidades:
+- [X] T028 [P] [US2] Frontend `wtnadmin/src/app/pages/risk-catalog/` (abas Ameaças e Vulnerabilidades:
   adotar/criar/editar/arquivar/vincular a ativos) + rota + link no shell (Fase 1 da esteira).
-- [ ] T029 [US2] Frontend `wtnadmin/src/app/pages/asset-detail/`: ligar os placeholders "Ameaças
+- [X] T029 [US2] Frontend `wtnadmin/src/app/pages/asset-detail/`: ligar os placeholders "Ameaças
   vinculadas"/"Vulnerabilidades vinculadas" a `GET /risk/assets/{id}/links` (sem alterar o modelo de Ativos).
-- [ ] T030 [P] [US2] Spec frontend `risk-catalog.spec.ts` + atualização da `asset-detail.spec.ts`.
+- [X] T030 [P] [US2] Spec frontend `risk-catalog.spec.ts` + atualização da `asset-detail.spec.ts`.
 
 **Checkpoint**: catálogos geríveis e vinculados aos ativos; US1 segue funcionando.
 
@@ -202,11 +202,11 @@ avaliado), e conferir o SoA-feed sem que a SoA seja escrita.
   `GET/POST /risk/risks/{id}/controls`, `DELETE /risk/risks/{id}/controls/{control_id}`,
   `POST /risk/risks/{id}/accept`, `GET /risk/plan`, `POST /risk/plan/submit-review`,
   `POST /risk/plan/approve` (`approve_risk_plan`), `GET /risk/plan/versions`, `GET /risk/soa-feed`.
-- [ ] T037 [P] [US3] Frontend `wtnadmin/src/app/pages/risk-treatment-plan/` (consolidar/revisar/aprovar/
+- [X] T037 [P] [US3] Frontend `wtnadmin/src/app/pages/risk-treatment-plan/` (consolidar/revisar/aprovar/
   assinar/listar versões) + rota + link no shell (Fase 3 da esteira) + spec.
-- [ ] T038 [US3] Frontend `pages/risk-detail/`: seção de tratamento (opção, controles do Gap, residual,
+- [X] T038 [US3] Frontend `pages/risk-detail/`: seção de tratamento (opção, controles do Gap, residual,
   aceitação) + atualizar `risk-detail.spec.ts`.
-- [ ] T039 [US3] Frontend `pages/asset-detail/`: ligar placeholders "Riscos vinculados"/"Controles
+- [X] T039 [US3] Frontend `pages/asset-detail/`: ligar placeholders "Riscos vinculados"/"Controles
   relacionados" a `GET /risk/assets/{id}/links` (riscos/controles).
 
 **Checkpoint**: tratamento + plano aprovável + SoA-feed prontos; US1/US2 intactos.
@@ -234,7 +234,7 @@ recalculam nível/aceitação a partir de prob/impacto; sem config, confirmar av
   de nível).
 - [X] T042 [US4] Endpoints `GET /risk/methodology` e `PUT /risk/methodology` (`manage_risk`; o PUT
   persiste e dispara `recompute_all`) em `wtnapp/routers/risk.py` + audit.
-- [ ] T043 [P] [US4] Frontend `wtnadmin/src/app/pages/risk-methodology/` (escalas/matriz/critério/CIA→
+- [X] T043 [P] [US4] Frontend `wtnadmin/src/app/pages/risk-methodology/` (escalas/matriz/critério/CIA→
   impacto) + rota + link no shell + spec.
 
 **Checkpoint**: metodologia configurável com recálculo consistente.
@@ -265,7 +265,7 @@ status/próxima ação/bloqueios — só do tenant ativo.
   dono, inerente×residual + heat map reusando a agregação da US1). Distinto do `GET /risk/matrix` (US1).
 - [X] T048 [US5] Adicionar `DashboardModuleId.risk` em `wtnapp/schemas/dashboard_schema.py` e
   `_risk_card(db, ctx)` (gated em `view_risk`, fail-open) em `wtnapp/services/dashboard_service.py`.
-- [ ] T049 [P] [US5] Frontend `wtnadmin/src/app/pages/risk-dashboard/` (heat map + distribuições +
+- [X] T049 [P] [US5] Frontend `wtnadmin/src/app/pages/risk-dashboard/` (heat map + distribuições +
   inerente×residual) + rota + spec; e refletir o card de risco na home.
 
 **Checkpoint**: visão gerencial do módulo + readiness na esteira.
@@ -291,7 +291,7 @@ registros append-only com justificativa nas mudanças relevantes; tentar editar/
 
 - [X] T052 [US6] Endpoint `GET /risk/risks/{id}/history` em `wtnapp/routers/risk.py` e revisão da
   exigência de `reason` nas mudanças relevantes nos serviços (risk/treatment/methodology).
-- [ ] T053 [US6] Frontend `pages/risk-detail/`: seção de histórico (linha do tempo) + atualizar
+- [X] T053 [US6] Frontend `pages/risk-detail/`: seção de histórico (linha do tempo) + atualizar
   `risk-detail.spec.ts`.
 
 **Checkpoint**: rastreabilidade completa das decisões de risco.
@@ -300,7 +300,7 @@ registros append-only com justificativa nas mudanças relevantes; tentar editar/
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T054 [P] Adicionar a seção do **Módulo de Riscos (Feature 012 — implementada)** em `CLAUDE.md`
+- [X] T054 [P] Adicionar a seção do **Módulo de Riscos (Feature 012 — implementada)** em `CLAUDE.md`
   (espelhando o padrão dos módulos anteriores).
 - [ ] T055 [P] Criar `scripts/seed_risk_demo.py` (cenário de demonstração E2E, padrão `seed_soa_demo.py`).
 - [X] T056 **Audit review**: confirmar que toda operação sensível do `/risk` gera log e que nenhum

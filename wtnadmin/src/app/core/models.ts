@@ -764,3 +764,122 @@ export interface AssetContextSource {
   description: string | null;
   suggested_item_type: AssetType | null;
 }
+
+// --- Gestão de Riscos (Feature 012) ---
+export type RiskStatus = 'identified' | 'assessed' | 'in_treatment' | 'accepted' | 'closed';
+export type RiskTreatmentOption = 'mitigate' | 'accept' | 'transfer' | 'avoid';
+export type ThreatCategory = 'human' | 'environmental' | 'technical' | 'organizational';
+export type ThreatOrigin = 'deliberate' | 'accidental' | 'environmental';
+export type VulnerabilityCategory = 'technical' | 'physical' | 'organizational' | 'human' | 'process';
+
+export interface RiskMethodology {
+  is_configured: boolean;
+  probability_scale: { order: number; label: string }[];
+  impact_scale: { order: number; label: string }[];
+  risk_levels: { key: string; label: string; severity: number; color: string; order: number }[];
+  risk_matrix: Record<string, string>;
+  acceptance: Record<string, boolean>;
+  cia_impact_map: Record<string, number>;
+}
+
+export interface Threat {
+  id: string;
+  code: string;
+  seed_item_id: string | null;
+  name: string;
+  description: string | null;
+  category: ThreatCategory;
+  origin: ThreatOrigin | null;
+  is_custom: boolean;
+  is_archived: boolean;
+}
+
+export interface Vulnerability {
+  id: string;
+  code: string;
+  seed_item_id: string | null;
+  name: string;
+  description: string | null;
+  category: VulnerabilityCategory;
+  gap_catalog_item_id: string | null;
+  is_custom: boolean;
+  is_archived: boolean;
+}
+
+export interface Risk {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  threat_id: string;
+  vulnerability_id: string;
+  asset_item_ids: string[];
+  probability_level: number | null;
+  impact_level: number | null;
+  impact_derived_level: number | null;
+  impact_is_override: boolean;
+  inherent_level_key: string | null;
+  above_acceptance: boolean | null;
+  owner_user_id: string | null;
+  status: RiskStatus;
+  treatment_option: RiskTreatmentOption | null;
+  residual_probability_level: number | null;
+  residual_impact_level: number | null;
+  residual_level_key: string | null;
+  residual_above_acceptance: boolean | null;
+  is_archived: boolean;
+}
+
+export interface RiskControl {
+  id: string;
+  risk_id: string;
+  gap_catalog_item_id: string | null;
+  custom_control_label: string | null;
+  responsible_user_id: string | null;
+  due_date: string | null;
+  note: string | null;
+}
+
+export interface RiskEvent {
+  id: string;
+  event_type: string;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  reason: string | null;
+  actor_id: string | null;
+  occurred_at: string;
+}
+
+export interface HeatmapCell {
+  probability: number;
+  impact: number;
+  level_key: string | null;
+  count: number;
+}
+
+export interface RiskDashboard {
+  heatmap: HeatmapCell[];
+  by_level: Record<string, number>;
+  top_risks: string[];
+  without_treatment: number;
+  accepted: number;
+  residual_pending: number;
+  by_owner: Record<string, number>;
+  by_asset: Record<string, number>;
+  inherent_vs_residual: { inherent_above: number; residual_above: number };
+}
+
+export interface SoaFeedItem {
+  gap_catalog_item_id: string;
+  ref_code: string | null;
+  inclusion_reason: string;
+  risk_ids: string[];
+  risk_codes: string[];
+}
+
+export interface RiskPlan {
+  id: string;
+  draft_status: string;
+  current_version_id: string | null;
+}

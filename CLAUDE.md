@@ -339,6 +339,48 @@ em `specs/011-asset-process-scope/`.
 - **Migration**: `wtnapp/alembic/versions/b1c2d3e4f015_asset_process_scope_module.py`
   (`down_revision="a6b7c8d9e014"`, idempotente, RLS + triggers append-only).
 
+#### Módulo de Riscos — Avaliação (6.1.2) e Tratamento (6.1.3) (Feature 012 — implementada)
+Módulo de Risco do MVP (entre Ativos e SoA definitiva), **um módulo de engenharia** que a esteira
+exibe como **três fases**: Ameaças/Vulnerabilidades → Avaliação → Tratamento. Spec/plano em
+`specs/012-risk-management/`.
+- **Backend** (`wtnapp/`): domínio `risk_*` — **12 tabelas** (2 semente de plataforma sem `tenant_id`:
+  `threat_seed_item`/`vulnerability_seed_item`; **10 tenant-scoped** com RLS: `risk_methodology`,
+  `org_threat`, `org_vulnerability`, `asset_threat_link`, `asset_vulnerability_link`, `risk`,
+  `risk_asset_link`, `risk_treatment_control`, `risk_plan`, `risk_events`), trilha `risk_events`
+  append-only (triggers SQLite+PG). **Metodologia** configurável por org (`risk_methodology_service`,
+  default 5x5 in-code — gate suave): escalas, matriz prob×impacto→nível, critério de aceitação por
+  nível, mapa CIA→impacto; recálculo em massa ao alterar. **Catálogos** semente+cópia editável da org
+  (`risk_catalog_service`, adoção idempotente; seed PT-BR original em `data/iso27005_seed.py`) com
+  vínculos a ativos e a gaps. **Registro de risco** (`risk_service`): cenário (ameaça+vuln+0..n ativos),
+  código `RSK-####`, impacto derivado da CIA `max(C,I,A)` com override justificado, nível pela matriz,
+  marcação acima/abaixo do critério, heat map. **Tratamento** (`risk_treatment_service`): opção
+  (mitigar/aceitar/transferir/evitar), controles do **catálogo de Gap da org** (resp.+prazo) ou custom,
+  re-pontuação residual, aceitação (justificativa+dono), **Plano de Tratamento** como Documento
+  Controlado (`controlled_document_service` + `document_versions`, novo `DocType.risk_treatment_plan`,
+  **gate duro**: aprovar exige riscos avaliados; assinatura avançada opcional). **Insumo da SoA** exposto
+  read-only via `GET /risk/soa-feed` (vínculo controle←risco + razão "tratamento de risco") — o módulo
+  **não escreve na SoA**. Métricas/heat map em `risk_metrics_service`; card de readiness na esteira
+  (`dashboard_service._risk_card`, `DashboardModuleId.risk`). Router `risk.py` (`/risk`, 26 endpoints) em
+  `main.py`. Permissões `view_risk`/`manage_risk`/`approve_risk_plan`. Enums + `RISK_CODE_PREFIX` +
+  `DEFAULT_RISK_METHODOLOGY` em `settings.py`. **Não altera o modelo de Ativos** (só consome/exibe nos
+  placeholders).
+- **Frontend** (`wtnadmin/`): `pages/risk-methodology`, `risk-catalog` (Fase 1), `risks` (Fase 2 —
+  lista+filtros+busca+heat map+criar), `risk-detail` (avaliação+tratamento+controles+aceitação+
+  histórico), `risk-treatment-plan` (Fase 3 — submeter/aprovar/assinar/versões+SoA-feed), `risk-dashboard`.
+  Rotas com `permissionGuard('view_risk')`; grupo "Gestão de Riscos" no shell; `pages/asset-detail`
+  estendida para preencher os placeholders (ameaças/vulnerabilidades/riscos/controles via
+  `GET /risk/assets/{id}/links`). `view_risk`/`manage_risk`/`approve_risk_plan` em `core/permissions.ts`.
+- **Testes**: backend `test_risk_assessment.py`, `test_risk_catalog.py`, `test_risk_treatment.py`,
+  `test_risk_plan.py`, `test_risk_methodology.py`, `test_risk_history.py`, `test_risk_metrics.py`,
+  `test_tenant_isolation_risk.py` (36 testes, todos passando; suíte backend completa verde) e
+  `risks/risk-detail/risk-catalog/risk-methodology/risk-treatment-plan/risk-dashboard.spec.ts`
+  (171 no admin, todos passando).
+- **Migration**: `wtnapp/alembic/versions/c2d3e4f5a116_risk_management_module.py`
+  (`down_revision="b1c2d3e4f015"`, idempotente, RLS nas 10 tenant + triggers append-only). **Pendente**:
+  E2E browser + `alembic upgrade` no Postgres real + `scripts/seed_risk_demo.py`. **Nota**: existe um bug
+  **pré-existente** (módulo Gap) que faz `alembic upgrade head` falhar a partir de DB zerado
+  (`gap_seed_item.referencia` em migration de backfill) — independente deste módulo.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
