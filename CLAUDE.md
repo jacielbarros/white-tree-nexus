@@ -479,6 +479,45 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
+**Feature 012 — Módulo de Gestão de Riscos** (`012-risk-management`) — **planejada**
+(spec + clarify + plano prontos; implementação pendente). Módulo de Risco do MVP (entre Ativos e SoA
+definitiva), cobrindo **três fases num módulo**: Ameaças/Vulnerabilidades → Avaliação (6.1.2) →
+Tratamento (6.1.3).
+- Plano: `specs/012-risk-management/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: **metodologia de risco** configurável por org (default 5x5: escalas prob/impacto, matriz,
+  critério de aceitação por nível, dono = membro); **catálogos** de ameaças e vulnerabilidades no padrão
+  semente-de-plataforma + cópia editável por org (adoção aditiva/idempotente, base ISO 27005 PT-BR
+  original), com vínculo a **ativos** e a **gaps**; **registro de risco** como cenário (0..n ativos +
+  ameaça + vulnerabilidade) com **impacto derivado da CIA** (`max(C,I,A)`, override justificado), nível
+  pela matriz, marcação acima/abaixo do critério e **heat map 5x5**; **tratamento** (mitigar/aceitar/
+  transferir/evitar) com **controles do catálogo de Gap da org** (resp.+prazo), **re-pontuação residual**,
+  **aceitação** (justificativa + dono) e **Plano de Tratamento** versionável (Documento Controlado,
+  assinatura avançada opcional); **insumo da SoA** exposto como vínculo controle←risco **read-only** (sem
+  escrever na SoA); preenchimento dos **placeholders do detalhe do ativo**; **histórico append-only** por
+  risco; **dashboard do módulo** + card de **readiness na esteira**.
+- Decisões-chave (clarify 2026-06-26): (1) impacto = `max(C,I,A)` mapeado p/ escala de 5 níveis por
+  tabela configurável, override justificado; por-dimensão (C/I/D) deferido; (2) SoA = **expor vínculo
+  controle←risco read-only**, o módulo **não grava na SoA** (finalização é feature futura); (3) cenário:
+  ameaça+vulnerabilidade obrigatórias, **ativos opcionais** (sem ativos ⇒ impacto manual); (4) aceitação
+  registrada por usuário `manage_risk` atribuída ao membro-dono (sem login/assinatura separados do dono);
+  (5) metodologia é pré-requisito **suave** (default 5x5); gates duros só na **aprovação do plano** (exige
+  riscos avaliados); apenas qualitativo 5x5 (sem quantitativo/Monte Carlo); residual = re-pontuação simples.
+- Arquitetura: domínio novo `risk_*` — **12 tabelas** (2 semente de plataforma `threat_seed_item`/
+  `vulnerability_seed_item` **sem `tenant_id`**; **10 tenant-scoped**: `risk_methodology`, `org_threat`,
+  `org_vulnerability`, `asset_threat_link`, `asset_vulnerability_link`, `risk`, `risk_asset_link`,
+  `risk_treatment_control`, `risk_plan`, `risk_events`) com RLS nas 10 + triggers append-only (`risk_events`).
+  Router `risk.py` (`/risk`) em `main.py`; serviços `risk_methodology_service`/`risk_service`/
+  `risk_catalog_service`/`risk_treatment_service`/`risk_metrics_service`; seed `data/iso27005_seed.py`.
+  Reusa `controlled_document_service`+`document_versions` (novo `DocType.risk_treatment_plan`) e
+  `signature_service` (assinatura opcional). Estende `dashboard_service` (`_risk_card`) e a tela
+  `pages/asset-detail` (preencher placeholders) — **sem alterar o modelo de Ativos**. Novas permissões
+  `view_risk`/`manage_risk`/`approve_risk_plan`; enums + `RISK_CODE_PREFIX` (`RSK-####`) +
+  `DEFAULT_RISK_METHODOLOGY` em `settings.py`. Migration `c2d3e4f5a116`
+  (`down_revision="b1c2d3e4f015"`, idempotente). Frontend: `pages/risk-methodology`, `risk-catalog`,
+  `risks`, `risk-detail`, `risk-treatment-plan`, `risk-dashboard` (`permissionGuard('view_risk')`).
+  **Sem novas dependências** (PDF deferido).
+
 **Feature 011 — Gestão de Ativos / Processos / Escopo** (`011-asset-process-scope`) — **planejada**
 (spec + clarify + plano prontos; implementação pendente). Módulo 3 do MVP.
 - Plano: `specs/011-asset-process-scope/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·

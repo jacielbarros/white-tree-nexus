@@ -37,6 +37,10 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
         "manage_asset",
+        # Gestão de Riscos (Feature 012)
+        "view_risk",
+        "manage_risk",
+        "approve_risk_plan",
     },
     Role.org_admin: {
         "invite_users",
@@ -63,6 +67,10 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
         "manage_asset",
+        # Gestão de Riscos (Feature 012)
+        "view_risk",
+        "manage_risk",
+        "approve_risk_plan",
     },
     Role.consultant: {
         "invite_users",
@@ -83,6 +91,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
         "manage_asset",
+        # Gestão de Riscos (Feature 012) — Consultor gere mas não aprova o plano
+        "view_risk",
+        "manage_risk",
     },
     Role.client: {
         "view_organization",
@@ -97,6 +108,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_soa",
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
+        # Gestão de Riscos (Feature 012)
+        "view_risk",
     },
     Role.manager: {
         "view_organization",
@@ -111,6 +124,8 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_soa",
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
+        # Gestão de Riscos (Feature 012)
+        "view_risk",
     },
     Role.process_owner: {
         "view_organization",
@@ -125,9 +140,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_soa",
         # Ativos / Processos / Escopo (Feature 011)
         "view_asset",
+        # Gestão de Riscos (Feature 012)
+        "view_risk",
     },
-    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset"},
-    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset"},
+    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset", "view_risk"},
+    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset", "view_risk"},
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 

@@ -216,6 +216,49 @@ def _soa_card(db: Session, ctx: OrgContext) -> ModuleCard:
     )
 
 
+def _risk_card(db: Session, ctx: OrgContext) -> ModuleCard:
+    """Readiness do Módulo de Riscos (Feature 012) na esteira."""
+    from wtnapp.models.risk_model import Risk, RiskPlan
+    from wtnapp.settings import RiskStatus
+
+    risks = db.query(Risk).filter_by(tenant_id=ctx.tenant_id, is_archived=False).all()
+    plan = db.query(RiskPlan).filter_by(tenant_id=ctx.tenant_id).first()
+
+    if not risks:
+        return ModuleCard(
+            id=DashboardModuleId.risk,
+            title="Gestão de Riscos",
+            status=DashboardCardStatus.not_started,
+            not_started=True,
+            next_action=NextAction(label="Identificar riscos", route="risks"),
+        )
+
+    evaluated = sum(1 for r in risks if r.status != RiskStatus.identified)
+    progress = round(evaluated / len(risks) * 100, 1)
+
+    current = _current_version(db, plan.current_version_id) if plan else None
+    overdue = cds.review_overdue(current)
+    draft_status = plan.draft_status if plan else DocStatus.draft
+    current_version_id = plan.current_version_id if plan else None
+    status = _card_status(draft_status, current_version_id, overdue)
+
+    if current_version_id is not None:
+        action = NextAction(label="Ver Plano de Tratamento", route="risk-treatment-plan")
+    elif evaluated < len(risks):
+        action = NextAction(label="Avaliar riscos", route="risks")
+    else:
+        action = NextAction(label="Tratar e aprovar o plano", route="risk-treatment-plan")
+
+    return ModuleCard(
+        id=DashboardModuleId.risk,
+        title="Gestão de Riscos",
+        status=status,
+        progress_pct=progress,
+        overdue=overdue,
+        next_action=action,
+    )
+
+
 def _placeholder_cards() -> list[ModuleCard]:
     return [
         ModuleCard(
@@ -282,6 +325,7 @@ def build_dashboard(db: Session, ctx: OrgContext) -> DashboardResponse:
         ("view_context", DashboardModuleId.context, "Contexto · Cláusula 4", lambda: _context_card(db, ctx)),
         ("view_gap", DashboardModuleId.gap, "Gap Analysis · Anexo A", lambda: _gap_card(db, ctx, kpis)),
         ("view_soa", DashboardModuleId.soa, "Declaração de Aplicabilidade", lambda: _soa_card(db, ctx)),
+        ("view_risk", DashboardModuleId.risk, "Gestão de Riscos", lambda: _risk_card(db, ctx)),
     ]
     for perm, module_id, title, build in builders:
         if not has_permission(ctx.role, perm):

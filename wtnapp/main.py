@@ -40,6 +40,7 @@ from wtnapp.routers import (
     memberships,
     organizations,
     print_documents,
+    risk,
     scope,
     soa,
     stakeholders,
@@ -150,3 +151,4 @@ app.include_router(gap_guidance.router)
 app.include_router(soa.router)
 app.include_router(dashboard.router)
 app.include_router(assets.router)
+app.include_router(risk.router)

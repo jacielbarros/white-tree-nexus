@@ -37,6 +37,17 @@ from wtnapp.models.print_document_model import (
     SignedDocumentSnapshot,
 )
 from wtnapp.models.scope_model import ScopeItem, ScopeStatement
+# Gestão de Riscos (Feature 012)
+from wtnapp.models.risk_catalog_model import (
+    AssetThreatLink,
+    AssetVulnerabilityLink,
+    OrgThreat,
+    OrgVulnerability,
+    ThreatSeedItem,
+    VulnerabilitySeedItem,
+)
+from wtnapp.models.risk_methodology_model import RiskMethodology
+from wtnapp.models.risk_model import Risk, RiskAssetLink, RiskEvent, RiskPlan, RiskTreatmentControl
 # SoA (Feature 005)
 from wtnapp.models.soa_model import Soa, SoaItem, SoaItemEvent
 from wtnapp.models.stakeholder_model import Stakeholder, StakeholderMap, StakeholderRequirement
@@ -88,6 +99,18 @@ __all__ = [
     "SignedDocumentSnapshot",
     "ScopeItem",
     "ScopeStatement",
+    "ThreatSeedItem",
+    "VulnerabilitySeedItem",
+    "OrgThreat",
+    "OrgVulnerability",
+    "AssetThreatLink",
+    "AssetVulnerabilityLink",
+    "RiskMethodology",
+    "Risk",
+    "RiskAssetLink",
+    "RiskTreatmentControl",
+    "RiskPlan",
+    "RiskEvent",
     "Soa",
     "SoaItem",
     "SoaItemEvent",

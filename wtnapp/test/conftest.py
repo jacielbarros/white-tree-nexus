@@ -262,6 +262,42 @@ def complete_soa(db):
 
 
 @pytest.fixture
+def risk_seed(db, factory):
+    """Org + usuários + catálogo de riscos adotado + 1 ativo com CIA (base do módulo de Riscos)."""
+    from wtnapp.models.asset_item_model import AssetItem
+    from wtnapp.services import risk_catalog_service
+    from wtnapp.settings import AssetScopeStatus, AssetType, CiaLevel
+
+    def _make(slug="risk-acme"):
+        org = factory.org(slug, f"RISK {slug.upper()}")
+        admin = factory.user(f"admin@{slug}.com", full_name=f"Admin {slug}")
+        consultant = factory.user(f"consultant@{slug}.com", full_name=f"Consultant {slug}")
+        client_user = factory.user(f"client@{slug}.com", full_name=f"Client {slug}")
+        factory.membership(admin, org, Role.org_admin)
+        factory.membership(consultant, org, Role.consultant)
+        factory.membership(client_user, org, Role.client)
+
+        risk_catalog_service.adopt_threats(db, org.id)
+        risk_catalog_service.adopt_vulnerabilities(db, org.id)
+
+        asset = AssetItem(
+            tenant_id=org.id, code="ATV-0001", item_type=AssetType.information_asset,
+            name="Base de clientes", scope_status=AssetScopeStatus.in_scope,
+            confidentiality=CiaLevel.alta, integrity=CiaLevel.media, availability=CiaLevel.media,
+            created_by=admin.id,
+        )
+        db.add(asset)
+        db.commit()
+        db.refresh(asset)
+        return {
+            "org": org, "admin": admin, "consultant": consultant, "client": client_user,
+            "asset": asset,
+        }
+
+    return _make
+
+
+@pytest.fixture
 def form_outbox(monkeypatch):
     """Captura emails do motor de formularios sem SMTP real."""
     from wtnapp.services import notification_service

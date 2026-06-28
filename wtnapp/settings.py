@@ -131,6 +131,7 @@ class DocType(str, Enum):
     form_response = "form_response"
     gap_baseline = "gap_baseline"
     soa = "soa"
+    risk_treatment_plan = "risk_treatment_plan"  # Plano de Tratamento de Riscos (Feature 012)
 
 
 class IssueOrigin(str, Enum):
@@ -505,3 +506,109 @@ ASSET_CODE_PREFIXES: dict[AssetType, str] = {
 
 # Janela (dias) em que a próxima revisão é considerada "próxima do vencimento".
 ASSET_REVIEW_DUE_SOON_DAYS = _int("ASSET_REVIEW_DUE_SOON_DAYS", 30)
+
+
+# --- Gestão de Riscos (Feature 012) ---
+
+class ThreatCategory(str, Enum):
+    human = "human"
+    environmental = "environmental"
+    technical = "technical"
+    organizational = "organizational"
+
+
+class ThreatOrigin(str, Enum):
+    deliberate = "deliberate"
+    accidental = "accidental"
+    environmental = "environmental"
+
+
+class VulnerabilityCategory(str, Enum):
+    technical = "technical"
+    physical = "physical"
+    organizational = "organizational"
+    human = "human"
+    process = "process"
+
+
+class RiskStatus(str, Enum):
+    identified = "identified"
+    assessed = "assessed"
+    in_treatment = "in_treatment"
+    accepted = "accepted"
+    closed = "closed"
+
+
+class RiskTreatmentOption(str, Enum):
+    mitigate = "mitigate"
+    accept = "accept"
+    transfer = "transfer"
+    avoid = "avoid"
+
+
+class RiskEventType(str, Enum):
+    created = "CREATE"
+    updated = "UPDATE"
+    probability_change = "PROBABILITY_CHANGE"
+    impact_change = "IMPACT_CHANGE"
+    level_change = "LEVEL_CHANGE"
+    owner_change = "OWNER_CHANGE"
+    treatment_decision = "TREATMENT_DECISION"
+    control_add = "CONTROL_ADD"
+    control_remove = "CONTROL_REMOVE"
+    accepted = "ACCEPTED"
+    archived = "ARCHIVE"
+    plan_submitted = "PLAN_SUBMITTED"
+    plan_approved = "PLAN_APPROVED"
+
+
+# Prefixo do identificador interno do risco (sequência por organização, imutável).
+RISK_CODE_PREFIX = os.getenv("RISK_CODE_PREFIX", "RSK")
+
+
+def _default_risk_matrix() -> dict[str, str]:
+    """Matriz 5x5 default: nível pelo produto probabilidade × impacto (1–25)."""
+    matrix: dict[str, str] = {}
+    for prob in range(1, 6):
+        for impact in range(1, 6):
+            product = prob * impact
+            if product <= 4:
+                key = "low"
+            elif product <= 9:
+                key = "medium"
+            elif product <= 15:
+                key = "high"
+            else:
+                key = "critical"
+            matrix[f"{prob}x{impact}"] = key
+    return matrix
+
+
+_SCALE_5 = [
+    {"order": 1, "label": "Muito Baixa"},
+    {"order": 2, "label": "Baixa"},
+    {"order": 3, "label": "Média"},
+    {"order": 4, "label": "Alta"},
+    {"order": 5, "label": "Muito Alta"},
+]
+
+# Metodologia padrão 5x5 (pré-requisito suave — usada quando a org não configurou a sua).
+DEFAULT_RISK_METHODOLOGY: dict = {
+    "probability_scale": [dict(s) for s in _SCALE_5],
+    "impact_scale": [dict(s) for s in _SCALE_5],
+    "risk_levels": [
+        {"key": "low", "label": "Baixo", "severity": 1, "color": "#2e7d32", "order": 1},
+        {"key": "medium", "label": "Médio", "severity": 2, "color": "#f9a825", "order": 2},
+        {"key": "high", "label": "Alto", "severity": 3, "color": "#ef6c00", "order": 3},
+        {"key": "critical", "label": "Crítico", "severity": 4, "color": "#c62828", "order": 4},
+    ],
+    "risk_matrix": _default_risk_matrix(),
+    # Critério de aceitação por nível: aceita automaticamente ≤ Médio.
+    "acceptance": {"low": True, "medium": True, "high": False, "critical": False},
+    # CIA (4 níveis) → ordem de impacto (escala de 5). Nível 1 reservado p/ "muito baixo"/manual.
+    "cia_impact_map": {"baixa": 2, "media": 3, "alta": 4, "critica": 5},
+}
+
+# Prefixos do código dos itens de catálogo da org (custom).
+RISK_THREAT_CODE_PREFIX = os.getenv("RISK_THREAT_CODE_PREFIX", "AME")
+RISK_VULN_CODE_PREFIX = os.getenv("RISK_VULN_CODE_PREFIX", "VUL")

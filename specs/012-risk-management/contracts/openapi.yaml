@@ -1,0 +1,447 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Módulo de Gestão de Riscos (Feature 012)
+  version: 0.1.0
+  description: >
+    Gestão de Riscos do SGSI em três fases (um módulo): catálogo de ameaças/vulnerabilidades,
+    avaliação de riscos (6.1.2) e plano de tratamento (6.1.3). Todos os endpoints exigem JWT (Bearer)
+    e o header X-Org-Context (organização-alvo). Leitura: permissão `view_risk`. Escrita: `manage_risk`.
+    Aprovação do plano: `approve_risk_plan`. Edição do catálogo-semente: Super Admin (sem org-context).
+    Acesso cross-tenant ⇒ 404 genérico + audit. Catálogos-semente são conteúdo de plataforma (sem tenant).
+    Este módulo NÃO escreve na SoA — apenas expõe o vínculo controle←risco (GET /risk/soa-feed).
+
+servers:
+  - url: /
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrgContext:
+      name: X-Org-Context
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    RiskStatus: { type: string, enum: [identified, assessed, in_treatment, accepted, closed] }
+    RiskTreatmentOption: { type: string, enum: [mitigate, accept, transfer, avoid] }
+    ThreatCategory: { type: string, enum: [human, environmental, technical, organizational] }
+    ThreatOrigin: { type: string, enum: [deliberate, accidental, environmental] }
+    VulnerabilityCategory: { type: string, enum: [technical, physical, organizational, human, process] }
+    CiaLevel: { type: string, enum: [baixa, media, alta, critica] }
+
+    Methodology:
+      type: object
+      properties:
+        is_configured: { type: boolean }
+        probability_scale:
+          type: array
+          items: { type: object, properties: { order: {type: integer}, label: {type: string} } }
+        impact_scale:
+          type: array
+          items: { type: object, properties: { order: {type: integer}, label: {type: string} } }
+        risk_levels:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              label: { type: string }
+              severity: { type: integer }
+              color: { type: string }
+              order: { type: integer }
+        risk_matrix:
+          type: object
+          additionalProperties: { type: string }
+          description: 'mapa "{prob}x{impact}" → level_key (25 células)'
+        acceptance:
+          type: object
+          additionalProperties: { type: boolean }
+          description: 'level_key → aceito automaticamente?'
+        cia_impact_map:
+          type: object
+          additionalProperties: { type: integer }
+          description: 'CiaLevel → impact_order (default baixa→2, media→3, alta→4, critica→5)'
+
+    ThreatCreate:
+      type: object
+      required: [name, category]
+      properties:
+        name: { type: string, maxLength: 300 }
+        description: { type: string, nullable: true }
+        category: { $ref: '#/components/schemas/ThreatCategory' }
+        origin: { $ref: '#/components/schemas/ThreatOrigin' }
+    Threat:
+      allOf:
+        - $ref: '#/components/schemas/ThreatCreate'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            seed_item_id: { type: string, format: uuid, nullable: true }
+            is_custom: { type: boolean }
+            is_archived: { type: boolean }
+            linked_asset_ids:
+              type: array
+              items: { type: string, format: uuid }
+
+    VulnerabilityCreate:
+      type: object
+      required: [name, category]
+      properties:
+        name: { type: string, maxLength: 300 }
+        description: { type: string, nullable: true }
+        category: { $ref: '#/components/schemas/VulnerabilityCategory' }
+        gap_catalog_item_id: { type: string, format: uuid, nullable: true }
+    Vulnerability:
+      allOf:
+        - $ref: '#/components/schemas/VulnerabilityCreate'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            seed_item_id: { type: string, format: uuid, nullable: true }
+            is_custom: { type: boolean }
+            is_archived: { type: boolean }
+
+    ArchiveRequest:
+      type: object
+      required: [reason]
+      properties: { reason: { type: string, maxLength: 500 } }
+
+    AdoptResult:
+      type: object
+      properties:
+        added: { type: integer }
+        unchanged: { type: integer }
+        reactivated: { type: integer }
+
+    RiskCreate:
+      type: object
+      required: [title, description, threat_id, vulnerability_id]
+      properties:
+        title: { type: string, maxLength: 300 }
+        description: { type: string }
+        threat_id: { type: string, format: uuid }
+        vulnerability_id: { type: string, format: uuid }
+        asset_item_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: '0..n ativos do mesmo tenant (opcional)'
+    RiskEvaluate:
+      type: object
+      properties:
+        probability_level: { type: integer, minimum: 1, maximum: 5 }
+        impact_level: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        impact_override_reason: { type: string, nullable: true, description: 'obrigatório se impact_level diverge do derivado' }
+        owner_user_id: { type: string, format: uuid, nullable: true }
+    Risk:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        title: { type: string }
+        description: { type: string }
+        threat_id: { type: string, format: uuid }
+        vulnerability_id: { type: string, format: uuid }
+        asset_item_ids: { type: array, items: { type: string, format: uuid } }
+        probability_level: { type: integer, nullable: true }
+        impact_level: { type: integer, nullable: true }
+        impact_derived_level: { type: integer, nullable: true }
+        impact_is_override: { type: boolean }
+        inherent_level_key: { type: string, nullable: true }
+        above_acceptance: { type: boolean, nullable: true }
+        owner_user_id: { type: string, format: uuid, nullable: true }
+        status: { $ref: '#/components/schemas/RiskStatus' }
+        treatment_option: { $ref: '#/components/schemas/RiskTreatmentOption' }
+        residual_probability_level: { type: integer, nullable: true }
+        residual_impact_level: { type: integer, nullable: true }
+        residual_level_key: { type: string, nullable: true }
+        residual_above_acceptance: { type: boolean, nullable: true }
+        is_archived: { type: boolean }
+
+    TreatmentUpdate:
+      type: object
+      required: [treatment_option]
+      properties:
+        treatment_option: { $ref: '#/components/schemas/RiskTreatmentOption' }
+        residual_probability_level: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        residual_impact_level: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        reason: { type: string, description: 'justificativa da decisão de tratamento' }
+    ControlCreate:
+      type: object
+      properties:
+        gap_catalog_item_id: { type: string, format: uuid, nullable: true, description: 'controle A.5–A.8 do catálogo da org' }
+        custom_control_label: { type: string, nullable: true, description: 'controle adicional/custom' }
+        responsible_user_id: { type: string, format: uuid, nullable: true }
+        due_date: { type: string, format: date, nullable: true }
+        note: { type: string, nullable: true }
+    Control:
+      allOf:
+        - $ref: '#/components/schemas/ControlCreate'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            risk_id: { type: string, format: uuid }
+    AcceptRequest:
+      type: object
+      required: [acceptance_reason, accepted_owner_user_id]
+      properties:
+        acceptance_reason: { type: string }
+        accepted_owner_user_id: { type: string, format: uuid }
+
+    SoaFeedItem:
+      type: object
+      description: 'Insumo read-only da SoA: controle ← riscos. Este módulo NÃO grava na SoA.'
+      properties:
+        gap_catalog_item_id: { type: string, format: uuid }
+        ref_code: { type: string, description: 'ex.: A.5.1' }
+        inclusion_reason: { type: string, enum: [risk_treatment] }
+        risk_ids: { type: array, items: { type: string, format: uuid } }
+        risk_codes: { type: array, items: { type: string } }
+
+    HeatmapCell:
+      type: object
+      properties:
+        probability: { type: integer }
+        impact: { type: integer }
+        level_key: { type: string }
+        count: { type: integer }
+    RiskDashboard:
+      type: object
+      properties:
+        heatmap: { type: array, items: { $ref: '#/components/schemas/HeatmapCell' } }
+        by_level: { type: object, additionalProperties: { type: integer } }
+        top_risks: { type: array, items: { $ref: '#/components/schemas/Risk' } }
+        without_treatment: { type: integer }
+        accepted: { type: integer }
+        residual_pending: { type: integer }
+        by_owner: { type: object, additionalProperties: { type: integer } }
+        by_asset: { type: object, additionalProperties: { type: integer } }
+        inherent_vs_residual:
+          type: object
+          properties:
+            inherent_above: { type: integer }
+            residual_above: { type: integer }
+
+    RiskEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        event_type: { type: string }
+        field_name: { type: string, nullable: true }
+        old_value: { type: string, nullable: true }
+        new_value: { type: string, nullable: true }
+        reason: { type: string, nullable: true }
+        actor_id: { type: string, format: uuid, nullable: true }
+        occurred_at: { type: string, format: date-time }
+
+    AssetRiskLinks:
+      type: object
+      description: 'Preenche os placeholders do detalhe do ativo.'
+      properties:
+        threats: { type: array, items: { $ref: '#/components/schemas/Threat' } }
+        vulnerabilities: { type: array, items: { $ref: '#/components/schemas/Vulnerability' } }
+        risks: { type: array, items: { $ref: '#/components/schemas/Risk' } }
+        controls: { type: array, items: { $ref: '#/components/schemas/Control' } }
+
+    Plan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        draft_status: { type: string, enum: [draft, in_review] }
+        current_version_id: { type: string, format: uuid, nullable: true }
+    PlanApprove:
+      type: object
+      properties:
+        classification: { type: string, enum: [publico, uso_interno, confidencial, restrito] }
+        next_review_at: { type: string, format: date-time, nullable: true }
+        change_nature: { type: string }
+        sign: { type: boolean, default: false, description: 'assinatura avançada opcional' }
+
+  responses:
+    NotFound: { description: 'Não encontrado (inclui cross-tenant — 404 genérico)' }
+    Forbidden: { description: 'Permissão insuficiente' }
+    Conflict: { description: 'Conflito de estado (ex.: aprovar sem revisão / com riscos não avaliados)' }
+    UnprocessableEntity: { description: 'Validação (ex.: mitigar sem controle; aceitar sem justificativa)' }
+
+paths:
+  /risk/methodology:
+    get:
+      summary: Metodologia da org (ou default 5x5)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Methodology' } } } } }
+    put:
+      summary: Salvar metodologia (manage_risk) — dispara recálculo em massa
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Methodology' } } } }
+      responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+
+  /risk/threats:
+    get:
+      summary: Listar ameaças da org
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: include_archived, in: query, schema: { type: boolean } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Threat' } } } } } }
+    post:
+      summary: Criar ameaça própria (manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ThreatCreate' } } } }
+      responses: { '201': { description: Criado }, '403': { $ref: '#/components/responses/Forbidden' } }
+  /risk/threats/adopt:
+    post:
+      summary: Adotar catálogo-semente de ameaças (idempotente, manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdoptResult' } } } } }
+  /risk/threats/{id}:
+    put:
+      summary: Editar ameaça da org (manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ThreatCreate' } } } }
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/NotFound' } }
+  /risk/threats/{id}/archive:
+    post:
+      summary: Arquivar ameaça (lógico, com justificativa)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ArchiveRequest' } } } }
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/NotFound' } }
+  /risk/threats/{id}/assets:
+    post:
+      summary: Vincular ameaça a um ativo
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [asset_item_id], properties: { asset_item_id: { type: string, format: uuid } } } } } }
+      responses: { '201': { description: Vinculado }, '404': { $ref: '#/components/responses/NotFound' } }
+
+  /risk/vulnerabilities:
+    get:
+      summary: Listar vulnerabilidades da org
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: include_archived, in: query, schema: { type: boolean } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Vulnerability' } } } } } }
+    post:
+      summary: Criar vulnerabilidade própria (manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VulnerabilityCreate' } } } }
+      responses: { '201': { description: Criado } }
+  /risk/vulnerabilities/adopt:
+    post:
+      summary: Adotar catálogo-semente de vulnerabilidades (idempotente)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdoptResult' } } } } }
+
+  /risk/risks:
+    get:
+      summary: Registro de riscos (filtros + busca)
+      parameters:
+        - { $ref: '#/components/parameters/OrgContext' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/RiskStatus' } }
+        - { name: level, in: query, schema: { type: string } }
+        - { name: owner_user_id, in: query, schema: { type: string, format: uuid } }
+        - { name: asset_item_id, in: query, schema: { type: string, format: uuid } }
+        - { name: above_acceptance, in: query, schema: { type: boolean } }
+        - { name: has_treatment, in: query, schema: { type: boolean } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Risk' } } } } } }
+    post:
+      summary: Criar cenário de risco (manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RiskCreate' } } } }
+      responses: { '201': { description: Criado }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+  /risk/risks/{id}:
+    get:
+      summary: Detalhe do risco
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Risk' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    put:
+      summary: Avaliar/editar risco (prob/impacto/dono/status) — justifica override e mudança de nível
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RiskEvaluate' } } } }
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/NotFound' }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+  /risk/risks/{id}/archive:
+    post:
+      summary: Arquivar risco (lógico, com justificativa)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ArchiveRequest' } } } }
+      responses: { '200': { description: OK } }
+  /risk/risks/{id}/treatment:
+    put:
+      summary: Definir opção de tratamento + re-pontuação residual
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TreatmentUpdate' } } } }
+      responses: { '200': { description: OK }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+  /risk/risks/{id}/controls:
+    get:
+      summary: Controles do tratamento do risco
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Control' } } } } } }
+    post:
+      summary: Adicionar controle (gap da org ou custom; resp.+prazo se mitigar)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ControlCreate' } } } }
+      responses: { '201': { description: Criado }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+  /risk/risks/{id}/controls/{control_id}:
+    delete:
+      summary: Remover controle do tratamento
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } }, { name: control_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '204': { description: Removido } }
+  /risk/risks/{id}/accept:
+    post:
+      summary: Registrar aceitação do risco residual (justificativa + dono)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AcceptRequest' } } } }
+      responses: { '200': { description: OK }, '422': { $ref: '#/components/responses/UnprocessableEntity' } }
+  /risk/risks/{id}/history:
+    get:
+      summary: Histórico append-only do risco
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/RiskEvent' } } } } } }
+
+  /risk/matrix:
+    get:
+      summary: Heat map 5x5 do registro de riscos (US1) — distribuição prob × impacto
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/HeatmapCell' } } } } } }
+
+  /risk/dashboard:
+    get:
+      summary: Dashboard completo do módulo (US5) — heat map + distribuições + top + inerente×residual
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RiskDashboard' } } } } }
+
+  /risk/soa-feed:
+    get:
+      summary: Insumo read-only da SoA (controle ← riscos). NÃO escreve na SoA.
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/SoaFeedItem' } } } } } }
+
+  /risk/assets/{asset_id}/links:
+    get:
+      summary: Vínculos de risco de um ativo (preenche placeholders do detalhe do ativo)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' }, { name: asset_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AssetRiskLinks' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+
+  /risk/plan:
+    get:
+      summary: Plano de Tratamento (estado do Documento Controlado)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Plan' } } } } }
+  /risk/plan/submit-review:
+    post:
+      summary: Enviar plano para revisão (manage_risk)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK }, '409': { $ref: '#/components/responses/Conflict' } }
+  /risk/plan/approve:
+    post:
+      summary: Aprovar plano (approve_risk_plan) — gate duro - riscos avaliados; assinatura opcional
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PlanApprove' } } } }
+      responses:
+        '200': { description: 'Versão imutável criada' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /risk/plan/versions:
+    get:
+      summary: Versões do plano (imutáveis)
+      parameters: [ { $ref: '#/components/parameters/OrgContext' } ]
+      responses: { '200': { description: OK } }

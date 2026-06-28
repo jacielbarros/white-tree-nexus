@@ -29,6 +29,7 @@ class DashboardModuleId(str, Enum):
     context = "context"
     gap = "gap"
     soa = "soa"
+    risk = "risk"  # Gestão de Riscos (Feature 012)
     action_plan = "action_plan"  # placeholder (Módulo 4)
     evidence = "evidence"  # placeholder (Módulo 5)
 
