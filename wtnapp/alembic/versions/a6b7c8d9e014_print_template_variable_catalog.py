@@ -110,10 +110,12 @@ def _seed_system_variables(conn: sa.engine.Connection) -> None:
             },
         ).scalar()
         params = {
-            "id": row_id or uuid.uuid5(
+            # str(): pysqlite não aceita bind de uuid.UUID em SQL cru (psycopg aceita a string
+            # numa coluna uuid). Mantém o `alembic upgrade head` funcional em SQLite e PostgreSQL.
+            "id": row_id or str(uuid.uuid5(
                 _SEED_NAMESPACE,
                 f"{definition['document_type']}:{definition['variable_key']}",
-            ),
+            )),
             "document_type": definition["document_type"],
             "variable_key": definition["variable_key"],
             "label": definition["label"],

@@ -7,6 +7,9 @@ Create Date: 2026-06-20
 
 from __future__ import annotations
 
+import uuid
+from datetime import datetime, timezone
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -18,6 +21,72 @@ depends_on = None
 
 def _table_exists(conn: sa.engine.Connection, name: str) -> bool:
     return sa.inspect(conn).has_table(name)
+
+
+def _seed_base_catalog(conn: sa.engine.Connection) -> None:
+    """Carga idempotente do seed 2022.1 — APENAS as colunas existentes nesta revisão.
+
+    NÃO usa o ORM `GapSeedItem` (que já declara os campos de orientação da Feature 007,
+    `referencia`/`como_avaliar`/... e a tabela `gap_legend_entry`, inexistentes aqui), pois isso
+    fazia o `alembic upgrade head` falhar a partir de um banco zerado com
+    "no such column: gap_seed_item.referencia". A orientação e a legenda são preenchidas adiante
+    pela migration de backfill `84c5c822d7b1`, depois que `a9b0c1d2e308` adiciona as colunas/tabelas.
+    """
+    from wtnapp.data.iso27001_seed import SEED_DESCRIPTION, SEED_VERSION, build_seed_items
+
+    version_t = sa.table(
+        "gap_seed_version",
+        sa.column("id", sa.Uuid(as_uuid=True)),
+        sa.column("version", sa.String()),
+        sa.column("description", sa.String()),
+        sa.column("created_at", sa.DateTime(timezone=True)),
+    )
+    item_t = sa.table(
+        "gap_seed_item",
+        sa.column("id", sa.Uuid(as_uuid=True)),
+        sa.column("seed_version_id", sa.Uuid(as_uuid=True)),
+        sa.column("dimension", sa.String()),
+        sa.column("ref_code", sa.String()),
+        sa.column("name", sa.String()),
+        sa.column("theme", sa.String()),
+        sa.column("objective", sa.Text()),
+        sa.column("order", sa.Integer()),
+    )
+
+    existing = conn.execute(
+        sa.select(version_t.c.id).where(version_t.c.version == SEED_VERSION)
+    ).fetchone()
+    if existing is None:
+        version_id = uuid.uuid4()
+        conn.execute(version_t.insert().values(
+            id=version_id, version=SEED_VERSION, description=SEED_DESCRIPTION,
+            created_at=datetime.now(timezone.utc),
+        ))
+    else:
+        version_id = existing[0]
+
+    have = {
+        row[0]
+        for row in conn.execute(
+            sa.select(item_t.c.ref_code).where(item_t.c.seed_version_id == version_id)
+        ).fetchall()
+    }
+    rows = [
+        {
+            "id": uuid.uuid4(),
+            "seed_version_id": version_id,
+            "dimension": it["dimension"].value,
+            "ref_code": it["ref_code"],
+            "name": it["name"],
+            "theme": it["theme"].value if it["theme"] is not None else None,
+            "objective": it["objective"],
+            "order": it["order"],
+        }
+        for it in build_seed_items()
+        if it["ref_code"] not in have
+    ]
+    if rows:
+        conn.execute(item_t.insert(), rows)
 
 
 def upgrade() -> None:
@@ -243,18 +312,10 @@ def upgrade() -> None:
         """))
 
     # -----------------------------------------------------------------
-    # Carga idempotente do seed 2022.1
+    # Carga idempotente do seed 2022.1 (colunas-base desta revisão; orientação/legenda da
+    # Feature 007 são preenchidas pela migration de backfill 84c5c822d7b1).
     # -----------------------------------------------------------------
-
-    from wtnapp.database.database import SessionLocal
-    from wtnapp.services.gap_seed_service import load_seed
-
-    db = SessionLocal()
-    try:
-        load_seed(db)
-        db.commit()
-    finally:
-        db.close()
+    _seed_base_catalog(conn)
 
 
 def downgrade() -> None:

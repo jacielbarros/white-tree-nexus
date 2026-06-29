@@ -285,7 +285,9 @@ def _seed_templates(conn: sa.engine.Connection) -> None:
             {"document_type": definition["document_type"], "name": definition["name"]},
         ).scalar()
         if template_id is None:
-            template_id = uuid.uuid4()
+            # str(): pysqlite não aceita bind de uuid.UUID em SQL cru; psycopg aceita a string
+            # numa coluna uuid. Mantém o `alembic upgrade head` funcional em SQLite e PostgreSQL.
+            template_id = str(uuid.uuid4())
             conn.execute(
                 sa.text(
                     "INSERT INTO print_templates "
@@ -324,7 +326,7 @@ def _seed_templates(conn: sa.engine.Connection) -> None:
                 ).scalar()
                 or 1
             )
-            version_id = uuid.uuid4()
+            version_id = str(uuid.uuid4())
             conn.execute(
                 sa.text(
                     "INSERT INTO print_template_versions "
