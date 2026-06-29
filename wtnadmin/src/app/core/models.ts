@@ -562,10 +562,21 @@ export type SoaImplementationStatus =
 
 export type SoaInclusionReason = 'risk_treatment' | 'legal' | 'contractual' | 'best_practice';
 
+export type SoaDivergenceSource = 'gap' | 'risk';
+export type SoaKind = 'pre_soa' | 'normative';
+export type SoaItemOrigin = 'risk' | 'manual' | 'risk+manual' | 'none';
+
 export interface SoaDivergenceField {
   field: string;
+  source: SoaDivergenceSource;
   soa_value: unknown;
+  source_value: unknown;
   gap_value: unknown;
+}
+
+export interface SoaRiskLink {
+  risk_id: string;
+  risk_code: string;
 }
 
 export interface SoaItem {
@@ -581,6 +592,9 @@ export interface SoaItem {
   responsible: string | null;
   deadline: string | null;
   risks_treated: string | null;
+  risk_links: SoaRiskLink[];
+  origin: SoaItemOrigin;
+  incomplete: boolean;
   expected_evidence: string | null;
   evidence_refs: string | null;
   observations: string | null;
@@ -593,6 +607,15 @@ export interface SoaSummary {
   applicable: number;
   not_applicable: number;
   divergent: number;
+  risk_divergent: number;
+  incomplete: number;
+}
+
+export interface SoaReadiness {
+  kind: SoaKind;
+  risk_plan_approved: boolean;
+  pending_for_normative: string[];
+  out_of_scope_risk_notices: string[];
 }
 
 export interface Soa {
@@ -602,6 +625,7 @@ export interface Soa {
   gap_assessment_id: string | null;
   items: SoaItem[];
   summary: SoaSummary;
+  readiness: SoaReadiness | null;
 }
 
 export interface SoaVersion {
@@ -615,6 +639,7 @@ export interface SoaVersion {
   approved_by: string | null;
   is_superseded: boolean;
   signed: boolean;
+  kind: SoaKind;
   created_at: string;
 }
 

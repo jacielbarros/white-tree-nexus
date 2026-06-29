@@ -270,6 +270,35 @@ Aplicabilidade dos 93 controles do Anexo A, **consolidando a avaliação corrent
   reconciliação, gate de incompletude, aprovação assinada e exportação de PDF. Seed de cenário em
   `scripts/seed_soa_demo.py`; serviços via `.claude/launch.json` (backend :8000 + frontend :4200).
 
+##### Evolução — SoA Normativa dirigida pelo Tratamento de Riscos (Feature 013 — implementada)
+Promove o Pré-SoA à Declaração de Aplicabilidade **normativa (6.1.3 d)** dirigida pelo Plano de
+Tratamento de Riscos (Feature 012). Spec/plano em `specs/013-soa-normativa-risco/`. **Evolução
+in-place** (não cria módulo novo).
+- **Backend** (`wtnapp/`): consolidação passa a ter **passo dirigido por risco** consumindo o insumo
+  read-only `risk_treatment_service.soa_feed` (vínculo controle←risco): controles do feed "1ª-mão"
+  viram Aplicável + razão `risk_treatment` + **riscos estruturados** (coluna nova `soa_item.risk_links`
+  JSON; texto legado `risks_treated` coexiste). Aditivo/idempotente; razões manuais nunca removidas;
+  drift vira **divergência por fonte** (`compute_risk_divergence`, `DivergenceField.source` `gap`|`risk`),
+  reconciliável por `source` (remover a única razão ⇒ item aplicável-**incompleto**, sem auto-flip).
+  **Gate duro = rótulo da versão**: o snapshot grava `soa_kind` (`SoaKind` `normative` se
+  `RiskPlan.current_version_id` vigente, senão `pre_soa`) + `risk_plan_version_number`; aprovação
+  bloqueada só por completude (`_incomplete_refs`). `GET /soa` expõe `readiness` (kind/risk_plan_approved/
+  pending/out-of-scope). PDF (`soa_export_service`) enriquecido (rótulo + razões tipadas + riscos
+  estruturados + origem). Enums novos `SoaKind`/`SoaDivergenceSource` + `SOA_KIND_LABELS` em
+  `settings.py`. **Sem novas permissões, sem novas dependências, sem router novo.** Não altera Risco
+  (012)/Gap (004) — só consome.
+- **Migration**: `wtnapp/alembic/versions/d3e4f5a6b217_soa_risk_normative.py` (add column
+  `soa_item.risk_links`, idempotente). `down_revision="c2d3e4f5a116"` (head, Feature 012).
+- **Testes backend**: `test_soa_risk_consolidation.py`, `test_soa_risk_divergence.py`,
+  `test_soa_gate_normative.py` + extensões a `test_soa_export.py` e `test_tenant_isolation_soa.py`
+  (consolidação nunca agrega feed de outro tenant). Fixtures `link_risk_to_control`/`approve_risk_plan`.
+- **Frontend** (`wtnadmin/`): `pages/soa` ganha banner **Pré-SoA × SoA normativa** (readiness + pendências
+  + notice fora-Anexo-A), chips de razão incl. **Risco**, badge de **origem**, riscos estruturados e
+  **divergência/reconciliação por fonte** (gap/risk); `pages/soa-versions` exibe o **rótulo `kind`** por
+  versão e o estado de readiness. Tipos em `core/models.ts` estendidos (`SoaRiskLink`, `SoaReadiness`,
+  `SoaKind`, `source`/`source_value` na divergência). Sem rotas novas.
+- **Pendente**: E2E browser + `alembic upgrade head` no Postgres real.
+
 #### Dashboard de Conformidade (Feature 006 — implementada)
 Home da organização — capacidade **transversal de leitura/agregação**. Spec/plano em
 `specs/006-compliance-dashboard/`. **Sem novo modelo de domínio, sem migration.**

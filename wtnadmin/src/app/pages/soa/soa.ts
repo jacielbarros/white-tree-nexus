@@ -49,6 +49,13 @@ const THEME_LABELS: Record<string, string> = {
 
 const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'technological'];
 
+const ORIGIN_LABELS: Record<string, string> = {
+  risk: 'Origem: risco',
+  manual: 'Origem: manual',
+  'risk+manual': 'Origem: risco + manual',
+  none: '',
+};
+
 @Component({
   selector: 'app-soa',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -111,12 +118,40 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
         />
       </div>
 
+      @if (soa()!.readiness; as r) {
+        <div class="soa-kind-banner" [class.is-normative]="r.kind === 'normative'">
+          <i class="pi" [class.pi-verified]="r.kind === 'normative'" [class.pi-info-circle]="r.kind !== 'normative'"></i>
+          <div>
+            <div class="soa-kind-banner__title">
+              {{ r.kind === 'normative' ? 'SoA normativa (6.1.3 d)' : 'Pré-SoA (consolidação do Gap)' }}
+            </div>
+            @if (r.kind !== 'normative' && r.pending_for_normative.length) {
+              <ul class="soa-kind-banner__pending">
+                @for (p of r.pending_for_normative; track p) { <li>{{ p }}</li> }
+              </ul>
+            }
+            @if (r.out_of_scope_risk_notices.length) {
+              <div class="text-sm mt-1">
+                Controles tratados por risco fora do Anexo A da SoA:
+                <b>{{ r.out_of_scope_risk_notices.join(', ') }}</b>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <div class="soa-summary mb-3">
         <span>Total: <b>{{ soa()!.summary.total }}</b></span>
         <span>Aplicáveis: <b>{{ soa()!.summary.applicable }}</b></span>
         <span>Não aplicáveis: <b>{{ soa()!.summary.not_applicable }}</b></span>
         @if (soa()!.summary.divergent > 0) {
           <span class="text-orange-500">Divergentes: <b>{{ soa()!.summary.divergent }}</b></span>
+        }
+        @if (soa()!.summary.risk_divergent > 0) {
+          <span class="text-orange-500">Divergem do risco: <b>{{ soa()!.summary.risk_divergent }}</b></span>
+        }
+        @if (soa()!.summary.incomplete > 0) {
+          <span class="text-red-500">Incompletos: <b>{{ soa()!.summary.incomplete }}</b></span>
         }
       </div>
 
@@ -128,8 +163,13 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
                 <div class="soa-item__header">
                   <span class="soa-item__ref">{{ item.ref_code }}</span>
                   <div class="flex gap-1">
-                    @if (item.divergence.length) {
+                    @if (hasRiskDivergence(item)) {
+                      <p-tag value="Risco" severity="warn" pTooltip="Diverge do tratamento de risco atual" />
+                    } @else if (item.divergence.length) {
                       <p-tag value="Diverge" severity="warn" pTooltip="Difere do Gap Analysis atual" />
+                    }
+                    @if (item.incomplete) {
+                      <p-tag value="Incompleto" severity="danger" pTooltip="Aplicável sem razão de inclusão" />
                     }
                     <p-tag
                       [value]="item.applicable ? 'Aplicável' : 'N/A'"
@@ -138,6 +178,14 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
                   </div>
                 </div>
                 <div class="soa-item__name">{{ item.name }}</div>
+                <div class="soa-item__meta">
+                  @if (item.applicable && item.origin !== 'none') {
+                    <span class="origin-badge" [class.origin-risk]="item.origin.includes('risk')">{{ originLabel(item.origin) }}</span>
+                  }
+                  @if (item.risk_links.length) {
+                    <span class="risk-codes" pTooltip="Riscos tratados">{{ riskCodes(item) }}</span>
+                  }
+                </div>
                 @if (item.implementation_status) {
                   <div class="soa-item__status">{{ statusLabel(item.implementation_status) }}</div>
                 }
@@ -156,17 +204,32 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
       >
         @if (selectedItem(); as it) {
           <div class="flex flex-col gap-3">
-            @if (it.divergence.length) {
+            @if (gapDivergences(it).length) {
               <div class="divergence-box">
                 <div class="font-semibold mb-1">Divergências com o Gap Analysis</div>
-                @for (d of it.divergence; track d.field) {
-                  <div class="text-sm">{{ d.field }}: SoA=<b>{{ d.soa_value }}</b> · Gap=<b>{{ d.gap_value }}</b></div>
+                @for (d of gapDivergences(it); track d.field) {
+                  <div class="text-sm">{{ d.field }}: SoA=<b>{{ d.soa_value }}</b> · Gap=<b>{{ d.source_value }}</b></div>
                 }
                 @if (canManage()) {
                   <p-button label="Reconciliar com o Gap" size="small" severity="warn" [text]="true"
-                    icon="pi pi-sync" (onClick)="reconcile(it)" [loading]="saving()" />
+                    icon="pi pi-sync" (onClick)="reconcile(it, 'gap')" [loading]="saving()" />
                 }
               </div>
+            }
+            @if (riskDivergences(it).length) {
+              <div class="divergence-box divergence-box--risk">
+                <div class="font-semibold mb-1">Divergências com o Tratamento de Riscos</div>
+                @for (d of riskDivergences(it); track d.field) {
+                  <div class="text-sm">{{ d.field }}: SoA=<b>{{ d.soa_value }}</b> · Risco=<b>{{ d.source_value }}</b></div>
+                }
+                @if (canManage()) {
+                  <p-button label="Reconciliar com o risco" size="small" severity="warn" [text]="true"
+                    icon="pi pi-sync" (onClick)="reconcile(it, 'risk')" [loading]="saving()" />
+                }
+              </div>
+            }
+            @if (it.risk_links.length) {
+              <div class="text-sm"><b>Riscos tratados:</b> {{ riskCodes(it) }}</div>
             }
 
             <div class="flex items-center gap-2">
@@ -260,6 +323,15 @@ const THEME_ORDER: GapTheme[] = ['organizational', 'people', 'physical', 'techno
     .reasons { display: flex; flex-wrap: wrap; gap: .75rem; }
     .reason { display: flex; align-items: center; gap: .35rem; font-size: .9rem; }
     .divergence-box { border: 1px solid var(--yellow-300, #f5d76e); background: var(--yellow-50, #fffbe6); border-radius: 6px; padding: .6rem .75rem; }
+    .divergence-box--risk { border-color: var(--orange-300, #f0a868); background: var(--orange-50, #fff5eb); }
+    .soa-kind-banner { display: flex; gap: .6rem; align-items: flex-start; border: 1px solid var(--surface-border); border-left: 4px solid var(--text-color-secondary); border-radius: 6px; padding: .65rem .85rem; margin-bottom: 14px; background: var(--surface-50, #fafafa); }
+    .soa-kind-banner.is-normative { border-left-color: var(--green-500, #22a559); background: var(--green-50, #f0fbf4); }
+    .soa-kind-banner__title { font-weight: 700; }
+    .soa-kind-banner__pending { margin: .25rem 0 0; padding-left: 1.1rem; font-size: .85rem; }
+    .soa-item__meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .3rem; }
+    .origin-badge { font-size: .72rem; padding: .1rem .4rem; border-radius: 4px; background: var(--surface-200, #e9e9e9); color: var(--text-color-secondary); }
+    .origin-badge.origin-risk { background: var(--orange-100, #ffe8d4); color: var(--orange-700, #b3541e); }
+    .risk-codes { font-size: .72rem; color: var(--text-color-secondary); }
     @media (max-width: 980px) {
       .document-tools { grid-template-columns: 1fr; }
     }
@@ -398,15 +470,36 @@ export class SoaPage implements OnInit {
     });
   }
 
-  reconcile(item: SoaItem) {
+  reconcile(item: SoaItem, source: 'gap' | 'risk' | 'all' = 'all') {
     this.saving.set(true);
-    this.api.post<SoaItem>(`/soa/items/${item.id}/reconcile`, { fields: [] }).subscribe({
-      next: (updated) => this.applyUpdated(updated, 'Reconciliado com o Gap.'),
+    const detail = source === 'risk' ? 'Reconciliado com o risco.' : 'Reconciliado com o Gap.';
+    this.api.post<SoaItem>(`/soa/items/${item.id}/reconcile`, { fields: [], source }).subscribe({
+      next: (updated) => this.applyUpdated(updated, detail),
       error: (e) => {
         this.msg.add({ severity: 'error', summary: 'Erro', detail: e.error?.detail ?? e.message });
         this.saving.set(false);
       },
     });
+  }
+
+  gapDivergences(item: SoaItem) {
+    return item.divergence.filter((d) => d.source === 'gap');
+  }
+
+  riskDivergences(item: SoaItem) {
+    return item.divergence.filter((d) => d.source === 'risk');
+  }
+
+  hasRiskDivergence(item: SoaItem): boolean {
+    return item.divergence.some((d) => d.source === 'risk');
+  }
+
+  riskCodes(item: SoaItem): string {
+    return item.risk_links.map((r) => r.risk_code).join(', ');
+  }
+
+  originLabel(origin: string): string {
+    return ORIGIN_LABELS[origin] ?? origin;
   }
 
   private applyUpdated(updated: SoaItem, detail: string) {
@@ -415,7 +508,12 @@ export class SoaPage implements OnInit {
       const items = s.items.map((i) => (i.id === updated.id ? updated : i));
       const applicable = items.filter((i) => i.applicable).length;
       const divergent = items.filter((i) => i.divergence.length).length;
-      return { ...s, items, summary: { total: items.length, applicable, not_applicable: items.length - applicable, divergent } };
+      const risk_divergent = items.filter((i) => i.divergence.some((d) => d.source === 'risk')).length;
+      const incomplete = items.filter((i) => i.incomplete).length;
+      return {
+        ...s, items,
+        summary: { total: items.length, applicable, not_applicable: items.length - applicable, divergent, risk_divergent, incomplete },
+      };
     });
     this.selectedItem.set(updated);
     this.msg.add({ severity: 'success', summary: 'Salvo', detail });

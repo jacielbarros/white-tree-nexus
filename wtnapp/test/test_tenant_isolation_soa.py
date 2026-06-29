@@ -42,3 +42,41 @@ def test_cross_tenant_export_denied(client, soa_seed, org_headers, complete_soa)
     # B tenta exportar a versão de A → 404
     resp = client.get(f"/soa/versions/{version['id']}/export", headers=hb)
     assert resp.status_code == 404
+
+
+# ── Feature 013 — isolamento na agregação do insumo de risco ──────────────────
+
+def test_risk_feed_does_not_cross_tenant_on_consolidate(
+    client, soa_seed, org_headers, link_risk_to_control, db
+):
+    """Consolidar no contexto de B não agrega o soa-feed (riscos) da org A."""
+    a = soa_seed("soa-a")
+    b = soa_seed("soa-b")
+    # risco só na org A
+    link_risk_to_control(a["org"], a["annex_items"][0].catalog_item_id, code="RSK-A001")
+
+    hb = org_headers(b["admin"].email, b["org"].id)
+    client.post("/soa/consolidate", headers=hb)
+    body_b = client.get("/soa", headers=hb).json()
+
+    # B não vê nenhum risk_link nem notice da org A
+    assert all(not i["risk_links"] for i in body_b["items"])
+    assert body_b["readiness"]["out_of_scope_risk_notices"] == []
+    assert body_b["summary"]["risk_divergent"] == 0
+
+
+def test_cross_tenant_reconcile_denied(
+    client, soa_seed, org_headers, link_risk_to_control
+):
+    """Reconciliar item da org A a partir do contexto de B → 404."""
+    a = soa_seed("soa-a")
+    b = soa_seed("soa-b")
+    link_risk_to_control(a["org"], a["annex_items"][0].catalog_item_id, code="RSK-A002")
+    ha = org_headers(a["admin"].email, a["org"].id)
+    client.post("/soa/consolidate", headers=ha)
+    item = next(i for i in client.get("/soa", headers=ha).json()["items"] if i["risk_links"])
+
+    hb = org_headers(b["admin"].email, b["org"].id)
+    client.post("/soa/consolidate", headers=hb)
+    resp = client.post(f"/soa/items/{item['id']}/reconcile", headers=hb, json={"source": "risk"})
+    assert resp.status_code == 404

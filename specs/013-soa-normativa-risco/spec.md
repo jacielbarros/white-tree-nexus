@@ -329,6 +329,8 @@ rótulo (Pré-SoA / SoA normativa) daquela versão.
   aprovação**: **"SoA normativa (6.1.3 d)"** somente quando, no instante da aprovação, existir uma
   **versão aprovada vigente (in-force)** do Plano de Tratamento de Riscos; caso contrário
   **"Pré-SoA (consolidação do Gap)"**. O rótulo MUST ser registrado de forma imutável na versão.
+  *Nota:* o gate de risco **não bloqueia** a aprovação — apenas decide o rótulo. O **único** bloqueio
+  de aprovação é a **completude** (FR-009a).
 - **FR-011**: A UI MUST indicar continuamente o estado da SoA (**Pré-SoA** vs. **pronta para SoA
   definitiva**) e **listar os pré-requisitos pendentes** para a versão definitiva (ex.: "Plano de
   Tratamento de Riscos ainda não aprovado").

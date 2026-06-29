@@ -80,6 +80,8 @@ class SoaItem(Base):
     responsible: Mapped[str | None] = mapped_column(String(200), nullable=True)
     deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
     risks_treated: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Feature 013: riscos tratados estruturados — projeção do soa-feed: list[{risk_id, risk_code}]
+    risk_links: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     expected_evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
     evidence_refs: Mapped[str | None] = mapped_column(Text, nullable=True)
     observations: Mapped[str | None] = mapped_column(Text, nullable=True)
