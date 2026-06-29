@@ -524,6 +524,37 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
+**Feature 013 — SoA Normativa dirigida pelo Tratamento de Riscos** (`013-soa-normativa-risco`) —
+**planejada** (spec + clarify + plano prontos; implementação pendente). **Evolução in-place** do módulo
+de SoA (Feature 005), promovendo o Pré-SoA à Declaração de Aplicabilidade **normativa (6.1.3 d)**
+dirigida pelo Plano de Tratamento de Riscos (Feature 012). **Não cria módulo novo.**
+- Plano: `specs/013-soa-normativa-risco/plan.md` · Spec: `.../spec.md` · Research: `.../research.md` ·
+  Data model: `.../data-model.md` · Contracts: `.../contracts/openapi-delta.yaml` · Quickstart: `.../quickstart.md`
+- Escopo: consolidação **dirigida primariamente pelo risco** consumindo o insumo read-only
+  `GET /risk/soa-feed` (vínculo controle←risco, razão `risk_treatment` + riscos tratados) — aditiva/
+  idempotente, **1ª-mão** (aplica risco só a item que nunca carregou vínculo; drift vira divergência);
+  **razões manuais** (legal/contratual/melhor prática) sempre preservadas; **status de implementação**
+  segue o Gap; **divergência/reconciliação por fonte** (Gap **e** risco); **gate duro = rótulo da versão**
+  (`SoaKind`: `pre_soa` vs. `normative` conforme exista `RiskPlan.current_version_id` vigente; aprovação
+  bloqueada só por completude, FR-009a); **PDF enriquecido** (razão tipada + riscos estruturados + origem
+  + rótulo). **Sem novas permissões** (`view_soa`/`manage_soa`/`approve_soa`), **sem dependências novas**.
+- Decisões-chave (clarify 2026-06-29): (1) consolidação/divergência leem o **insumo vivo** do `soa-feed`;
+  o **snapshot do Plano aprovado** só decide o rótulo no gate; (2) razão `risk_treatment` e `risk_links`
+  geridos pela consolidação/reconciliação, **razões manuais nunca removidas**; (3) gate: aprovação sempre
+  permitida, versão **rotulada** `pre_soa` vs. `normative` (= existe versão aprovada **vigente** do Plano,
+  `current_version_id != null`); (4) riscos tratados = **referência estruturada** (`risk_links`: id+`RSK-####`),
+  texto legado `risks_treated` coexiste; (5) consolidação para item **existente** = aditivo + sinaliza
+  divergência (espelha o Gap); (6) feed aponta controle **fora do Anexo A** ⇒ **notice**, não cria/descarta;
+  (7) reconciliar removendo a **única** razão (`risk_treatment`) ⇒ item **aplicável-incompleto** (bloqueia
+  aprovação), sem auto-flip.
+- Arquitetura: **1 mudança de schema** — coluna `risk_links` (JSON) em `soa_item`; rótulo/riscos da versão
+  vivem no `content_snapshot` (sem coluna nova). Estende `soa_consolidation_service` (passo risco,
+  `compute_risk_divergence`, reconcile risco), `routers/soa.py` (readiness do gate, divergência por fonte,
+  rótulo no snapshot), `soa_export_service` (PDF), `soa_schema`, `settings.py` (`SoaKind`/`SoaDivergenceSource`).
+  Migration `down_revision="c2d3e4f5a116"` (head atual, Feature 012), idempotente. Frontend: evolui
+  `pages/soa` + `pages/soa-versions` (sem rotas novas). Consome Risco (012) e Gap (004) **read-only** — não
+  os altera. Prepara o terreno para Evidências/Auditoria/PDCA (Módulo 5).
+
 **Feature 012 — Módulo de Gestão de Riscos** (`012-risk-management`) — **planejada**
 (spec + clarify + plano prontos; implementação pendente). Módulo de Risco do MVP (entre Ativos e SoA
 definitiva), cobrindo **três fases num módulo**: Ameaças/Vulnerabilidades → Avaliação (6.1.2) →
