@@ -46,6 +46,17 @@ import { Soa, SoaVersion } from '@app/core/models';
             <p-button label="Aprovar e emitir" icon="pi pi-check" size="small" (onClick)="showApprove()" [loading]="busy()" />
           }
         </div>
+        @if (soa()!.readiness; as r) {
+          <div class="kind-hint mt-2" [class.is-normative]="r.kind === 'normative'">
+            Ao aprovar agora, a versão será emitida como
+            <b>{{ r.kind === 'normative' ? 'SoA normativa (6.1.3 d)' : 'Pré-SoA (consolidação do Gap)' }}</b>.
+            @if (r.kind !== 'normative' && r.pending_for_normative.length) {
+              <ul class="kind-hint__pending">
+                @for (p of r.pending_for_normative; track p) { <li>{{ p }}</li> }
+              </ul>
+            }
+          </div>
+        }
         @if (incomplete().length) {
           <div class="incomplete-box mt-2">
             <b>SoA incompleta</b> — controles pendentes (sem razão de inclusão ou justificativa):
@@ -63,6 +74,7 @@ import { Soa, SoaVersion } from '@app/core/models';
               <div class="version-row__meta">
                 <span class="font-semibold">{{ v.identifier }} v{{ v.version_number }}</span>
                 <p-tag [value]="v.status" [severity]="v.is_superseded ? 'secondary' : 'success'" />
+                <p-tag [value]="kindLabel(v.kind)" [severity]="v.kind === 'normative' ? 'success' : 'warn'" />
                 @if (v.signed) { <p-tag value="Assinada" severity="info" /> }
                 <span class="text-sm text-color-secondary">{{ v.classification }}</span>
               </div>
@@ -104,6 +116,9 @@ import { Soa, SoaVersion } from '@app/core/models';
     .version-row { border: 1px solid var(--surface-border); border-radius: 6px; padding: .6rem .75rem; margin-bottom: .5rem; }
     .version-row__meta { display: flex; gap: .5rem; align-items: center; margin-bottom: .2rem; }
     .incomplete-box { border: 1px solid var(--red-300, #f5a9a9); background: var(--red-50, #fff0f0); border-radius: 6px; padding: .6rem .75rem; font-size: .85rem; }
+    .kind-hint { border: 1px solid var(--orange-300, #f0a868); background: var(--orange-50, #fff5eb); border-radius: 6px; padding: .6rem .75rem; font-size: .85rem; }
+    .kind-hint.is-normative { border-color: var(--green-300, #86dba8); background: var(--green-50, #f0fbf4); }
+    .kind-hint__pending { margin: .25rem 0 0; padding-left: 1.1rem; }
   `],
 })
 export class SoaVersionsPage implements OnInit {
@@ -192,6 +207,10 @@ export class SoaVersionsPage implements OnInit {
         }
       },
     });
+  }
+
+  kindLabel(kind: string): string {
+    return kind === 'normative' ? 'Normativa' : 'Pré-SoA';
   }
 
   exportVersion(v: SoaVersion) {

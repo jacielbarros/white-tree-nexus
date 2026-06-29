@@ -298,6 +298,57 @@ def risk_seed(db, factory):
 
 
 @pytest.fixture
+def link_risk_to_control(db):
+    """Feature 013: cria Risk + RiskTreatmentControl ligando um risco a um controle do catálogo.
+
+    Produz a entrada correspondente no soa-feed (insumo read-only consumido pela SoA).
+    """
+    from wtnapp.models.risk_catalog_model import OrgThreat, OrgVulnerability
+    from wtnapp.models.risk_model import Risk, RiskTreatmentControl
+    from wtnapp.services import risk_catalog_service
+    from wtnapp.settings import RiskStatus
+
+    def _link(org, gap_catalog_item_id, code="RSK-0001"):
+        if not db.query(OrgThreat).filter_by(tenant_id=org.id).first():
+            risk_catalog_service.adopt_threats(db, org.id)
+        if not db.query(OrgVulnerability).filter_by(tenant_id=org.id).first():
+            risk_catalog_service.adopt_vulnerabilities(db, org.id)
+        threat = db.query(OrgThreat).filter_by(tenant_id=org.id).first()
+        vuln = db.query(OrgVulnerability).filter_by(tenant_id=org.id).first()
+        risk = Risk(
+            tenant_id=org.id, code=code, title=f"Risco {code}", description="cenário de teste",
+            threat_id=threat.id, vulnerability_id=vuln.id, status=RiskStatus.identified,
+        )
+        db.add(risk)
+        db.flush()
+        db.add(RiskTreatmentControl(
+            tenant_id=org.id, risk_id=risk.id, gap_catalog_item_id=gap_catalog_item_id,
+        ))
+        db.commit()
+        return risk
+
+    return _link
+
+
+@pytest.fixture
+def approve_risk_plan(db):
+    """Feature 013: marca o Plano de Tratamento de Riscos como aprovado vigente (gate normativo)."""
+    from wtnapp.models.risk_model import RiskPlan
+
+    def _approve(org):
+        plan = db.query(RiskPlan).filter_by(tenant_id=org.id).first()
+        if plan is None:
+            plan = RiskPlan(tenant_id=org.id)
+            db.add(plan)
+            db.flush()
+        plan.current_version_id = uuid.uuid4()
+        db.commit()
+        return plan
+
+    return _approve
+
+
+@pytest.fixture
 def form_outbox(monkeypatch):
     """Captura emails do motor de formularios sem SMTP real."""
     from wtnapp.services import notification_service

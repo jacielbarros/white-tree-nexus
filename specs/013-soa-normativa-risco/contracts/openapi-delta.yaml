@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — SoA Normativa (Feature 013) — DELTA sobre a Feature 005
+  version: 0.1.0
+  description: >
+    Delta da evolução do módulo de SoA para Declaração de Aplicabilidade normativa (6.1.3 d)
+    dirigida pelo Tratamento de Riscos. Reusa os endpoints da Feature 005 (mesmos paths/prefixo
+    `/soa`, mesmas permissões view_soa/manage_soa/approve_soa). Nenhum endpoint novo obrigatório;
+    payloads de resposta enriquecidos e semântica de consolidação/divergência/reconciliação/aprovação
+    estendida. Isolamento de tenant fail-closed; auditoria em todas as operações de escrita.
+
+tags:
+  - name: soa
+    description: Statement of Applicability — evolução normativa (Feature 013)
+
+paths:
+  /soa:
+    get:
+      tags: [soa]
+      summary: Lê a SoA da organização (ENRIQUECIDO — readiness do gate + risco)
+      security: [{ bearerAuth: [] }]    # require_permission("view_soa")
+      responses:
+        "200":
+          description: SoA com itens, divergências (Gap+risco), riscos estruturados e readiness.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaResponse" }
+        "404": { description: SoA não encontrada (consolide primeiro). }
+
+  /soa/consolidate:
+    post:
+      tags: [soa]
+      summary: Consolida a SoA (Gap + DIRIGIDA POR RISCO, aditiva/idempotente)
+      description: >
+        Passo Gap (005) + passo risco (013): controles do soa-feed "1ª-mão" tornam-se aplicáveis com
+        razão `risk_treatment` e `risk_links`; itens já tocados por risco não são alterados (drift vira
+        divergência). Entradas do feed fora do Anexo A retornam como notices. Idempotente; preserva
+        razões manuais e justificativas. Audit: CONSOLIDATE.
+      security: [{ bearerAuth: [] }]    # require_permission("manage_soa")
+      responses:
+        "200":
+          description: SoA consolidada + contadores e avisos.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SoaResponse" }
+
+  /soa/items/{item_id}:
+    put:
+      tags: [soa]
+      summary: Edita um controle (razões incl. risco/manual, justificativa, status…)
+      description: >
+        Validações: aplicável exige ≥1 razão tipada; não-aplicável exige justificativa de exclusão.
+        `risk_treatment` pode coexistir com razões manuais. Audit: UPDATE; eventos append-only.
+      security: [{ bearerAuth: [] }]    # require_permission("manage_soa")
+      parameters:
+        - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SoaItemUpdate" }
+      responses:
+        "200": { description: Item atualizado., content: { application/json: { schema: { $ref: "#/components/schemas/SoaItemResponse" } } } }
+        "404": { description: Item não encontrado (ou de outro tenant). }
+        "422": { description: Aplicável sem razão / N/A sem justificativa. }
+
+  /soa/items/{item_id}/reconcile:
+    post:
+      tags: [soa]
+      summary: Reconcilia divergências do item (Gap E/OU risco) — explícito
+      description: >
+        Aplica o valor vivo da fonte indicada. Para risco: incluir + `risk_treatment` + `risk_links`,
+        ou remover `risk_treatment`/`risk_links` órfãos. Se remover a ÚNICA razão (risk_treatment) de
+        item aplicável sem razão manual ⇒ item permanece aplicável e fica INCOMPLETO (sem auto-flip).
+        Razões manuais sempre preservadas. Audit: RECONCILE; eventos append-only.
+      security: [{ bearerAuth: [] }]    # require_permission("manage_soa")
+      parameters:
+        - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReconcileRequest" }
+      responses:
+        "200": { description: Item reconciliado., content: { application/json: { schema: { $ref: "#/components/schemas/SoaItemResponse" } } } }
+        "404": { description: Item não encontrado. }
+
+  /soa/divergences:
+    get:
+      tags: [soa]
+      summary: Lista itens divergentes (Gap E risco)
+      security: [{ bearerAuth: [] }]    # require_permission("view_soa")
+      responses:
+        "200":
+          description: Itens com ≥1 divergência (fonte gap ou risk).
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/SoaItemResponse" } }
+
+  /soa/submit-review:
+    post:
+      tags: [soa]
+      summary: Envia a SoA para revisão (inalterado vs. 005)
+      security: [{ bearerAuth: [] }]    # require_permission("manage_soa")
+      responses:
+        "200": { description: Status atualizado. }
+
+  /soa/approve:
+    post:
+      tags: [soa]
+      summary: Aprova/emite versão (GATE = rótulo Pré-SoA vs. SoA normativa)
+      description: >
+        Exige draft em revisão e SoA completa (sem item aplicável-sem-razão / N/A-sem-justificativa —
+        cobre FR-009a). Emite versão imutável. O snapshot grava `soa_kind`= `normative` se houver Plano
+        de Tratamento aprovado VIGENTE (RiskPlan.current_version_id != null), senão `pre_soa`, mais
+        `risk_plan_version_number`. Assinatura avançada opcional. Audit: APPROVE_SOA (com rótulo).
+      security: [{ bearerAuth: [] }]    # require_permission("approve_soa")
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SoaApproveRequest" }
+      responses:
+        "201": { description: Versão emitida., content: { application/json: { schema: { $ref: "#/components/schemas/SoaVersionResponse" } } } }
+        "409": { description: SoA não está em revisão. }
+        "422": { description: SoA incompleta (lista de ref_codes pendentes). }
+
+  /soa/versions:
+    get:
+      tags: [soa]
+      summary: Lista versões emitidas (com rótulo kind)
+      security: [{ bearerAuth: [] }]    # require_permission("view_soa")
+      responses:
+        "200": { description: Versões., content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SoaVersionResponse" } } } } }
+
+  /soa/versions/{version_id}/export:
+    get:
+      tags: [soa]
+      summary: Exporta uma versão em PDF (ENRIQUECIDO — razões/risco/origem/rótulo)
+      description: PDF do snapshot da versão, agora com razão tipada, riscos estruturados, origem e rótulo. Audit: EXPORT. Acesso por classificação.
+      security: [{ bearerAuth: [] }]    # require_permission("view_soa") + classificação
+      parameters:
+        - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: PDF., content: { application/pdf: { schema: { type: string, format: binary } } } }
+        "404": { description: Versão não encontrada. }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  schemas:
+    SoaInclusionReason:
+      type: string
+      enum: [risk_treatment, legal, contractual, best_practice]
+
+    RiskLink:
+      type: object
+      properties:
+        risk_id: { type: string, format: uuid }
+        risk_code: { type: string, example: "RSK-0003" }
+
+    DivergenceField:
+      type: object
+      description: Divergência de um campo do item contra a fonte viva (Gap ou risco).
+      properties:
+        field: { type: string, example: "applicable" }
+        source: { type: string, enum: [gap, risk], default: gap }
+        soa_value: {}
+        source_value: { description: "Valor vivo da fonte (Gap ou risco)." }
+        gap_value: { description: "DEPRECATED — alias de source_value quando source=gap (compat)." }
+
+    SoaItemUpdate:
+      type: object
+      properties:
+        applicable: { type: boolean }
+        inclusion_reasons: { type: array, items: { $ref: "#/components/schemas/SoaInclusionReason" } }
+        inclusion_note: { type: string }
+        exclusion_justification: { type: string }
+        implementation_status: { type: string, enum: [implemented, in_progress, planned, not_started, not_applicable] }
+        responsible: { type: string }
+        deadline: { type: string, format: date }
+        risks_treated: { type: string, description: "Campo legado (texto). Riscos estruturados vêm de risk_links via consolidação/reconciliação." }
+        expected_evidence: { type: string }
+        evidence_refs: { type: string }
+        observations: { type: string }
+
+    SoaItemResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ref_code: { type: string }
+        theme: { type: string, nullable: true }
+        name: { type: string }
+        applicable: { type: boolean }
+        inclusion_reasons: { type: array, items: { type: string } }
+        inclusion_note: { type: string, nullable: true }
+        exclusion_justification: { type: string, nullable: true }
+        implementation_status: { type: string, nullable: true }
+        responsible: { type: string, nullable: true }
+        deadline: { type: string, format: date, nullable: true }
+        risks_treated: { type: string, nullable: true, description: "legado" }
+        risk_links: { type: array, items: { $ref: "#/components/schemas/RiskLink" }, description: "NOVO — riscos estruturados" }
+        origin: { type: string, enum: [risk, manual, "risk+manual", none], description: "NOVO — origem da inclusão (derivada)" }
+        incomplete: { type: boolean, description: "NOVO — aplicável sem razão (bloqueia aprovação, FR-009a)" }
+        expected_evidence: { type: string, nullable: true }
+        evidence_refs: { type: string, nullable: true }
+        observations: { type: string, nullable: true }
+        gap_assessment_item_id: { type: string, format: uuid, nullable: true }
+        divergence: { type: array, items: { $ref: "#/components/schemas/DivergenceField" } }
+
+    SoaSummary:
+      type: object
+      properties:
+        total: { type: integer }
+        applicable: { type: integer }
+        not_applicable: { type: integer }
+        divergent: { type: integer, description: "itens com qualquer divergência (gap ou risco)" }
+        risk_divergent: { type: integer, description: "NOVO — itens com divergência de fonte risco" }
+        incomplete: { type: integer, description: "NOVO — itens aplicáveis sem razão" }
+
+    SoaReadiness:
+      type: object
+      description: NOVO — estado do gate da esteira (Pré-SoA vs. SoA normativa).
+      properties:
+        kind: { type: string, enum: [pre_soa, normative], description: "estado atual se aprovada agora" }
+        risk_plan_approved: { type: boolean, description: "existe Plano de Tratamento aprovado vigente" }
+        pending_for_normative:
+          type: array
+          items: { type: string }
+          description: "pré-requisitos pendentes p/ SoA definitiva (ex.: 'Plano de Tratamento de Riscos não aprovado')"
+        out_of_scope_risk_notices:
+          type: array
+          items: { type: string }
+          description: "controles tratados por risco fora do Anexo A da SoA (ref_codes)"
+
+    SoaResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        draft_status: { type: string }
+        current_version_id: { type: string, format: uuid, nullable: true }
+        gap_assessment_id: { type: string, format: uuid, nullable: true }
+        items: { type: array, items: { $ref: "#/components/schemas/SoaItemResponse" } }
+        summary: { $ref: "#/components/schemas/SoaSummary" }
+        readiness: { $ref: "#/components/schemas/SoaReadiness" }
+
+    ReconcileRequest:
+      type: object
+      properties:
+        fields:
+          type: array
+          items: { type: string }
+          description: "campos a reconciliar (vazio = todos os divergentes). Inclui campos de fonte risco."
+        source:
+          type: string
+          enum: [gap, risk, all]
+          default: all
+          description: "NOVO — limita a reconciliação a uma fonte."
+
+    SoaApproveRequest:
+      type: object
+      properties:
+        classification: { type: string, default: uso_interno }
+        next_review_at: { type: string, format: date-time, nullable: true }
+        change_nature: { type: string, default: "Emissão inicial" }
+        sign: { type: boolean, default: false }
+
+    SoaVersionResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        identifier: { type: string }
+        version_number: { type: integer }
+        status: { type: string }
+        classification: { type: string }
+        next_review_at: { type: string, format: date-time, nullable: true }
+        change_nature: { type: string }
+        approved_by: { type: string, format: uuid, nullable: true }
+        is_superseded: { type: boolean }
+        signed: { type: boolean }
+        kind: { type: string, enum: [pre_soa, normative], description: "NOVO — rótulo congelado da versão (do snapshot)" }
+        created_at: { type: string, format: date-time }

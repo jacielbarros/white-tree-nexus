@@ -411,6 +411,28 @@ GAP_TO_SOA_STATUS: dict[GapStatus, "SoaImplementationStatus | None"] = {
 }
 
 
+# --- SoA Normativa dirigida pelo Tratamento de Riscos (Feature 013) ---
+
+class SoaKind(str, Enum):
+    """Rótulo da versão da SoA conforme o gate da esteira."""
+
+    pre_soa = "pre_soa"          # consolidação do Gap (sem Plano de Tratamento aprovado vigente)
+    normative = "normative"      # Declaração de Aplicabilidade normativa (6.1.3 d)
+
+
+SOA_KIND_LABELS: dict["SoaKind", str] = {
+    SoaKind.pre_soa: "Pré-SoA (consolidação do Gap)",
+    SoaKind.normative: "SoA normativa (6.1.3 d)",
+}
+
+
+class SoaDivergenceSource(str, Enum):
+    """Fonte de uma divergência de item da SoA."""
+
+    gap = "gap"      # vs. avaliação corrente do Gap Analysis (Feature 005)
+    risk = "risk"    # vs. insumo de risco vivo / soa-feed (Feature 013)
+
+
 # --- Gestão de Ativos / Processos / Escopo (Feature 011) ---
 
 class AssetType(str, Enum):

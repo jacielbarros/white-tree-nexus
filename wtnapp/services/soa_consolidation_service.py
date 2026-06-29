@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
 from wtnapp.models.gap_catalog_model import GapCatalogItem
 from wtnapp.models.soa_model import Soa, SoaItem
-from wtnapp.settings import GAP_TO_SOA_STATUS, GapDimension, GapStatus
+from wtnapp.settings import GAP_TO_SOA_STATUS, GapDimension, GapStatus, SoaInclusionReason
 
 
 # Campos consolidados (com origem no Gap) sujeitos a detecção de divergência.
@@ -24,6 +24,41 @@ CONSOLIDATED_FIELDS = (
     "responsible",
     "deadline",
 )
+
+# Razão de inclusão dirigida pelo tratamento de risco (Feature 013).
+RISK_REASON = SoaInclusionReason.risk_treatment.value
+
+
+# ── Insumo de risco (read-only) ──────────────────────────────────────────────
+
+def build_feed_index(db: Session, tenant_id: uuid.UUID) -> dict:
+    """Calcula o soa-feed do módulo de Risco UMA vez e indexa por gap_catalog_item_id."""
+    from wtnapp.services import risk_treatment_service  # lazy: evita ciclo de import
+
+    return {e["gap_catalog_item_id"]: e for e in risk_treatment_service.soa_feed(db, tenant_id)}
+
+
+def _risk_links_from_feed(entry: dict) -> list[dict]:
+    return [
+        {"risk_id": str(rid), "risk_code": code}
+        for rid, code in zip(entry.get("risk_ids", []), entry.get("risk_codes", []))
+    ]
+
+
+def derive_origin(item: SoaItem) -> str:
+    """Origem da inclusão (derivada): risk | manual | risk+manual | none."""
+    if not item.applicable:
+        return "none"
+    reasons = item.inclusion_reasons or []
+    has_risk = RISK_REASON in reasons
+    has_manual = any(r != RISK_REASON for r in reasons)
+    if has_risk and has_manual:
+        return "risk+manual"
+    if has_risk:
+        return "risk"
+    if has_manual:
+        return "manual"
+    return "none"
 
 
 def _gap_applicable(gap_status: GapStatus) -> bool:
@@ -114,8 +149,40 @@ def consolidate(db: Session, tenant_id: uuid.UUID) -> dict:
         ))
         added += 1
 
+    # --- Passo dirigido por risco (Feature 013): aditivo, 1ª-mão, idempotente ---
+    # Lê o valor VIVO do soa-feed. Aplica risco só a item que nunca carregou vínculo de risco;
+    # drift posterior vira divergência (compute_risk_divergence), reconciliável explicitamente.
+    db.flush()  # garante que os itens recém-criados no passo Gap apareçam na query abaixo
+    feed_index = build_feed_index(db, tenant_id)
+    items_by_catalog = {
+        s.catalog_item_id: s for s in db.query(SoaItem).filter(SoaItem.soa_id == soa.id).all()
+    }
+    risk_applied = 0
+    out_of_scope: list[str] = []
+    for gap_catalog_id, entry in feed_index.items():
+        si = items_by_catalog.get(gap_catalog_id)
+        if si is None:
+            # Controle tratado por risco fora do conjunto Anexo A da SoA → notice (não cria item).
+            out_of_scope.append(entry.get("ref_code") or str(gap_catalog_id))
+            continue
+        already_risk = RISK_REASON in (si.inclusion_reasons or []) or bool(si.risk_links)
+        if already_risk:
+            continue  # preserva edições; mudança no insumo vira divergência
+        reasons = list(si.inclusion_reasons or [])
+        reasons.append(RISK_REASON)
+        si.inclusion_reasons = reasons
+        si.applicable = True
+        si.risk_links = _risk_links_from_feed(entry)
+        risk_applied += 1
+
     db.commit()
-    return {"soa_id": str(soa.id), "added": added, "preserved": preserved}
+    return {
+        "soa_id": str(soa.id),
+        "added": added,
+        "preserved": preserved,
+        "risk_applied": risk_applied,
+        "out_of_scope": out_of_scope,
+    }
 
 
 def compute_divergence(db: Session, item: SoaItem) -> list[dict]:
@@ -146,18 +213,52 @@ def compute_divergence(db: Session, item: SoaItem) -> list[dict]:
         soa_v = _norm(soa_values[field])
         gap_v = _norm(gap_values[field])
         if soa_v != gap_v:
-            out.append({"field": field, "soa_value": soa_v, "gap_value": gap_v})
+            # source/source_value (Feature 013) + gap_value (compat).
+            out.append({
+                "field": field, "source": "gap",
+                "soa_value": soa_v, "source_value": gap_v, "gap_value": gap_v,
+            })
     return out
 
 
-def reconcile(db: Session, item: SoaItem, fields: list[str]) -> list[str]:
-    """Aplica o valor vivo do Gap aos campos indicados (ou a todos divergentes se vazio)."""
+def compute_risk_divergence(db: Session, item: SoaItem, feed_index: dict) -> list[dict]:
+    """Divergências contra o insumo de risco VIVO (soa-feed). Fonte 'risk' (Feature 013).
+
+    (a) feed aponta o controle mas a SoA não o inclui por risco;
+    (b) item incluído por risco cujo feed não aponta mais o controle (risco órfão);
+    (c) conjunto de riscos vinculados difere do feed.
+    """
+    entry = feed_index.get(item.catalog_item_id)
+    has_risk_reason = RISK_REASON in (item.inclusion_reasons or [])
+    out: list[dict] = []
+
+    if entry is not None:
+        feed_codes = sorted(l["risk_code"] for l in _risk_links_from_feed(entry))
+        soa_codes = sorted(l.get("risk_code") for l in (item.risk_links or []))
+        if not item.applicable or not has_risk_reason:
+            out.append({
+                "field": "risk_inclusion", "source": "risk",
+                "soa_value": "não incluído por risco", "source_value": feed_codes,
+            })
+        elif feed_codes != soa_codes:
+            out.append({
+                "field": "risk_links", "source": "risk",
+                "soa_value": soa_codes, "source_value": feed_codes,
+            })
+    elif has_risk_reason:
+        out.append({
+            "field": "risk_inclusion", "source": "risk",
+            "soa_value": "incluído por risco", "source_value": "sem risco correspondente",
+        })
+    return out
+
+
+def _reconcile_gap(db: Session, item: SoaItem, fields: list[str]) -> list[str]:
     divergences = {d["field"]: d for d in compute_divergence(db, item)}
     target = fields or list(divergences.keys())
     gap = db.get(GapAssessmentItem, item.gap_assessment_item_id) if item.gap_assessment_item_id else None
     if gap is None:
         return []
-
     applied: list[str] = []
     for field in target:
         if field not in divergences:
@@ -167,11 +268,51 @@ def reconcile(db: Session, item: SoaItem, fields: list[str]) -> list[str]:
         elif field == "exclusion_justification":
             item.exclusion_justification = gap.exclusion_justification
         elif field == "implementation_status":
-            mapped = GAP_TO_SOA_STATUS.get(gap.status)
-            item.implementation_status = mapped
+            item.implementation_status = GAP_TO_SOA_STATUS.get(gap.status)
         elif field == "responsible":
             item.responsible = gap.responsible
         elif field == "deadline":
             item.deadline = gap.deadline
         applied.append(field)
+    return applied
+
+
+def _reconcile_risk(db: Session, item: SoaItem, fields: list[str], feed_index: dict) -> list[str]:
+    """Aplica o valor vivo do insumo de risco. Preserva as razões manuais.
+
+    Se a remoção do vínculo de risco deixar um item aplicável sem nenhuma razão, ele permanece
+    aplicável e fica INCOMPLETO (derivado na leitura) — sem auto-flip para 'Não aplicável'.
+    """
+    risk_divs = {d["field"]: d for d in compute_risk_divergence(db, item, feed_index)}
+    if not risk_divs:
+        return []
+    if fields and not any(f in ("risk_inclusion", "risk_links") for f in fields):
+        return []
+
+    entry = feed_index.get(item.catalog_item_id)
+    if entry is not None:
+        # Incluir + razão de risco + riscos do feed (sem remover razões manuais).
+        reasons = list(item.inclusion_reasons or [])
+        if RISK_REASON not in reasons:
+            reasons.append(RISK_REASON)
+        item.inclusion_reasons = reasons
+        item.applicable = True
+        item.risk_links = _risk_links_from_feed(entry)
+    else:
+        # Remover razão de risco + riscos órfãos; manuais preservadas; pode ficar incompleto.
+        item.inclusion_reasons = [r for r in (item.inclusion_reasons or []) if r != RISK_REASON]
+        item.risk_links = []
+    return list(risk_divs.keys())
+
+
+def reconcile(db: Session, item: SoaItem, fields: list[str], source: str = "all",
+              feed_index: dict | None = None) -> list[str]:
+    """Reconcilia divergências por fonte (gap e/ou risco). Ação explícita do usuário."""
+    applied: list[str] = []
+    if source in ("all", "gap"):
+        applied.extend(_reconcile_gap(db, item, fields))
+    if source in ("all", "risk"):
+        if feed_index is None:
+            feed_index = build_feed_index(db, item.tenant_id)
+        applied.extend(_reconcile_risk(db, item, fields, feed_index))
     return applied

@@ -13,13 +13,16 @@ from wtnapp.helpers.classification_access import require_classification_read
 from wtnapp.helpers.permissions import require_permission
 from wtnapp.helpers.tenant_scope import OrgContext, scoped_query
 from wtnapp.models.document_version_model import DocumentVersion
+from wtnapp.models.risk_model import RiskPlan
 from wtnapp.models.soa_model import Soa, SoaItem, SoaItemEvent
 from wtnapp.schemas.soa_schema import (
     DivergenceField,
     ReconcileRequest,
+    RiskLink,
     SoaApproveRequest,
     SoaItemResponse,
     SoaItemUpdate,
+    SoaReadiness,
     SoaResponse,
     SoaSummary,
     SoaVersionResponse,
@@ -28,7 +31,7 @@ from wtnapp.services import controlled_document_service as cds
 from wtnapp.services import soa_consolidation_service as consolidation
 from wtnapp.services import soa_export_service
 from wtnapp.services.audit_service import AuditService
-from wtnapp.settings import Classification, DocStatus, DocType
+from wtnapp.settings import SOA_KIND_LABELS, Classification, DocStatus, DocType, SoaKind
 
 router = APIRouter(prefix="/soa", tags=["soa"])
 
@@ -47,8 +50,17 @@ def _get_soa(db: Session, ctx: OrgContext) -> Soa:
     return soa
 
 
-def _item_response(db: Session, item: SoaItem) -> SoaItemResponse:
+def _is_incomplete(item: SoaItem) -> bool:
+    if item.applicable:
+        return not (item.inclusion_reasons or [])
+    return not (item.exclusion_justification or "").strip()
+
+
+def _item_response(db: Session, item: SoaItem, feed_index: dict | None = None) -> SoaItemResponse:
+    if feed_index is None:
+        feed_index = consolidation.build_feed_index(db, item.tenant_id)
     divergence = [DivergenceField(**d) for d in consolidation.compute_divergence(db, item)]
+    divergence += [DivergenceField(**d) for d in consolidation.compute_risk_divergence(db, item, feed_index)]
     return SoaItemResponse(
         id=item.id,
         ref_code=item.ref_code,
@@ -62,6 +74,9 @@ def _item_response(db: Session, item: SoaItem) -> SoaItemResponse:
         responsible=item.responsible,
         deadline=item.deadline,
         risks_treated=item.risks_treated,
+        risk_links=[RiskLink(**rl) for rl in (item.risk_links or [])],
+        origin=consolidation.derive_origin(item),
+        incomplete=_is_incomplete(item),
         expected_evidence=item.expected_evidence,
         evidence_refs=item.evidence_refs,
         observations=item.observations,
@@ -79,11 +94,44 @@ def _items_ordered(db: Session, soa: Soa) -> list[SoaItem]:
     )
 
 
+def _has_approved_risk_plan(db: Session, tenant_id) -> bool:
+    """Existe Plano de Tratamento de Riscos com versão aprovada vigente (in-force)?"""
+    plan = db.query(RiskPlan).filter_by(tenant_id=tenant_id).first()
+    return bool(plan and plan.current_version_id)
+
+
+def _readiness(db: Session, soa: Soa, items: list[SoaItem], out_of_scope: list[str]) -> SoaReadiness:
+    approved = _has_approved_risk_plan(db, soa.tenant_id)
+    kind = SoaKind.normative if approved else SoaKind.pre_soa
+    pending: list[str] = []
+    if not approved:
+        pending.append("Plano de Tratamento de Riscos ainda não aprovado.")
+    incomplete = [i.ref_code for i in items if _is_incomplete(i)]
+    if incomplete:
+        pending.append(f"{len(incomplete)} controle(s) sem razão de inclusão ou justificativa de exclusão.")
+    return SoaReadiness(
+        kind=kind.value,
+        risk_plan_approved=approved,
+        pending_for_normative=pending,
+        out_of_scope_risk_notices=out_of_scope,
+    )
+
+
 def _soa_response(db: Session, soa: Soa) -> SoaResponse:
     items = _items_ordered(db, soa)
-    responses = [_item_response(db, i) for i in items]
+    feed_index = consolidation.build_feed_index(db, soa.tenant_id)
+    responses = [_item_response(db, i, feed_index) for i in items]
     applicable = sum(1 for i in items if i.applicable)
     divergent = sum(1 for r in responses if r.divergence)
+    risk_divergent = sum(1 for r in responses if any(d.source == "risk" for d in r.divergence))
+    incomplete = sum(1 for r in responses if r.incomplete)
+    # Controles tratados por risco fora do Anexo A da SoA (notice, sem criar item).
+    catalog_ids = {i.catalog_item_id for i in items}
+    out_of_scope = [
+        e.get("ref_code") or str(gid)
+        for gid, e in feed_index.items()
+        if gid not in catalog_ids
+    ]
     return SoaResponse(
         id=soa.id,
         draft_status=soa.draft_status.value,
@@ -95,7 +143,10 @@ def _soa_response(db: Session, soa: Soa) -> SoaResponse:
             applicable=applicable,
             not_applicable=len(items) - applicable,
             divergent=divergent,
+            risk_divergent=risk_divergent,
+            incomplete=incomplete,
         ),
+        readiness=_readiness(db, soa, items, out_of_scope),
     )
 
 
@@ -112,6 +163,7 @@ def _version_response(db: Session, v: DocumentVersion) -> SoaVersionResponse:
         approved_by=v.approved_by,
         is_superseded=cds.is_superseded(db, v.id),
         signed=bool(snapshot.get("signature")),
+        kind=snapshot.get("soa_kind", SoaKind.pre_soa.value),
         created_at=v.created_at,
     )
 
@@ -142,7 +194,11 @@ def consolidate_soa(db: db_dep, ctx: manage_dep, request: Request):
     AuditService.log_from_request(
         request=request, operation="CONSOLIDATE",
         entity_type="soa", entity_id=str(soa.id),
-        details={"added": result["added"], "preserved": result["preserved"]},
+        details={
+            "added": result["added"], "preserved": result["preserved"],
+            "risk_applied": result.get("risk_applied", 0),
+            "out_of_scope": result.get("out_of_scope", []),
+        },
         actor_user_id=ctx.principal.user.id, tenant_id=ctx.tenant_id,
     )
     return _soa_response(db, soa)
@@ -208,7 +264,7 @@ def reconcile_item(item_id: uuid.UUID, body: ReconcileRequest, db: db_dep, ctx: 
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Item não encontrado.")
 
-    applied = consolidation.reconcile(db, item, body.fields)
+    applied = consolidation.reconcile(db, item, body.fields, source=body.source)
     for field in applied:
         db.add(SoaItemEvent(
             tenant_id=ctx.tenant_id, item_id=item.id, field=field,
@@ -278,6 +334,8 @@ def approve_soa(body: SoaApproveRequest, db: db_dep, ctx: approve_dep, request: 
             "responsible": i.responsible,
             "deadline": i.deadline.isoformat() if i.deadline else None,
             "risks_treated": i.risks_treated,
+            "risk_links": list(i.risk_links or []),
+            "origin": consolidation.derive_origin(i),
             "expected_evidence": i.expected_evidence,
             "evidence_refs": i.evidence_refs,
             "observations": i.observations,
@@ -286,6 +344,14 @@ def approve_soa(body: SoaApproveRequest, db: db_dep, ctx: approve_dep, request: 
     ]
     applicable = sum(1 for i in items if i.applicable)
     summary = {"total": len(items), "applicable": applicable, "not_applicable": len(items) - applicable}
+
+    # Gate duro (Feature 013): rótulo da versão conforme exista Plano de Tratamento aprovado vigente.
+    risk_plan = db.query(RiskPlan).filter_by(tenant_id=ctx.tenant_id).first()
+    soa_kind = SoaKind.normative if (risk_plan and risk_plan.current_version_id) else SoaKind.pre_soa
+    risk_plan_version_number = None
+    if risk_plan and risk_plan.current_version_id:
+        rp_version = db.query(DocumentVersion).filter_by(id=risk_plan.current_version_id).first()
+        risk_plan_version_number = rp_version.version_number if rp_version else None
 
     signature = None
     if body.sign:
@@ -302,7 +368,12 @@ def approve_soa(body: SoaApproveRequest, db: db_dep, ctx: approve_dep, request: 
         }
 
     def _snapshot():
-        snap = {"items": item_snapshots, "summary": summary, "gap_assessment_id": str(soa.gap_assessment_id) if soa.gap_assessment_id else None}
+        snap = {
+            "items": item_snapshots, "summary": summary,
+            "gap_assessment_id": str(soa.gap_assessment_id) if soa.gap_assessment_id else None,
+            "soa_kind": soa_kind.value,
+            "risk_plan_version_number": risk_plan_version_number,
+        }
         if signature:
             snap["signature"] = signature
         return snap
@@ -315,7 +386,8 @@ def approve_soa(body: SoaApproveRequest, db: db_dep, ctx: approve_dep, request: 
     AuditService.log_from_request(
         request=request, operation="APPROVE_SOA",
         entity_type="soa", entity_id=str(soa.id),
-        details={"version_number": version.version_number, "signed": bool(signature)},
+        details={"version_number": version.version_number, "signed": bool(signature),
+                 "soa_kind": soa_kind.value},
         actor_user_id=ctx.principal.user.id, tenant_id=ctx.tenant_id,
     )
     return _version_response(db, version)
