@@ -256,8 +256,9 @@ o rótulo no cabeçalho; versão `pre_soa` antiga reflete seu snapshot.
   nenhum log/erro expõe PII ou detalhe sensível de risco (só id/código).
 - [X] T040 **Tenant isolation sweep**: revisar que a agregação do `soa_feed` e toda query nova passam por
   `tenant_scope`/contexto (fail-closed).
-- [ ] T041 Rodar `quickstart.md` (E2E browser, Postgres real) + `alembic upgrade head` **2×** (DB zerado e
-  com `create_all`) confirmando idempotência.
+- [X] T041 `alembic upgrade head` no **Postgres real** (c2d3e4f5a116 → d3e4f5a6b217) + idempotência (2ª
+  execução = no-op) ✓; seed E2E `scripts/seed_soa_normative_demo.py` valida consolidação dirigida por
+  risco + gate **normativo** (A.5.1 ← RSK-0001) ✓. **Pendente**: click-through manual no browser.
 - [X] T042 Suítes verdes: `pytest wtnapp/test -q` e `cd wtnadmin && npm test`.
 
 ---
