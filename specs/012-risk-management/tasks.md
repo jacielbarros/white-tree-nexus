@@ -302,7 +302,7 @@ registros append-only com justificativa nas mudanças relevantes; tentar editar/
 
 - [X] T054 [P] Adicionar a seção do **Módulo de Riscos (Feature 012 — implementada)** em `CLAUDE.md`
   (espelhando o padrão dos módulos anteriores).
-- [ ] T055 [P] Criar `scripts/seed_risk_demo.py` (cenário de demonstração E2E, padrão `seed_soa_demo.py`).
+- [X] T055 [P] Criar `scripts/seed_risk_demo.py` (cenário de demonstração E2E, padrão `seed_soa_demo.py`).
 - [X] T056 **Audit review**: confirmar que toda operação sensível do `/risk` gera log e que nenhum
   log/erro/telemetria expõe PII/segredos/conteúdo confidencial.
 - [X] T057 **Tenant isolation sweep**: revisar que nenhuma query nova do módulo escapou de `scoped_query`/
