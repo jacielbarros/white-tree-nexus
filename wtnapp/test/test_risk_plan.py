@@ -57,6 +57,29 @@ def test_approve_requires_submit_first(client, risk_seed, org_headers):
     assert client.post("/risk/plan/approve", headers=h, json={"change_nature": "x"}).status_code == 409
 
 
+def test_optional_signature_seals_the_version(client, db, risk_seed, org_headers):
+    from wtnapp.models.document_version_model import DocumentVersion
+    from wtnapp.settings import DocType
+    seed = risk_seed()
+    h = org_headers("admin@risk-acme.com", seed["org"].id)
+    _create_risk(client, h, seed, evaluate=True)
+    client.post("/risk/plan/submit-review", headers=h)
+
+    resp = client.post("/risk/plan/approve", headers=h, json={"change_nature": "v1", "sign": True})
+    assert resp.status_code == 200, resp.text
+
+    version = (
+        db.query(DocumentVersion)
+        .filter_by(tenant_id=seed["org"].id, document_type=DocType.risk_treatment_plan)
+        .order_by(DocumentVersion.version_number.desc())
+        .first()
+    )
+    sig = (version.content_snapshot or {}).get("signature")
+    assert sig is not None
+    assert sig["algorithm"] == "sha256" and sig["level"] == "advanced"
+    assert len(sig["content_hash"]) == 64
+
+
 def test_consultant_cannot_approve_plan(client, risk_seed, org_headers):
     seed = risk_seed()
     admin_h = org_headers("admin@risk-acme.com", seed["org"].id)

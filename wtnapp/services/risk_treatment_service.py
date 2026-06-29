@@ -6,6 +6,8 @@ Este serviço NÃO escreve em `soa`/`soa_item`: o `soa_feed` apenas expõe o ví
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from datetime import datetime, timezone
 
@@ -190,10 +192,10 @@ def submit_plan(db: Session, ctx: OrgContext) -> RiskPlan:
     return plan
 
 
-def _plan_snapshot(db: Session, tenant_id: uuid.UUID) -> dict:
+def _plan_body(db: Session, tenant_id: uuid.UUID) -> dict:
+    """Conteúdo canônico do plano (sem a vedação de assinatura — base do hash)."""
     risks = db.query(Risk).filter_by(tenant_id=tenant_id, is_archived=False).all()
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
         "risks": [
             {
                 "code": r.code, "title": r.title, "status": r.status.value,
@@ -233,14 +235,32 @@ def approve_plan(db: Session, ctx: OrgContext, data: dict):
     classification = Classification(data.get("classification") or Classification.uso_interno.value)
     signed = bool(data.get("sign"))
     change_nature = data.get("change_nature") or "Aprovação do Plano de Tratamento de Riscos"
+
+    # Assinatura avançada opcional: selo SHA-256 sobre o conteúdo canônico (padrão da SoA — sem OTP).
+    body = _plan_body(db, tenant_id)
+    signature = None
     if signed:
-        change_nature = f"{change_nature} (assinado)"
+        canonical = json.dumps(body, sort_keys=True, ensure_ascii=False)
+        signature = {
+            "signer_user_id": str(ctx.principal.user.id),
+            "signer_name": ctx.principal.user.full_name or str(ctx.principal.user.id),
+            "signed_at": datetime.now(timezone.utc).isoformat(),
+            "content_hash": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+            "algorithm": "sha256",
+            "level": "advanced",
+        }
+
+    def _snapshot() -> dict:
+        snap = {"generated_at": datetime.now(timezone.utc).isoformat(), **body}
+        if signature:
+            snap["signature"] = signature
+        return snap
 
     version = cds.approve_document(
         db=db, artifact=plan, doc_type=DocType.risk_treatment_plan,
         actor_id=ctx.principal.user.id, classification=classification,
         next_review_at=data.get("next_review_at"), change_nature=change_nature,
-        snapshot_factory=lambda: _plan_snapshot(db, tenant_id),
+        snapshot_factory=_snapshot,
     )
     risk_service.record_event(db, tenant_id, None, RiskEventType.plan_approved,
                               new=str(version.version_number), reason=change_nature,
