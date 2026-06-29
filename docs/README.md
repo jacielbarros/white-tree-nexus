@@ -30,20 +30,24 @@ pela [constitution](../.specify/memory/constitution.md).
 | 0 | Fundação multi-tenant | [`00-fundacao-multi-tenant.md`](00-fundacao-multi-tenant.md) |
 | 1 | Diagnóstico e Contexto da Organização | [`01-diagnostico-contexto.md`](01-diagnostico-contexto.md) |
 | 2 | Gap Analysis ISO 27001:2022 (+ seed do Anexo A) | [`02-gap-analysis.md`](02-gap-analysis.md) |
-| 3 | Statement of Applicability (SoA) — **implementada** ([`specs/005-soa-declaracao-aplicabilidade/`](../specs/005-soa-declaracao-aplicabilidade/)) | [`03-soa.md`](03-soa.md) |
-| 4 | Plano de Ação | [`04-plano-de-acao.md`](04-plano-de-acao.md) |
-| 5 | Gestão de Evidências | [`05-gestao-evidencias.md`](05-gestao-evidencias.md) |
+| 3 | Gestão de Ativos / Processos / Escopo — **implementada** ([`specs/011-asset-process-scope/`](../specs/011-asset-process-scope/)) | — |
+| 4 | Gestão de Riscos: Ameaças & Vulnerabilidades → Avaliação (6.1.2) → Tratamento (6.1.3) — **implementada** ([`specs/012-risk-management/`](../specs/012-risk-management/)) | — |
+| 5 | Statement of Applicability (SoA) — consolida o tratamento de risco; hoje em **Pré-SoA** sobre o Gap até a versão definitiva ([`specs/005-soa-declaracao-aplicabilidade/`](../specs/005-soa-declaracao-aplicabilidade/)) | [`03-soa.md`](03-soa.md) |
+| 6 | Evidências / Auditoria / Melhoria Contínua (PDCA) | [`05-gestao-evidencias.md`](05-gestao-evidencias.md) |
 
-> **Feature 003 implementada** (backend) — Motor de Workflow de Preenchimento:
-> ([`specs/003-workflow-preenchimento/`](../specs/003-workflow-preenchimento/)) 37 testes passando;
-> frontend pendente (T014/T018/T024/T027/T030/T036). Numeração: 001 = Fundação ·
-> 002 = Diagnóstico/Contexto · **003 = Motor de Workflow (implementada)** · 004 = Gap Analysis · …
->
-> **Próxima feature-branch: 004 — Gap Analysis** — consome o motor de workflow da 003.
+> _Sequência revisada para a ordem lógica da ISO (risco **antes** da SoA, pois a SoA é output do
+> tratamento de risco — 6.1.3 d). O **Plano de Ação** (prompt [`04-plano-de-acao.md`](04-plano-de-acao.md))
+> foi absorvido pelo **Plano de Tratamento de Riscos** nesta esteira._
+
+> **Status atual — fonte de verdade: [`CLAUDE.md`](../CLAUDE.md).** Implementadas: Fundação (001),
+> Diagnóstico/Contexto (002), Motor de Workflow (003), Gap Analysis (004), SoA/Pré-SoA (005),
+> Dashboard de Conformidade (006), Orientação do Gap (007), Evidências do Gap (008), Documentos
+> imprimíveis/assináveis (009–010), Ativos/Processos/Escopo (011) e Gestão de Riscos (012). Este
+> índice preserva os **prompts de specify originais**; a **sequência e o status vivem no `CLAUDE.md`**.
 
 ## Evolução pós-MVP (prompts a criar quando chegar a vez)
 
-Gestão de Riscos · Auditoria Interna · Revisão pela Direção · Dashboard Executivo ·
+Auditoria Interna · Revisão pela Direção · Dashboard Executivo ·
 Recursos de IA (opt-in por organização).
 
 **Capacidade transversal mapeada:** **Central de Templates de Comunicação** (parametrizar

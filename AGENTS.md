@@ -138,10 +138,13 @@ Papéis: **Super Admin da plataforma** (único cross-tenant), **Admin da organiz
 - Login lockout após `MAX_LOGIN_ATTEMPTS`. Logout revoga `jti` no Redis (fail-open).
 
 ### Módulos do produto (preencher conforme as features chegam)
-Ordem de MVP: 1) Diagnóstico e Contexto · 2) Gap Analysis · 3) SoA · 4) Plano de Ação ·
-5) Gestão de Evidências. Evolução: 6) Riscos · 7) Auditoria Interna · 8) Revisão pela Direção ·
-9) IA · 10) Dashboards avançados. Cada módulo nasce de uma spec própria
-([Spec Kit](.specify/)) e ganha sua seção aqui quando implementado.
+Sequência da esteira guiada (ordem ISO): 1) Diagnóstico e Contexto · 2) Gap Analysis ·
+3) Gestão de Ativos/Processos/Escopo · 4) Gestão de Riscos (Ameaças & Vulnerabilidades →
+Avaliação 6.1.2 → Tratamento 6.1.3) · 5) SoA (consolidada a partir do tratamento de risco) ·
+6) Evidências / Auditoria / Melhoria Contínua (PDCA). Evolução: IA · Dashboards avançados.
+**Nota de sequência:** a SoA é output do tratamento de risco (6.1.3 d); o módulo de SoA atual
+consolida o Gap como **Pré-SoA** até a consolidação definitiva pós-tratamento. Cada módulo nasce de
+uma spec própria ([Spec Kit](.specify/)) e ganha sua seção aqui quando implementado.
 
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,

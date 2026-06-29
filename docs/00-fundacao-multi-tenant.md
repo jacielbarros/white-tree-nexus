@@ -48,9 +48,10 @@ Requisitos observáveis (critérios de aceitação):
   e o evento é auditado.
 
 Fora de escopo desta feature (virão em specs próprias, nesta ordem de MVP):
-Diagnóstico e Contexto da Organização, Gap Analysis, Statement of Applicability,
-Plano de Ação, Gestão de Evidências. Depois: Riscos, Auditoria Interna, Revisão pela
-Direção, IA, Dashboards avançados.
+Diagnóstico e Contexto da Organização, Gap Analysis, Gestão de Ativos/Processos/Escopo,
+Gestão de Riscos (Ameaças & Vulnerabilidades → Avaliação 6.1.2 → Tratamento 6.1.3),
+Statement of Applicability (consolidada a partir do tratamento de risco) e
+Evidências/Auditoria/Melhoria Contínua (PDCA). Depois: IA, Dashboards avançados.
 
 NÃO especificar tecnologia/stack nesta spec — decisões de implementação ficam para o
 /speckit.plan, guiado pela constitution do projeto.
