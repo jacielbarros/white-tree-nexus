@@ -260,6 +260,9 @@ def _drop_legacy(conn: sa.engine.Connection) -> None:
     if not _table_exists(conn, "gap_evidence"):
         return
     if conn.dialect.name == "postgresql":
+        # FK circular do 008: gap_evidence.current_version_id → gap_evidence_version. Remover antes
+        # de dropar as tabelas, senão `DROP TABLE gap_evidence_version` falha por dependência.
+        conn.execute(sa.text("ALTER TABLE gap_evidence DROP CONSTRAINT IF EXISTS fk_gap_evidence_current_version"))
         for table in ("gap_evidence_version", "gap_evidence_event"):
             conn.execute(sa.text(f"DROP TRIGGER IF EXISTS {table}_append_only ON {table}"))
             conn.execute(sa.text(f"DROP FUNCTION IF EXISTS wtn_{table}_append_only()"))
