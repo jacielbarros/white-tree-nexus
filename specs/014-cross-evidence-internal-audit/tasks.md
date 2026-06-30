@@ -119,10 +119,10 @@ ativo; vincular evidência a 2º artefato; inativas só com `manage_evidence`.
   paginado) e `link`/`unlink` (cria `evidence_link`/marca `active=false` + eventos `linked`/`unlinked`).
 - [X] T024 [US2] `wtnapp/routers/evidence.py`: `GET /evidence` (filtros), `POST /evidence/{id}/links`,
   `DELETE /evidence/{id}/links/{link_id}`.
-- [ ] T025 [P] [US2] `wtnadmin/src/app/pages/evidence-repository/`: lista pesquisável/filtrável +
+- [X] T025 [P] [US2] `wtnadmin/src/app/pages/evidence-repository/`: lista pesquisável/filtrável +
   detalhe com vínculos + ação vincular/desvincular; rota com `permissionGuard('view_evidence')`,
   link no shell.
-- [ ] T026 [P] [US2] `pages/evidence-repository/evidence-repository.spec.ts` (filtros, vínculos,
+- [X] T026 [P] [US2] `pages/evidence-repository/evidence-repository.spec.ts` (filtros, vínculos,
   inativas gated).
 
 **Checkpoint**: repositório central pesquisável e reuso de evidência funcionando.

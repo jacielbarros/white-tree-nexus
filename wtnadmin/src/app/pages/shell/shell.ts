@@ -315,6 +315,18 @@ interface OrgOption { label: string; value: string; }
                 @if (!collapsed()) { <span>Versões</span> }
               </a>
             </div>
+
+            <!-- Evidências & Auditoria Interna (Feature 014) -->
+            <div class="wtn-nav-group">
+              @if (!collapsed()) { <div class="wtn-nav-label">Evidências & Auditoria</div> }
+              <a class="wtn-nav-item" routerLink="evidence-repository" routerLinkActive="active" [title]="collapsed() ? 'Repositório de Evidências' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Repositório de Evidências</span> }
+              </a>
+            </div>
           }
         </nav>
 

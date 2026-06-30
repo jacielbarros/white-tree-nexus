@@ -171,6 +171,12 @@ export const routes: Routes = [
           import('@app/pages/risk-dashboard/risk-dashboard').then((m) => m.RiskDashboardPage),
       },
       {
+        path: 'evidence-repository',
+        canActivate: [permissionGuard('view_evidence')],
+        loadComponent: () =>
+          import('@app/pages/evidence-repository/evidence-repository').then((m) => m.EvidenceRepositoryPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),
