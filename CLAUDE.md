@@ -468,7 +468,10 @@ PDCA 10.1) **sem implementá-la**. Pendente apenas o roteiro E2E manual no brows
 - **Migrations**: `f6a7b8c9d014_cross_evidence_repository.py` (cria `evidence_*` + RLS + triggers, migra
   dados do 008 e dropa tabelas legadas; **merge** dos dois heads anteriores `a9b0c1d2e308`+`d3e4f5a6b217`,
   idempotente) e `a7b8c9d0e015_internal_audit_module.py` (`down_revision="f6a7b8c9d014"`, 5 tabelas + RLS +
-  trigger). Head único `a7b8c9d0e015`. **`alembic upgrade head` aplicado e validado no PostgreSQL real**
+  trigger) + `b8c9d0e1f016_internal_audit_rename_current_version.py` (auto-correção idempotente:
+  renomeia `internal_audit.current_report_version_id`→`current_version_id` em bancos que criaram a
+  tabela via `create_all()` antes do rename; no-op em bancos novos). Head único `b8c9d0e1f016`.
+  **`alembic upgrade head` aplicado e validado no PostgreSQL real**
   (a migração do 008 exigiu ordenação por causa da FK circular `evidence.current_version_id↔evidence_version`
   e do drop das tabelas legadas — resolvido). **Pendente**: apenas o E2E manual no browser.
 
