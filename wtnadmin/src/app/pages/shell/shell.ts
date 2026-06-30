@@ -333,6 +333,13 @@ interface OrgOption { label: string; value: string; }
                 </svg>
                 @if (!collapsed()) { <span>Auditoria Interna</span> }
               </a>
+              <a class="wtn-nav-item" routerLink="internal-audit-dashboard" routerLinkActive="active" [title]="collapsed() ? 'Dashboard Auditoria' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Dashboard Auditoria</span> }
+              </a>
             </div>
           }
         </nav>

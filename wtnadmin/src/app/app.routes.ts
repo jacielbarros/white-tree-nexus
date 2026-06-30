@@ -189,6 +189,12 @@ export const routes: Routes = [
           import('@app/pages/internal-audit-detail/internal-audit-detail').then((m) => m.InternalAuditDetailPage),
       },
       {
+        path: 'internal-audit-dashboard',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit-dashboard/internal-audit-dashboard').then((m) => m.InternalAuditDashboardPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

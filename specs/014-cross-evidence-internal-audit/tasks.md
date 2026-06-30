@@ -288,7 +288,7 @@ concluída/relatório aprovado; estado vazio sem erro.
 - [X] T058 [US8] `wtnapp/routers/internal_audit.py`: `GET /internal-audit/dashboard`.
 - [X] T059 [US8] Estender `wtnapp/services/dashboard_service.py` + `schemas/dashboard_schema.py` com
   card desta etapa (`DashboardModuleId.internal_audit`, gating por `view_internal_audit`, fail-open).
-- [ ] T060 [P] [US8] `pages/internal-audit-dashboard/` (cards) + card na home; `.spec.ts`.
+- [X] T060 [P] [US8] `pages/internal-audit-dashboard/` (cards) + card na home; `.spec.ts`.
 
 **Checkpoint**: visão executiva + readiness na esteira; feature completa.
 
