@@ -9,6 +9,14 @@ from wtnapp.models.diagnostic_model import Diagnostic
 from wtnapp.models.document_version_model import DocumentVersion
 # Evidências transversais (Feature 014)
 from wtnapp.models.evidence_model import Evidence, EvidenceEvent, EvidenceLink, EvidenceVersion
+# Auditoria Interna (Feature 014, Fase 2)
+from wtnapp.models.internal_audit_model import (
+    InternalAudit,
+    InternalAuditChecklistItem,
+    InternalAuditEvent,
+    InternalAuditFinding,
+    InternalAuditProgram,
+)
 from wtnapp.models.form_assignment_event_model import FormAssignmentEvent
 from wtnapp.models.form_assignment_model import FormAssignment
 from wtnapp.models.form_signature_model import FormSignature, FormSignatureOTP
@@ -70,6 +78,11 @@ __all__ = [
     "EvidenceVersion",
     "EvidenceLink",
     "EvidenceEvent",
+    "InternalAuditProgram",
+    "InternalAudit",
+    "InternalAuditChecklistItem",
+    "InternalAuditFinding",
+    "InternalAuditEvent",
     "FormAssignment",
     "FormAssignmentEvent",
     "FormSignature",

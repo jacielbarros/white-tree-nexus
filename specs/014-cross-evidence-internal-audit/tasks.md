@@ -38,7 +38,7 @@ description: "Task list — Feature 014: Evidências Transversais + Auditoria In
 - [X] T004 Criar `wtnapp/models/evidence_model.py` com 4 tabelas (`evidence`, `evidence_version`,
   `evidence_link`, `evidence_event`), todas com `tenant_id`; triggers append-only (SQLite+PG) em
   `evidence_version` e `evidence_event` (padrão do `gap_evidence_model.py`).
-- [ ] T005 [P] Criar `wtnapp/models/internal_audit_model.py` com 5 tabelas
+- [X] T005 [P] Criar `wtnapp/models/internal_audit_model.py` com 5 tabelas
   (`internal_audit_program`, `internal_audit`, `internal_audit_checklist_item`,
   `internal_audit_finding`, `internal_audit_event`), todas com `tenant_id`; trigger append-only em
   `internal_audit_event`.
@@ -163,22 +163,22 @@ importação SoA/Gap).
 transitar estados; transição inválida ⇒ 409; tudo tenant-scoped.
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
-- [ ] T032 [P] [US4] Isolation em `wtnapp/test/test_tenant_isolation_internal_audit.py`
+- [X] T032 [P] [US4] Isolation em `wtnapp/test/test_tenant_isolation_internal_audit.py`
   (programa/auditoria/checklist da Org B inacessíveis).
-- [ ] T033 [P] [US4] Ciclo de vida + transições inválidas + import de checklist em
+- [X] T033 [P] [US4] Ciclo de vida + transições inválidas + import de checklist em
   `wtnapp/test/test_internal_audit_lifecycle.py`; **incluir edge case**: item de checklist cujo alvo
   (controle/cláusula/risco) deixou de existir é tratado graciosamente (referência preservada, sem
   quebrar a auditoria).
 
 ### Implementation for User Story 4
-- [ ] T034 [P] [US4] `wtnapp/schemas/internal_audit_schema.py`: `ProgramRequest/Summary`,
+- [X] T034 [P] [US4] `wtnapp/schemas/internal_audit_schema.py`: `ProgramRequest/Summary`,
   `AuditRequest/Summary/Detail` (com `readiness`), `ChecklistItemRequest/Summary`,
   `ChecklistImportRequest`.
-- [ ] T035 [US4] `wtnapp/services/internal_audit_service.py`: programas, auditorias (geração de `code`
+- [X] T035 [US4] `wtnapp/services/internal_audit_service.py`: programas, auditorias (geração de `code`
   por tenant, imutável; **validar que `auditor_member_id` é membro ativo do tenant** — N1), máquina de
   estados (`start`/`complete`/`cancel`), checklist manual + `import_from_scope` (SoA/Gap), trilha
   `internal_audit_event`. **Sem campo `mandatory`** — gate de completude usa `result=pendente`.
-- [ ] T036 [US4] `wtnapp/routers/internal_audit.py`: endpoints de programs, audits (CRUD + `transition`)
+- [X] T036 [US4] `wtnapp/routers/internal_audit.py`: endpoints de programs, audits (CRUD + `transition`)
   e checklist (`GET/POST` + `/import`), com RBAC/scoped_query/audit.
 - [ ] T037 [P] [US4] `wtnadmin/src/app/pages/internal-audit/` (lista programas+auditorias + criar) e
   base de `pages/internal-audit-detail/` (seção checklist); rotas com
@@ -198,15 +198,15 @@ promovíveis com `nonconformity_ref` reservado.
 evidência (`target_type=audit_finding`); remoção lógica preserva trilha.
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
-- [ ] T039 [P] [US5] Constatações por tipo + `promotable` + vínculo de evidência em
+- [X] T039 [P] [US5] Constatações por tipo + `promotable` + vínculo de evidência em
   `wtnapp/test/test_internal_audit_findings.py`.
-- [ ] T040 [P] [US5] Isolation + remoção lógica/trilha em
+- [X] T040 [P] [US5] Isolation + remoção lógica/trilha em
   `wtnapp/test/test_internal_audit_findings.py`.
 
 ### Implementation for User Story 5
-- [ ] T041 [US5] `internal_audit_service`: CRUD de finding (deriva `promotable`, bloqueia set de
+- [X] T041 [US5] `internal_audit_service`: CRUD de finding (deriva `promotable`, bloqueia set de
   `nonconformity_ref`), vínculo opcional a checklist item, remoção lógica + evento.
-- [ ] T042 [US5] `wtnapp/routers/internal_audit.py`: `GET/POST /audits/{id}/findings`,
+- [X] T042 [US5] `wtnapp/routers/internal_audit.py`: `GET/POST /audits/{id}/findings`,
   `PUT/DELETE /findings/{id}`; `FindingSummary` expõe `promotable`/`nonconformity_ref`/`evidence_links`.
 - [ ] T043 [P] [US5] `pages/internal-audit-detail/`: seção de constatações (tipo+vínculo) + anexar
   evidência via `evidence-panel` (`target_type=audit_finding`).
