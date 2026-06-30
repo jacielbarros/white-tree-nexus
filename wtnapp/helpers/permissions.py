@@ -41,6 +41,12 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_risk",
         "manage_risk",
         "approve_risk_plan",
+        # Evidências transversais + Auditoria Interna (Feature 014)
+        "view_evidence",
+        "manage_evidence",
+        "view_internal_audit",
+        "manage_internal_audit",
+        "approve_audit_report",
     },
     Role.org_admin: {
         "invite_users",
@@ -71,6 +77,12 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_risk",
         "manage_risk",
         "approve_risk_plan",
+        # Evidências transversais + Auditoria Interna (Feature 014)
+        "view_evidence",
+        "manage_evidence",
+        "view_internal_audit",
+        "manage_internal_audit",
+        "approve_audit_report",
     },
     Role.consultant: {
         "invite_users",
@@ -94,6 +106,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Gestão de Riscos (Feature 012) — Consultor gere mas não aprova o plano
         "view_risk",
         "manage_risk",
+        # Evidências transversais + Auditoria Interna (Feature 014) — gere mas não aprova o relatório
+        "view_evidence",
+        "manage_evidence",
+        "view_internal_audit",
+        "manage_internal_audit",
     },
     Role.client: {
         "view_organization",
@@ -110,6 +127,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_asset",
         # Gestão de Riscos (Feature 012)
         "view_risk",
+        # Evidências transversais + Auditoria Interna (Feature 014)
+        "view_evidence",
+        "view_internal_audit",
     },
     Role.manager: {
         "view_organization",
@@ -126,6 +146,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_asset",
         # Gestão de Riscos (Feature 012)
         "view_risk",
+        # Evidências transversais + Auditoria Interna (Feature 014)
+        "view_evidence",
+        "view_internal_audit",
     },
     Role.process_owner: {
         "view_organization",
@@ -142,9 +165,20 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_asset",
         # Gestão de Riscos (Feature 012)
         "view_risk",
+        # Evidências transversais + Auditoria Interna (Feature 014)
+        "view_evidence",
+        "view_internal_audit",
     },
-    Role.control_owner: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset", "view_risk"},
-    Role.internal_auditor: {"view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset", "view_risk"},
+    Role.control_owner: {
+        "view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset",
+        "view_risk", "view_evidence", "view_internal_audit",
+    },
+    Role.internal_auditor: {
+        "view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset",
+        "view_risk",
+        # Auditor interno: conduz auditorias e anexa evidências a constatações (Feature 014)
+        "view_evidence", "manage_evidence", "view_internal_audit", "manage_internal_audit",
+    },
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }
 

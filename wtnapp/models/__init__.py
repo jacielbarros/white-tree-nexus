@@ -7,6 +7,8 @@ from wtnapp.models.classification_policy_model import ClassificationAccessPolicy
 from wtnapp.models.context_analysis_model import ContextAnalysis, ContextIssue
 from wtnapp.models.diagnostic_model import Diagnostic
 from wtnapp.models.document_version_model import DocumentVersion
+# Evidências transversais (Feature 014)
+from wtnapp.models.evidence_model import Evidence, EvidenceEvent, EvidenceLink, EvidenceVersion
 from wtnapp.models.form_assignment_event_model import FormAssignmentEvent
 from wtnapp.models.form_assignment_model import FormAssignment
 from wtnapp.models.form_signature_model import FormSignature, FormSignatureOTP
@@ -16,7 +18,6 @@ from wtnapp.models.form_template_model import FormTemplate
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem, GapAssessmentItemEvent
 from wtnapp.models.gap_assignment_model import GapAssignment
 from wtnapp.models.gap_catalog_model import GapCatalogItem
-from wtnapp.models.gap_evidence_model import GapEvidence, GapEvidenceEvent, GapEvidenceVersion
 from wtnapp.models.gap_guidance_event_model import GapGuidanceEvent
 from wtnapp.models.gap_legend_model import GapLegendEntry
 from wtnapp.models.gap_seed_model import GapSeedItem, GapSeedVersion
@@ -65,6 +66,10 @@ __all__ = [
     "ContextIssue",
     "Diagnostic",
     "DocumentVersion",
+    "Evidence",
+    "EvidenceVersion",
+    "EvidenceLink",
+    "EvidenceEvent",
     "FormAssignment",
     "FormAssignmentEvent",
     "FormSignature",
@@ -76,9 +81,6 @@ __all__ = [
     "GapAssessmentItemEvent",
     "GapAssignment",
     "GapCatalogItem",
-    "GapEvidence",
-    "GapEvidenceEvent",
-    "GapEvidenceVersion",
     "GapGuidanceEvent",
     "GapLegendEntry",
     "GapSeedItem",

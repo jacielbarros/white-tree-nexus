@@ -132,6 +132,7 @@ class DocType(str, Enum):
     gap_baseline = "gap_baseline"
     soa = "soa"
     risk_treatment_plan = "risk_treatment_plan"  # Plano de Tratamento de Riscos (Feature 012)
+    internal_audit_report = "internal_audit_report"  # Relatório de Auditoria Interna (Feature 014)
 
 
 class IssueOrigin(str, Enum):
@@ -290,6 +291,72 @@ class GapEvidenceEventType(str, Enum):
     replaced = "replaced"
     inactivated = "inactivated"
     access_denied = "access_denied"
+
+
+# --- Evidências transversais + Auditoria Interna (Feature 014 / 5a) ---
+
+class SgsiArtifactType(str, Enum):
+    """Taxonomia canônica de alvo (vínculo polimórfico de evidência e de constatação).
+
+    Aponta para linhas de artefato tenant-scoped já existentes. Extensível — a Feature 5b
+    acrescenta `nonconformity`/`corrective_action`.
+    """
+
+    soa_item = "soa_item"
+    gap_item = "gap_item"
+    risk = "risk"
+    asset = "asset"
+    audit_finding = "audit_finding"
+
+
+class EvidenceStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
+
+class EvidenceEventType(str, Enum):
+    uploaded = "uploaded"
+    content_viewed = "content_viewed"
+    downloaded = "downloaded"
+    replaced = "replaced"
+    inactivated = "inactivated"
+    linked = "linked"
+    unlinked = "unlinked"
+    access_denied = "access_denied"
+
+
+class InternalAuditStatus(str, Enum):
+    planned = "planned"
+    in_progress = "in_progress"
+    completed = "completed"
+    cancelled = "cancelled"
+
+
+class AuditChecklistResult(str, Enum):
+    conforme = "conforme"
+    nao_conforme = "nao_conforme"
+    nao_aplicavel = "nao_aplicavel"
+    pendente = "pendente"
+
+
+class AuditFindingType(str, Enum):
+    conforme = "conforme"
+    nc_maior = "nc_maior"
+    nc_menor = "nc_menor"
+    oportunidade_melhoria = "oportunidade_melhoria"
+    observacao = "observacao"
+
+
+class AuditFindingStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
+
+# Tipos de constatação promovíveis a Não Conformidade formal (gancho da Feature 5b).
+PROMOTABLE_FINDING_TYPES = frozenset({AuditFindingType.nc_maior, AuditFindingType.nc_menor})
+
+# Código por auditoria interna, sequência por tenant (ex.: AUD-0001). Imutável.
+AUDIT_CODE_PREFIX = os.getenv("AUDIT_CODE_PREFIX", "AUD-")
 
 
 # --- Motor de Workflow de Preenchimento (Feature 003) ---

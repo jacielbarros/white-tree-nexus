@@ -26,6 +26,7 @@ from wtnapp.routers import (
     context_overview,
     dashboard,
     diagnostic,
+    evidence,
     form_assignments,
     form_respond,
     form_signature_policy,
@@ -152,3 +153,4 @@ app.include_router(soa.router)
 app.include_router(dashboard.router)
 app.include_router(assets.router)
 app.include_router(risk.router)
+app.include_router(evidence.router)

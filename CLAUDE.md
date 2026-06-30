@@ -553,6 +553,42 @@ specify em `docs/README.md`).
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
 
+**Feature 014 — Repositório Transversal de Evidências + Auditoria Interna (9.2)**
+(`014-cross-evidence-internal-audit`) — **planejada** (spec + clarify + plano prontos; implementação
+pendente). Feature **5a** da etapa final da esteira (Evidências/Auditoria/PDCA). Generaliza o módulo de
+evidências do Gap (008) e adiciona auditoria interna; **prepara a base para a Feature 5b** (NC/ações
+corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem implementá-la.
+- Plano: `specs/014-cross-evidence-internal-audit/plan.md` · Spec: `.../spec.md` · Research:
+  `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+  Quickstart: `.../quickstart.md`
+- Escopo: **Fase 1** — store **unificado** `evidence_*` (evidência 1ª-classe vinculável a **1..N**
+  artefatos via `evidence_link` polimórfico → `soa_item`/`gap_item`/`risk`/`asset`/`audit_finding`,
+  extensível p/ 5b); reusa `utils/evidence_storage` (upload+SHA-256+Fernet), versões imutáveis,
+  inativação lógica, custódia append-only, auditoria e `classification_access`; **migra** o 008 e
+  mantém os endpoints do Gap via adaptador; repositório central pesquisável + painel reutilizável.
+  **Fase 2** — domínio `internal_audit_*` (programa→auditoria→checklist→constatação) com constatações
+  **promovíveis** (`nonconformity_ref` reservado p/ 5b) e **relatório** como Documento Controlado
+  (novo `DocType.internal_audit_report`, assinatura opcional, PDF). Transversal: timeline read-only +
+  dashboard do módulo + card de readiness na esteira.
+- Decisões-chave (clarify 2026-06-30): (1) repositório **unificado** + evidência reutilizável 1..N +
+  **migração** do 008; (2) constatação pertence à **auditoria**, vínculo a item de checklist
+  **opcional**; (3) checklist **manual** + importação **opcional** do escopo SoA/Gap; (4) vínculos
+  apontam para **linhas de artefato tenant-scoped** (SoA/Gap/risco/ativo), sem códigos abstratos;
+  (5) proteção em repouso = **storage + acesso por classificação** (cifragem Fernet **herdada** do
+  `evidence_storage`, sem novo esquema de aplicação).
+- Arquitetura: domínios novos `evidence_*` (4 tabelas) + `internal_audit_*` (5 tabelas), todas
+  `tenant_id`+RLS; trilhas append-only (`evidence_version`/`evidence_event`/`internal_audit_event`).
+  Routers novos `evidence`/`internal_audit`/`traceability` em `main.py`; serviços `evidence_service`,
+  `internal_audit_service`/`_report_service`/`_export_service`, `traceability_service`,
+  `audit_metrics_service`. Reusa `controlled_document_service`+`document_versions`, `signature_service`,
+  reportlab, `dashboard_service`. **5 permissões novas** (`view_evidence`/`manage_evidence`,
+  `view_internal_audit`/`manage_internal_audit`/`approve_audit_report`). Enums novos +
+  `DocType.internal_audit_report` + `AUDIT_CODE_PREFIX` em `settings.py`. Migration **merge** dos dois
+  heads atuais (`a9b0c1d2e308` + `d3e4f5a6b217`), idempotente, com migração de dados do 008. **Sem
+  novas dependências.** Frontend: `pages/evidence-repository`, `pages/internal-audit`,
+  `pages/internal-audit-detail`, `pages/internal-audit-dashboard`, `shared/evidence-panel`
+  (`permissionGuard`). Consome SoA/Gap/Risco/Ativo **read-only** (vínculos); não os altera.
+
 **Feature 013 — SoA Normativa dirigida pelo Tratamento de Riscos** (`013-soa-normativa-risco`) —
 **planejada** (spec + clarify + plano prontos; implementação pendente). **Evolução in-place** do módulo
 de SoA (Feature 005), promovendo o Pré-SoA à Declaração de Aplicabilidade **normativa (6.1.3 d)**
