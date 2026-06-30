@@ -91,7 +91,7 @@ metadados; recusa arquivo inválido; conteúdo confidencial barrado por classifi
   (filtro `target_type=gap_item`), **mantendo os mesmos paths/contratos** do 008.
 - [X] T018 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/`: componente reutilizável (lista +
   upload + download) com Signals/OnPush/Reactive Forms; helpers de upload/blob em `core/api.ts`.
-- [ ] T019 [US1] Embutir `evidence-panel` nas telas `pages/soa`, `pages/risk-detail`,
+- [X] T019 [US1] Embutir `evidence-panel` nas telas `pages/soa`, `pages/risk-detail`,
   `pages/asset-detail` e migrar o painel atual de `pages/gap-analysis` para o componente compartilhado.
 - [X] T020 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/evidence-panel.spec.ts` (lista/upload/
   estado vazio/regressão do Gap).

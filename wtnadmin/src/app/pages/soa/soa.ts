@@ -21,6 +21,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
+import { EvidencePanel } from '@app/shared/evidence-panel/evidence-panel';
 import { Soa, SoaItem, SoaImplementationStatus, SoaInclusionReason, GapTheme } from '@app/core/models';
 import { DocumentHistory } from '@app/shared/document-history/document-history';
 import { DocumentPreview } from '@app/shared/document-preview/document-preview';
@@ -73,6 +74,7 @@ const ORIGIN_LABELS: Record<string, string> = {
     TooltipModule,
     DocumentPreview,
     DocumentHistory,
+    EvidencePanel,
   ],
   template: `
     <div class="page-header">
@@ -292,6 +294,9 @@ const ORIGIN_LABELS: Record<string, string> = {
               <label class="block font-semibold mb-1">Observações</label>
               <textarea pTextarea [formControl]="editObservations" rows="2" class="w-full"></textarea>
             </div>
+
+            <!-- Evidências transversais anexadas (Feature 014) -->
+            <app-evidence-panel [targetType]="'soa_item'" [targetId]="it.id" [canManage]="canManageEvidence()" title="Evidências anexadas ao controle" />
           </div>
 
           <ng-template pTemplate="footer">
@@ -361,6 +366,7 @@ export class SoaPage implements OnInit {
   editObservations = new FormControl('', { nonNullable: true });
 
   canManage = computed(() => hasPermission(this.auth.currentRole(), 'manage_soa'));
+  canManageEvidence = computed(() => hasPermission(this.auth.currentRole(), 'manage_evidence'));
 
   reasons = REASONS;
   statusOptions = Object.entries(STATUS_LABELS).map(([value, label]) => ({ label, value }));

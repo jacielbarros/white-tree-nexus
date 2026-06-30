@@ -12,6 +12,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
+import { EvidencePanel } from '@app/shared/evidence-panel/evidence-panel';
 import {
   AssetItem,
   AssetItemDetail,
@@ -40,7 +41,7 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SlicePipe, RouterLink, FormsModule, ReactiveFormsModule, ButtonModule, DialogModule,
-    InputTextModule, SelectModule, TextareaModule,
+    InputTextModule, SelectModule, TextareaModule, EvidencePanel,
   ],
   template: `
     @if (detail(); as d) {
@@ -187,9 +188,11 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
               </div>
             </div>
           } @else { <p class="muted">Carregando vínculos de risco…</p> }
-          <div class="future">
-            <div class="future-box"><span>Evidências</span><em>Será preenchido no Módulo 5</em></div>
-          </div>
+        </article>
+
+        <!-- Evidências transversais (Feature 014) -->
+        <article class="wtn-card pad span2">
+          <app-evidence-panel [targetType]="'asset'" [targetId]="itemId" [canManage]="canManageEvidence()" title="Evidências do ativo" />
         </article>
 
         <!-- Histórico -->
@@ -342,7 +345,7 @@ export class AssetDetailPage implements OnInit {
   newGap: string | null = null;
   archiveReason = '';
 
-  private itemId = '';
+  protected itemId = '';
 
   readonly typeOptions: Option<AssetType>[] = (Object.keys(ASSET_TYPE_LABELS) as AssetType[]).map((v) => ({ label: ASSET_TYPE_LABELS[v], value: v }));
   readonly scopeOptions: Option[] = Object.entries(SCOPE_STATUS_LABELS).map(([value, label]) => ({ label, value }));
@@ -405,6 +408,7 @@ export class AssetDetailPage implements OnInit {
   }
 
   canManage(): boolean { return hasPermission(this.store.currentRole(), 'manage_asset'); }
+  canManageEvidence(): boolean { return hasPermission(this.store.currentRole(), 'manage_evidence'); }
 
   openEdit(): void {
     const it = this.detail()?.item;
