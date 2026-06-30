@@ -413,6 +413,51 @@ exibe como **três fases**: Ameaças/Vulnerabilidades → Avaliação → Tratam
   **pré-existente** (módulo Gap) que faz `alembic upgrade head` falhar a partir de DB zerado
   (`gap_seed_item.referencia` em migration de backfill) — independente deste módulo.
 
+#### Módulo 5a — Repositório Transversal de Evidências + Auditoria Interna (Feature 014 — backend implementado)
+Etapa final da esteira (Evidências/Auditoria/PDCA). Spec/plano em `specs/014-cross-evidence-internal-audit/`.
+Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna (9.2). **Backend completo
+e testado (US1–US8); frontend pendente.** Prepara a base para a Feature 5b (NC/ações corretivas 10.2,
+análise crítica 9.3, PDCA 10.1) **sem implementá-la**.
+- **Fase 1 — Repositório transversal de evidências** (`wtnapp/`): domínio unificado `evidence_*`
+  (4 tabelas: `evidence`, `evidence_version`, `evidence_link`, `evidence_event`; todas `tenant_id`+RLS;
+  versão/evento append-only). A evidência é objeto de 1ª classe vinculável a **1..N** artefatos via
+  `evidence_link` **polimórfico** (`SgsiArtifactType`: `soa_item`/`gap_item`/`risk`/`asset`/`audit_finding`,
+  extensível p/ 5b) apontando para **linhas de artefato tenant-scoped**. Reusa `utils/evidence_storage`
+  (upload + SHA-256 + cifragem **Fernet** em repouso), `classification_access` (acesso ao conteúdo por
+  classificação) e auditoria. Serviço `services/evidence_service.py`; router `routers/evidence.py`
+  (`/evidence`: repositório central pesquisável/filtrável, upload+vínculo, download, versões, inativação,
+  histórico, link/unlink). **Unificação do 008**: `routers/gap_evidence.py` virou **adaptador** sobre o
+  store unificado (mesmos paths/DTOs/permissões `view_gap`/`manage_gap`/audit); o modelo `GapEvidence` foi
+  **removido** e os dados migrados.
+- **Fase 2 — Auditoria interna (9.2)** (`wtnapp/`): domínio `internal_audit_*` (5 tabelas:
+  `internal_audit_program`/`internal_audit`/`internal_audit_checklist_item`/`internal_audit_finding`/
+  `internal_audit_event` append-only). Programa → auditoria (código `AUD-####`, máquina de estados
+  planned→in_progress→completed/cancel) → checklist (manual + importação opcional do escopo SoA/Gap, com
+  atualização de resultado) → **constatações** (5 tipos; NC maior/menor ⇒ `promotable=true` +
+  `nonconformity_ref` **reservado p/ 5b**; evidência anexada via `target_type=audit_finding`).
+  **Relatório** como Documento Controlado (reusa `controlled_document_service`+`document_versions`, novo
+  `DocType.internal_audit_report`; **gate duro**: aprovar exige auditoria `completed` + zero itens de
+  checklist `pendente`; assinatura avançada opcional SHA-256; **PDF** via `internal_audit_export_service`/
+  reportlab). Serviços `internal_audit_service`/`_report_service`/`_export_service`; router
+  `routers/internal_audit.py` (`/internal-audit`, 20 endpoints).
+- **Transversal**: `routers/traceability.py` (`GET /traceability/timeline`, read-only, **RBAC composto**:
+  view do módulo do alvo + `view_evidence`; constatações só com `view_internal_audit`); dashboard do
+  módulo (`audit_metrics_service` + `GET /internal-audit/dashboard`); card de readiness **Evidências &
+  Auditoria Interna** na esteira (`dashboard_service` + `DashboardModuleId.internal_audit`).
+- **RBAC**: 5 permissões novas — `view_evidence`/`manage_evidence`, `view_internal_audit`/
+  `manage_internal_audit`/`approve_audit_report` (nome de auditoria interna distinto de um futuro
+  `view_audit` de leitura de audit logs). Enums + `DocType.internal_audit_report` + `AUDIT_CODE_PREFIX`
+  em `settings.py`. **Sem novas dependências.**
+- **Testes backend** (todos passando; suíte 360): `test_evidence_repository.py`,
+  `test_tenant_isolation_evidence.py`, `test_evidence_migration_008.py`, `test_internal_audit_lifecycle.py`,
+  `test_internal_audit_findings.py`, `test_internal_audit_report.py`, `test_tenant_isolation_internal_audit.py`,
+  `test_traceability_timeline.py`, `test_audit_metrics.py` (+ 008/dashboard atualizados à unificação).
+- **Migrations**: `f6a7b8c9d014_cross_evidence_repository.py` (cria `evidence_*` + RLS + triggers, migra
+  dados do 008 e dropa tabelas legadas; **merge** dos dois heads anteriores `a9b0c1d2e308`+`d3e4f5a6b217`,
+  idempotente) e `a7b8c9d0e015_internal_audit_module.py` (`down_revision="f6a7b8c9d014"`, 5 tabelas + RLS +
+  trigger). Head único. **Pendente**: frontend (`shared/evidence-panel`, `pages/evidence-repository`,
+  `pages/internal-audit`/`-detail`/`-dashboard`), E2E browser + `alembic upgrade` no Postgres real.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -554,10 +599,11 @@ specify em `docs/README.md`).
 ## Plano ativo (Spec Kit)
 
 **Feature 014 — Repositório Transversal de Evidências + Auditoria Interna (9.2)**
-(`014-cross-evidence-internal-audit`) — **planejada** (spec + clarify + plano prontos; implementação
-pendente). Feature **5a** da etapa final da esteira (Evidências/Auditoria/PDCA). Generaliza o módulo de
-evidências do Gap (008) e adiciona auditoria interna; **prepara a base para a Feature 5b** (NC/ações
-corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem implementá-la.
+(`014-cross-evidence-internal-audit`) — **backend implementado** (US1–US8, 360 testes verdes, 4 commits;
+**frontend pendente**). Ver a seção do módulo "Módulo 5a" acima. Feature **5a** da etapa final da esteira
+(Evidências/Auditoria/PDCA). Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna;
+**prepara a base para a Feature 5b** (NC/ações corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem
+implementá-la.
 - Plano: `specs/014-cross-evidence-internal-audit/plan.md` · Spec: `.../spec.md` · Research:
   `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
   Quickstart: `.../quickstart.md`

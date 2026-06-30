@@ -296,11 +296,11 @@ concluída/relatório aprovado; estado vazio sem erro.
 
 ## Phase 11: Polish & Cross-Cutting Concerns
 
-- [ ] T061 [P] **Audit review**: confirmar que upload/download/replace/inactivate/link/unlink, CRUD de
+- [X] T061 [P] **Audit review**: confirmar que upload/download/replace/inactivate/link/unlink, CRUD de
   auditoria/constatação, transições e relatório geram audit log sem PII/`storage_key`/conteúdo.
-- [ ] T062 [P] **Tenant isolation sweep**: revisar que nenhuma query nova (evidence/internal_audit/
+- [X] T062 [P] **Tenant isolation sweep**: revisar que nenhuma query nova (evidence/internal_audit/
   traceability/metrics) escapou de `scoped_query`; consolidação/timeline fail-closed.
-- [ ] T063 [P] Atualizar seção do módulo no `CLAUDE.md` (Feature 014 implementada) e mover o bloco do
+- [X] T063 [P] Atualizar seção do módulo no `CLAUDE.md` (Feature 014 implementada) e mover o bloco do
   plano ativo.
 - [ ] T064 Rodar suíte backend completa (`pytest wtnapp/test`) e frontend (`npm test` em `wtnadmin/`).
 - [ ] T065 Validar `quickstart.md` no browser + `alembic upgrade head` no Postgres real (inclui
