@@ -177,6 +177,18 @@ export const routes: Routes = [
           import('@app/pages/evidence-repository/evidence-repository').then((m) => m.EvidenceRepositoryPage),
       },
       {
+        path: 'internal-audit',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit/internal-audit').then((m) => m.InternalAuditPage),
+      },
+      {
+        path: 'internal-audit-detail/:id',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit-detail/internal-audit-detail').then((m) => m.InternalAuditDetailPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

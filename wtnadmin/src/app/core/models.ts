@@ -107,6 +107,88 @@ export interface EvidenceSummary {
   links: EvidenceLink[];
 }
 
+// --- Auditoria Interna (Feature 014, Fase 2) ---
+export type InternalAuditStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
+export type AuditFindingType = 'conforme' | 'nc_maior' | 'nc_menor' | 'oportunidade_melhoria' | 'observacao';
+export type AuditChecklistResult = 'conforme' | 'nao_conforme' | 'nao_aplicavel' | 'pendente';
+
+export interface AuditProgram {
+  id: string;
+  name: string;
+  objective: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+}
+
+export interface AuditSummary {
+  id: string;
+  program_id: string;
+  code: string;
+  title: string;
+  status: InternalAuditStatus;
+  auditor_member_id: string;
+  period_start: string | null;
+  period_end: string | null;
+  current_version_id: string | null;
+  draft_status: string;
+}
+
+export interface AuditReadiness {
+  can_approve_report: boolean;
+  pending_items: number;
+  findings_count: number;
+}
+
+export interface AuditDetail extends AuditSummary {
+  scope: string;
+  criteria: string;
+  readiness: AuditReadiness;
+}
+
+export interface AuditChecklistItem {
+  id: string;
+  audit_id: string;
+  criterion: string;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+  result: AuditChecklistResult;
+  note: string | null;
+  order_index: number;
+}
+
+export interface AuditFinding {
+  id: string;
+  audit_id: string;
+  finding_type: AuditFindingType;
+  title: string;
+  description: string;
+  checklist_item_id: string | null;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+  promotable: boolean;
+  nonconformity_ref: string | null;
+  status: 'active' | 'inactive';
+  evidence_links: EvidenceLink[];
+}
+
+export interface AuditReportVersion {
+  id: string;
+  version_number: number;
+  status: string;
+  classification: Classification;
+  signed: boolean;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+export interface AuditDashboardData {
+  evidence_by_status: Record<string, number>;
+  evidence_by_classification: Record<string, number>;
+  audits_by_status: Record<string, number>;
+  findings_by_type: Record<string, number>;
+}
+
 export type PrintableDocumentType =
   | 'context_report'
   | 'gap_report'

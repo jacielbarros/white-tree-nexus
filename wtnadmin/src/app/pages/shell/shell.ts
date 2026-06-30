@@ -326,6 +326,13 @@ interface OrgOption { label: string; value: string; }
                 </svg>
                 @if (!collapsed()) { <span>Repositório de Evidências</span> }
               </a>
+              <a class="wtn-nav-item" routerLink="internal-audit" routerLinkActive="active" [title]="collapsed() ? 'Auditoria Interna' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 11l2 2 4-4M5 4h14a1 1 0 0 1 1 1v14l-4-2-4 2-4-2-4 2V5a1 1 0 0 1 1-1Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Auditoria Interna</span> }
+              </a>
             </div>
           }
         </nav>

@@ -180,10 +180,10 @@ transitar estados; transição inválida ⇒ 409; tudo tenant-scoped.
   `internal_audit_event`. **Sem campo `mandatory`** — gate de completude usa `result=pendente`.
 - [X] T036 [US4] `wtnapp/routers/internal_audit.py`: endpoints de programs, audits (CRUD + `transition`)
   e checklist (`GET/POST` + `/import`), com RBAC/scoped_query/audit.
-- [ ] T037 [P] [US4] `wtnadmin/src/app/pages/internal-audit/` (lista programas+auditorias + criar) e
+- [X] T037 [P] [US4] `wtnadmin/src/app/pages/internal-audit/` (lista programas+auditorias + criar) e
   base de `pages/internal-audit-detail/` (seção checklist); rotas com
   `permissionGuard('view_internal_audit')`, grupo no shell.
-- [ ] T038 [P] [US4] `pages/internal-audit/internal-audit.spec.ts` (criar/listar/transição).
+- [X] T038 [P] [US4] `pages/internal-audit/internal-audit.spec.ts` (criar/listar/transição).
 
 **Checkpoint**: planejamento/condução de auditoria funcional.
 
@@ -208,9 +208,9 @@ evidência (`target_type=audit_finding`); remoção lógica preserva trilha.
   `nonconformity_ref`), vínculo opcional a checklist item, remoção lógica + evento.
 - [X] T042 [US5] `wtnapp/routers/internal_audit.py`: `GET/POST /audits/{id}/findings`,
   `PUT/DELETE /findings/{id}`; `FindingSummary` expõe `promotable`/`nonconformity_ref`/`evidence_links`.
-- [ ] T043 [P] [US5] `pages/internal-audit-detail/`: seção de constatações (tipo+vínculo) + anexar
+- [X] T043 [P] [US5] `pages/internal-audit-detail/`: seção de constatações (tipo+vínculo) + anexar
   evidência via `evidence-panel` (`target_type=audit_finding`).
-- [ ] T044 [P] [US5] `pages/internal-audit-detail/internal-audit-detail.spec.ts` (findings + evidência).
+- [X] T044 [P] [US5] `pages/internal-audit-detail/internal-audit-detail.spec.ts` (findings + evidência).
 
 **Checkpoint**: constatações com base preparada para a 5b.
 
@@ -239,7 +239,7 @@ assinatura) congela versão imutável, exportar PDF.
   `content_snapshot` (rótulos, tipos de constatação, vínculos, evidências referenciadas).
 - [X] T049 [US6] `wtnapp/routers/internal_audit.py`: `report/submit-review`, `report/approve`,
   `report/versions`, `report/versions/{id}/export` (audit + `approve_audit_report`).
-- [ ] T050 [P] [US6] `pages/internal-audit-detail/`: seção relatório (submeter/aprovar/assinar/listar
+- [X] T050 [P] [US6] `pages/internal-audit-detail/`: seção relatório (submeter/aprovar/assinar/listar
   versões/exportar PDF) com `getBlob`.
 
 **Checkpoint**: relatório versionável/aprovável/exportável — gate duro da etapa.
