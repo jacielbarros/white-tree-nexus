@@ -83,7 +83,9 @@ class InternalAudit(Base):
         default=InternalAuditStatus.planned,
         nullable=False,
     )
-    current_report_version_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    # Ponteiro para a versão em vigor do relatório (Documento Controlado). Nome alinhado ao
+    # contrato de `controlled_document_service.approve_document` (igual a SoA/RiskPlan).
+    current_version_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     draft_status: Mapped[DocStatus] = mapped_column(
         SAEnum(DocStatus, native_enum=False, length=20),
         default=DocStatus.draft,

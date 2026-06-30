@@ -6,13 +6,16 @@ O relatório (Documento Controlado) é adicionado numa fatia posterior (US6).
 
 import uuid
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from wtnapp.database.database import get_db
+from wtnapp.helpers.classification_access import require_classification_read
 from wtnapp.helpers.permissions import require_permission
 from wtnapp.helpers.tenant_scope import OrgContext, scoped_query
+from wtnapp.models.document_version_model import DocumentVersion
 from wtnapp.models.internal_audit_model import (
     InternalAudit,
     InternalAuditChecklistItem,
@@ -33,17 +36,31 @@ from wtnapp.schemas.internal_audit_schema import (
     FindingSummary,
     ProgramRequest,
     ProgramSummary,
+    ReportApproveRequest,
+    ReportVersionSummary,
     TransitionRequest,
 )
+from wtnapp.services import controlled_document_service as cds
+from wtnapp.services import internal_audit_export_service, internal_audit_report_service
 from wtnapp.services import internal_audit_service as svc
 from wtnapp.services.audit_service import AuditService
-from wtnapp.settings import AuditFindingStatus, AuditOutcome, InternalAuditStatus
+from wtnapp.settings import AuditFindingStatus, AuditOutcome, DocType, InternalAuditStatus
 
 router = APIRouter(prefix="/internal-audit", tags=["internal-audit"])
 
 db_dep = Annotated[Session, Depends(get_db)]
 view_dep = Annotated[OrgContext, Depends(require_permission("view_internal_audit"))]
 manage_dep = Annotated[OrgContext, Depends(require_permission("manage_internal_audit"))]
+approve_dep = Annotated[OrgContext, Depends(require_permission("approve_audit_report"))]
+
+
+def _report_version_summary(v: DocumentVersion) -> ReportVersionSummary:
+    snap = v.content_snapshot or {}
+    return ReportVersionSummary(
+        id=v.id, version_number=v.version_number,
+        status=v.status.value if v.status else "", classification=v.classification,
+        signed=bool(snap.get("signature")), approved_by=v.approved_by, approved_at=v.created_at,
+    )
 
 
 def _audit(request: Request, ctx: OrgContext, operation: str, *, entity_id=None, outcome=AuditOutcome.success, details=None):
@@ -68,7 +85,7 @@ def _detail(db: Session, ctx: OrgContext, audit: InternalAudit) -> AuditDetail:
     return AuditDetail(
         id=audit.id, program_id=audit.program_id, code=audit.code, title=audit.title, status=audit.status,
         auditor_member_id=audit.auditor_member_id, period_start=audit.period_start, period_end=audit.period_end,
-        current_report_version_id=audit.current_report_version_id, draft_status=audit.draft_status,
+        current_version_id=audit.current_version_id, draft_status=audit.draft_status,
         scope=audit.scope, criteria=audit.criteria,
         readiness=AuditReadiness(
             can_approve_report=svc.can_approve_report(db, ctx, audit),
@@ -243,3 +260,57 @@ def remove_finding(finding_id: uuid.UUID, request: Request, db: db_dep, ctx: man
     db.commit()
     _audit(request, ctx, "INACTIVATE_AUDIT_FINDING", entity_id=finding.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ───────────────────────────── Relatório (Documento Controlado) ─────────────────────────────
+
+@router.post("/audits/{audit_id}/report/submit-review", response_model=AuditDetail)
+def submit_report_review(audit_id: uuid.UUID, request: Request, db: db_dep, ctx: manage_dep):
+    audit = svc.get_audit(db, ctx, audit_id)
+    internal_audit_report_service.submit_review(db, ctx, audit)
+    db.commit()
+    db.refresh(audit)
+    _audit(request, ctx, "SUBMIT_AUDIT_REPORT_REVIEW", entity_id=audit.id)
+    return _detail(db, ctx, audit)
+
+
+@router.post("/audits/{audit_id}/report/approve", response_model=ReportVersionSummary, status_code=status.HTTP_201_CREATED)
+def approve_report(audit_id: uuid.UUID, request: Request, db: db_dep, ctx: approve_dep, body: ReportApproveRequest = Body(default=ReportApproveRequest())):
+    audit = svc.get_audit(db, ctx, audit_id)
+    version = internal_audit_report_service.approve(
+        db, ctx, audit, sign=body.sign, classification=body.classification,
+        next_review_at=body.next_review_at, change_nature=body.change_nature,
+    )
+    db.commit()
+    db.refresh(version)
+    _audit(request, ctx, "APPROVE_AUDIT_REPORT", entity_id=audit.id, details={"version_number": version.version_number, "signed": bool((version.content_snapshot or {}).get("signature"))})
+    return _report_version_summary(version)
+
+
+@router.get("/audits/{audit_id}/report/versions", response_model=list[ReportVersionSummary])
+def list_report_versions(audit_id: uuid.UUID, db: db_dep, ctx: view_dep):
+    audit = svc.get_audit(db, ctx, audit_id)
+    versions = cds.list_versions(db, ctx.tenant_id, DocType.internal_audit_report, audit.id)
+    return [_report_version_summary(v) for v in versions]
+
+
+@router.get("/audits/{audit_id}/report/versions/{version_id}/export")
+def export_report(audit_id: uuid.UUID, version_id: uuid.UUID, request: Request, db: db_dep, ctx: view_dep):
+    audit = svc.get_audit(db, ctx, audit_id)
+    version = (
+        db.query(DocumentVersion)
+        .filter(
+            DocumentVersion.id == version_id,
+            DocumentVersion.tenant_id == ctx.tenant_id,
+            DocumentVersion.document_type == DocType.internal_audit_report,
+            DocumentVersion.document_id == audit.id,
+        )
+        .first()
+    )
+    if version is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Versao nao encontrada.")
+    require_classification_read(db, ctx, version.classification)
+    pdf = internal_audit_export_service.render_pdf(version)
+    _audit(request, ctx, "EXPORT_AUDIT_REPORT", entity_id=version.id, details={"version_number": version.version_number})
+    filename = quote(f"relatorio-auditoria-{audit.code}-v{version.version_number}.pdf")
+    return Response(content=pdf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"})

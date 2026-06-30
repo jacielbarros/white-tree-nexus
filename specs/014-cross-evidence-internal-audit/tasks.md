@@ -225,19 +225,19 @@ completude.
 assinatura) congela versão imutável, exportar PDF.
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
-- [ ] T045 [P] [US6] Geração/gate/aprovação/imutabilidade em
+- [X] T045 [P] [US6] Geração/gate/aprovação/imutabilidade em
   `wtnapp/test/test_internal_audit_report.py`.
-- [ ] T046 [P] [US6] Export PDF + assinatura opcional + isolation em
+- [X] T046 [P] [US6] Export PDF + assinatura opcional + isolation em
   `wtnapp/test/test_internal_audit_report.py`.
 
 ### Implementation for User Story 6
-- [ ] T047 [US6] `wtnapp/services/internal_audit_report_service.py`: `snapshot_factory` (escopo/
+- [X] T047 [US6] `wtnapp/services/internal_audit_report_service.py`: `snapshot_factory` (escopo/
   critérios/itens/constatações) + reuso de `controlled_document_service` (submit-review/approve) +
   `signature_service` (opcional) + **gate de completude** (`status=completed` **e** zero itens com
   `result=pendente`).
-- [ ] T048 [P] [US6] `wtnapp/services/internal_audit_export_service.py`: PDF via reportlab a partir do
+- [X] T048 [P] [US6] `wtnapp/services/internal_audit_export_service.py`: PDF via reportlab a partir do
   `content_snapshot` (rótulos, tipos de constatação, vínculos, evidências referenciadas).
-- [ ] T049 [US6] `wtnapp/routers/internal_audit.py`: `report/submit-review`, `report/approve`,
+- [X] T049 [US6] `wtnapp/routers/internal_audit.py`: `report/submit-review`, `report/approve`,
   `report/versions`, `report/versions/{id}/export` (audit + `approve_audit_report`).
 - [ ] T050 [P] [US6] `pages/internal-audit-detail/`: seção relatório (submeter/aprovar/assinar/listar
   versões/exportar PDF) com `getBlob`.

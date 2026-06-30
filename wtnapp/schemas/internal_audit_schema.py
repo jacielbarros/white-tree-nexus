@@ -11,6 +11,7 @@ from wtnapp.settings import (
     AuditChecklistResult,
     AuditFindingStatus,
     AuditFindingType,
+    Classification,
     DocStatus,
     InternalAuditStatus,
     SgsiArtifactType,
@@ -60,7 +61,7 @@ class AuditSummary(BaseModel):
     auditor_member_id: uuid.UUID
     period_start: date | None = None
     period_end: date | None = None
-    current_report_version_id: uuid.UUID | None = None
+    current_version_id: uuid.UUID | None = None
     draft_status: DocStatus
 
 
@@ -138,3 +139,22 @@ class FindingSummary(BaseModel):
     nonconformity_ref: uuid.UUID | None = None
     status: AuditFindingStatus
     evidence_links: list[EvidenceLinkOut] = Field(default_factory=list)
+
+
+# ───────────────────────────── Relatório (Documento Controlado) ─────────────────────────────
+
+class ReportApproveRequest(BaseModel):
+    sign: bool = False
+    classification: Classification = Classification.uso_interno
+    next_review_at: datetime | None = None
+    change_nature: str = Field(default="Emissão do relatório de auditoria", max_length=300)
+
+
+class ReportVersionSummary(BaseModel):
+    id: uuid.UUID
+    version_number: int
+    status: str
+    classification: Classification
+    signed: bool
+    approved_by: uuid.UUID | None = None
+    approved_at: datetime | None = None

@@ -67,7 +67,7 @@ def _create_tables(conn) -> None:
             sa.Column("period_start", sa.Date(), nullable=True),
             sa.Column("period_end", sa.Date(), nullable=True),
             sa.Column("status", sa.String(20), nullable=False, server_default="planned"),
-            sa.Column("current_report_version_id", sa.Uuid(as_uuid=True), nullable=True),
+            sa.Column("current_version_id", sa.Uuid(as_uuid=True), nullable=True),
             sa.Column("draft_status", sa.String(20), nullable=False, server_default="draft"),
             sa.Column("created_by", sa.Uuid(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
