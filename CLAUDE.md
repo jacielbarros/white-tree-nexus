@@ -413,11 +413,12 @@ exibe como **três fases**: Ameaças/Vulnerabilidades → Avaliação → Tratam
   **pré-existente** (módulo Gap) que faz `alembic upgrade head` falhar a partir de DB zerado
   (`gap_seed_item.referencia` em migration de backfill) — independente deste módulo.
 
-#### Módulo 5a — Repositório Transversal de Evidências + Auditoria Interna (Feature 014 — backend implementado)
+#### Módulo 5a — Repositório Transversal de Evidências + Auditoria Interna (Feature 014 — implementada)
 Etapa final da esteira (Evidências/Auditoria/PDCA). Spec/plano em `specs/014-cross-evidence-internal-audit/`.
-Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna (9.2). **Backend completo
-e testado (US1–US8); frontend pendente.** Prepara a base para a Feature 5b (NC/ações corretivas 10.2,
-análise crítica 9.3, PDCA 10.1) **sem implementá-la**.
+Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna (9.2). **Backend + frontend
+completos e testados (US1–US8; backend 361 testes, admin 197); migração aplicada e validada no
+PostgreSQL real.** Prepara a base para a Feature 5b (NC/ações corretivas 10.2, análise crítica 9.3,
+PDCA 10.1) **sem implementá-la**. Pendente apenas o roteiro E2E manual no browser (`quickstart.md`).
 - **Fase 1 — Repositório transversal de evidências** (`wtnapp/`): domínio unificado `evidence_*`
   (4 tabelas: `evidence`, `evidence_version`, `evidence_link`, `evidence_event`; todas `tenant_id`+RLS;
   versão/evento append-only). A evidência é objeto de 1ª classe vinculável a **1..N** artefatos via
@@ -448,15 +449,28 @@ análise crítica 9.3, PDCA 10.1) **sem implementá-la**.
   `manage_internal_audit`/`approve_audit_report` (nome de auditoria interna distinto de um futuro
   `view_audit` de leitura de audit logs). Enums + `DocType.internal_audit_report` + `AUDIT_CODE_PREFIX`
   em `settings.py`. **Sem novas dependências.**
-- **Testes backend** (todos passando; suíte 360): `test_evidence_repository.py`,
+- **Frontend** (`wtnadmin/`): `shared/evidence-panel` (lista/upload/download/**substituir**/**histórico**/
+  inativar, gated por classificação/`manage_evidence`) embutido em `pages/soa`, `pages/risk-detail`,
+  `pages/asset-detail` (o `pages/gap-analysis` mantém o painel próprio do 008, que já consome o store
+  unificado); `pages/evidence-repository` (repositório central pesquisável/filtrável);
+  `shared/traceability-timeline` (linha do tempo read-only) nas mesmas telas de artefato;
+  `pages/internal-audit` (programas+auditorias), `pages/internal-audit-detail` (condução: checklist +
+  constatações + relatório assinável/PDF) e `pages/internal-audit-dashboard` (cards do módulo). Rotas com
+  `permissionGuard('view_evidence')`/`view_internal_audit` + grupo "Evidências & Auditoria" no shell;
+  tipos e métodos de API em `core/models.ts`/`core/api.service.ts`; 5 permissões espelhadas em
+  `core/permissions.ts`.
+- **Testes backend** (361 verdes): `test_evidence_repository.py`,
   `test_tenant_isolation_evidence.py`, `test_evidence_migration_008.py`, `test_internal_audit_lifecycle.py`,
   `test_internal_audit_findings.py`, `test_internal_audit_report.py`, `test_tenant_isolation_internal_audit.py`,
   `test_traceability_timeline.py`, `test_audit_metrics.py` (+ 008/dashboard atualizados à unificação).
+  **Testes frontend** (197 verdes): specs de `evidence-panel`, `evidence-repository`,
+  `traceability-timeline`, `internal-audit`, `internal-audit-detail`, `internal-audit-dashboard`.
 - **Migrations**: `f6a7b8c9d014_cross_evidence_repository.py` (cria `evidence_*` + RLS + triggers, migra
   dados do 008 e dropa tabelas legadas; **merge** dos dois heads anteriores `a9b0c1d2e308`+`d3e4f5a6b217`,
   idempotente) e `a7b8c9d0e015_internal_audit_module.py` (`down_revision="f6a7b8c9d014"`, 5 tabelas + RLS +
-  trigger). Head único. **Pendente**: frontend (`shared/evidence-panel`, `pages/evidence-repository`,
-  `pages/internal-audit`/`-detail`/`-dashboard`), E2E browser + `alembic upgrade` no Postgres real.
+  trigger). Head único `a7b8c9d0e015`. **`alembic upgrade head` aplicado e validado no PostgreSQL real**
+  (a migração do 008 exigiu ordenação por causa da FK circular `evidence.current_version_id↔evidence_version`
+  e do drop das tabelas legadas — resolvido). **Pendente**: apenas o E2E manual no browser.
 
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
@@ -599,11 +613,11 @@ specify em `docs/README.md`).
 ## Plano ativo (Spec Kit)
 
 **Feature 014 — Repositório Transversal de Evidências + Auditoria Interna (9.2)**
-(`014-cross-evidence-internal-audit`) — **backend implementado** (US1–US8, 360 testes verdes, 4 commits;
-**frontend pendente**). Ver a seção do módulo "Módulo 5a" acima. Feature **5a** da etapa final da esteira
-(Evidências/Auditoria/PDCA). Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna;
-**prepara a base para a Feature 5b** (NC/ações corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem
-implementá-la.
+(`014-cross-evidence-internal-audit`) — **implementada** (US1–US8 backend+frontend; backend 361 testes,
+admin 197; migração aplicada e validada no PostgreSQL real; resta só o E2E manual no browser). Ver a
+seção do módulo "Módulo 5a" acima. Feature **5a** da etapa final da esteira (Evidências/Auditoria/PDCA).
+Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna; **prepara a base para a
+Feature 5b** (NC/ações corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem implementá-la.
 - Plano: `specs/014-cross-evidence-internal-audit/plan.md` · Spec: `.../spec.md` · Research:
   `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
   Quickstart: `.../quickstart.md`
