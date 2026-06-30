@@ -204,6 +204,18 @@ def test_replace_keeps_history_and_versions_are_immutable(client, db, gap_seed, 
     db.rollback()
 
 
+def test_history_requires_manage_evidence(client, db, gap_seed, gap_seed_factory, org_headers, monkeypatch, tmp_path):
+    """US3 (T028): versões anteriores/eventos só com manage_evidence; view-only recebe 403."""
+    _configure_storage(monkeypatch, tmp_path)
+    seed = _seed_gap(db, gap_seed_factory, "ev-hist-rbac")
+    admin_h = org_headers(seed["admin"].email, seed["org"].id)  # manage_evidence
+    client_h = org_headers(seed["client"].email, seed["org"].id)  # apenas view_evidence
+    eid = _upload(client, admin_h, "gap_item", seed["item"].id).json()["id"]
+
+    assert client.get(f"/evidence/{eid}/history", headers=client_h).status_code == 403
+    assert client.get(f"/evidence/{eid}/history", headers=admin_h).status_code == 200
+
+
 def test_inactivate_hides_from_default_search_but_keeps_history(client, db, gap_seed, gap_seed_factory, org_headers, monkeypatch, tmp_path):
     _configure_storage(monkeypatch, tmp_path)
     seed = _seed_gap(db, gap_seed_factory, "ev-inact")

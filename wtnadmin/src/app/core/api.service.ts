@@ -9,6 +9,7 @@ import {
   Diagnostic,
   DocumentPreview,
   DocumentVersion,
+  EvidenceHistory,
   EvidenceLink,
   EvidenceSummary,
   FormAssignment,
@@ -489,6 +490,10 @@ export class ApiService {
 
   replaceEvidence(evidenceId: string, body: FormData): Observable<EvidenceSummary> {
     return this.http.post<EvidenceSummary>(`${this.base}/evidence/${evidenceId}/versions`, body);
+  }
+
+  evidenceHistory(evidenceId: string): Observable<EvidenceHistory> {
+    return this.http.get<EvidenceHistory>(`${this.base}/evidence/${evidenceId}/history`);
   }
 
   inactivateEvidence(evidenceId: string, reason?: string): Observable<void> {

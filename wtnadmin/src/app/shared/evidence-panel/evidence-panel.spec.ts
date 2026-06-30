@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiService } from '@app/core/api.service';
-import { EvidenceSummary } from '@app/core/models';
+import { EvidenceHistory, EvidenceSummary } from '@app/core/models';
 import { EvidencePanel } from './evidence-panel';
 
 const EVIDENCE: EvidenceSummary = {
@@ -31,10 +31,21 @@ function apiStub() {
   return {
     listEvidence: vi.fn((_params?: Record<string, string>) => of([EVIDENCE])),
     uploadEvidence: vi.fn((_form: FormData) => of(EVIDENCE)),
+    replaceEvidence: vi.fn((_id: string, _form: FormData) => of(EVIDENCE)),
+    evidenceHistory: vi.fn((_id: string) => of(HISTORY)),
     downloadEvidence: vi.fn((_id: string) => of(new Blob(['x'], { type: 'application/pdf' }))),
     inactivateEvidence: vi.fn((_id: string) => of(void 0)),
   };
 }
+
+const HISTORY: EvidenceHistory = {
+  evidence: { ...({} as EvidenceSummary) },
+  versions: [
+    { id: 'ver-2', version_number: 2, classification: 'uso_interno', file_name: 'v2.pdf', mime_type: 'application/pdf', extension: '.pdf', size_bytes: 10, content_hash: 'b'.repeat(64), hash_algorithm: 'sha256', uploaded_by: 'user-1', uploaded_at: '2026-06-30T13:00:00Z', is_current: true },
+    { id: 'ver-1', version_number: 1, classification: 'uso_interno', file_name: 'v1.pdf', mime_type: 'application/pdf', extension: '.pdf', size_bytes: 8, content_hash: 'a'.repeat(64), hash_algorithm: 'sha256', uploaded_by: 'user-1', uploaded_at: '2026-06-29T13:00:00Z', is_current: false },
+  ],
+  events: [{ id: 'evt-1', event_type: 'replaced', outcome: 'success', actor_id: 'user-1', occurred_at: '2026-06-30T13:00:00Z', details: null }],
+};
 
 function setup(canManage: boolean): { fixture: ComponentFixture<EvidencePanel>; component: EvidencePanel; api: ReturnType<typeof apiStub> } {
   const api = apiStub();
@@ -98,5 +109,29 @@ describe('EvidencePanel', () => {
     (component as unknown as { inactivate(ev: EvidenceSummary): void }).inactivate(EVIDENCE);
     expect(api.inactivateEvidence).toHaveBeenCalledWith('ev-1');
     expect(api.listEvidence).toHaveBeenCalledTimes(2); // load inicial + reload
+  });
+
+  it('replaces an evidence with a new version (keeps classification)', () => {
+    const { component, api } = setup(true);
+    (component as unknown as { replaceFile(ev: EvidenceSummary, f: File): void }).replaceFile(EVIDENCE, new File(['v2'], 'v2.pdf'));
+    expect(api.replaceEvidence).toHaveBeenCalledTimes(1);
+    const [id, form] = api.replaceEvidence.mock.calls[0];
+    expect(id).toBe('ev-1');
+    expect((form as FormData).get('classification')).toBe('confidencial');
+  });
+
+  it('toggles the custody history view', () => {
+    const { fixture, component, api } = setup(true);
+    const c = component as unknown as { toggleHistory(ev: EvidenceSummary): void; historyOf: { (): string | null } };
+    c.toggleHistory(EVIDENCE);
+    fixture.detectChanges();
+    expect(api.evidenceHistory).toHaveBeenCalledWith('ev-1');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Versões');
+    expect(text).toContain('(corrente)');
+    expect(text).toContain('replaced');
+    // segundo toggle fecha
+    c.toggleHistory(EVIDENCE);
+    expect(c.historyOf()).toBeNull();
   });
 });

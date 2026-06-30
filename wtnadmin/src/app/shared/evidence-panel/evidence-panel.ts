@@ -4,7 +4,7 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 
 import { ApiService } from '@app/core/api.service';
-import { Classification, EvidenceSummary, SgsiArtifactType } from '@app/core/models';
+import { Classification, EvidenceHistory, EvidenceSummary, SgsiArtifactType } from '@app/core/models';
 
 /**
  * Painel reutilizável de evidências (Feature 014). Lista, anexa, baixa e inativa evidências
@@ -64,10 +64,28 @@ import { Classification, EvidenceSummary, SgsiArtifactType } from '@app/core/mod
                   <button type="button" disabled title="Conteúdo restrito pela classificação"><span class="pi pi-lock"></span></button>
                 }
                 @if (canManage()) {
+                  <button type="button" (click)="triggerReplace(ev)" title="Substituir por nova versão"><span class="pi pi-upload"></span></button>
+                  <button type="button" (click)="toggleHistory(ev)" title="Histórico de versões"><span class="pi pi-history"></span></button>
                   <button type="button" (click)="inactivate(ev)" title="Inativar"><span class="pi pi-trash"></span></button>
                 }
               </div>
             </div>
+            @if (historyOf() === ev.id) {
+              <div class="ev__history">
+                @if (history(); as h) {
+                  <div class="ev__hist-head">Versões</div>
+                  @for (v of h.versions; track v.id) {
+                    <small>v{{ v.version_number }} @if (v.is_current) { <b>(corrente)</b> } · {{ formatSize(v.size_bytes) }} · {{ shortHash(v.content_hash) }} · {{ formatDate(v.uploaded_at) }}</small>
+                  }
+                  <div class="ev__hist-head">Eventos de custódia</div>
+                  @for (e of h.events; track e.id) {
+                    <small>{{ e.event_type }} · {{ e.outcome }} · {{ formatDate(e.occurred_at) }}</small>
+                  }
+                } @else {
+                  <small>Carregando histórico…</small>
+                }
+              </div>
+            }
           }
         </div>
       }
@@ -93,6 +111,9 @@ import { Classification, EvidenceSummary, SgsiArtifactType } from '@app/core/mod
     .ev__actions button { align-items: center; background: var(--wtn-surface); border: 1px solid var(--wtn-border); border-radius: var(--wtn-r-md); color: var(--wtn-text-2); cursor: pointer; display: flex; height: 30px; justify-content: center; width: 30px; }
     .ev__actions button:hover:not(:disabled) { border-color: var(--wtn-border-strong); color: var(--wtn-primary); }
     .ev__actions button:disabled { opacity: .5; cursor: not-allowed; }
+    .ev__history { border: 1px dashed var(--wtn-border); border-radius: var(--wtn-r-md); display: grid; gap: 3px; margin: -2px 0 6px; padding: 8px 10px; }
+    .ev__hist-head { color: var(--wtn-muted); font-size: 10px; font-weight: 700; letter-spacing: .06em; margin-top: 4px; text-transform: uppercase; }
+    .ev__history small { color: var(--wtn-text-2); font-size: 11px; }
   `,
 })
 export class EvidencePanel implements OnInit {
@@ -108,6 +129,8 @@ export class EvidencePanel implements OnInit {
   protected readonly uploading = signal(false);
   protected readonly items = signal<EvidenceSummary[]>([]);
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly historyOf = signal<string | null>(null);
+  protected readonly history = signal<EvidenceHistory | null>(null);
   protected classification: Classification = 'uso_interno';
   protected uploadTitle = '';
 
@@ -168,6 +191,56 @@ export class EvidencePanel implements OnInit {
     this.api.downloadEvidence(ev.id).subscribe({
       next: (blob) => this.downloadBlob(blob, ev.file_name),
       error: (e) => this.messages.add({ severity: 'error', summary: 'Erro ao baixar', detail: this.errorDetail(e) }),
+    });
+  }
+
+  /** Substitui a evidência por uma nova versão (mantém a classificação corrente). */
+  protected replaceFile(ev: EvidenceSummary, file: File): void {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('classification', ev.classification);
+    this.api.replaceEvidence(ev.id, form).subscribe({
+      next: () => {
+        this.messages.add({ severity: 'success', summary: 'Nova versão registrada' });
+        if (this.historyOf() === ev.id) {
+          this.loadHistory(ev);
+        }
+        this.load();
+      },
+      error: (e) => this.messages.add({ severity: 'error', summary: 'Falha ao substituir', detail: this.errorDetail(e) }),
+    });
+  }
+
+  protected triggerReplace(ev: EvidenceSummary): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) {
+        this.replaceFile(ev, file);
+      }
+    };
+    input.click();
+  }
+
+  protected toggleHistory(ev: EvidenceSummary): void {
+    if (this.historyOf() === ev.id) {
+      this.historyOf.set(null);
+      this.history.set(null);
+      return;
+    }
+    this.loadHistory(ev);
+  }
+
+  private loadHistory(ev: EvidenceSummary): void {
+    this.historyOf.set(ev.id);
+    this.history.set(null);
+    this.api.evidenceHistory(ev.id).subscribe({
+      next: (h) => this.history.set(h),
+      error: (e) => {
+        this.messages.add({ severity: 'error', summary: 'Erro ao carregar histórico', detail: this.errorDetail(e) });
+        this.historyOf.set(null);
+      },
     });
   }
 

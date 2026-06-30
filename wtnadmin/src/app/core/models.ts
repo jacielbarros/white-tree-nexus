@@ -107,6 +107,36 @@ export interface EvidenceSummary {
   links: EvidenceLink[];
 }
 
+export interface EvidenceVersionSummary {
+  id: string;
+  version_number: number;
+  classification: Classification;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  is_current: boolean;
+}
+
+export interface EvidenceEventSummary {
+  id: string;
+  event_type: string;
+  outcome: string;
+  actor_id: string | null;
+  occurred_at: string;
+  details: Record<string, unknown> | null;
+}
+
+export interface EvidenceHistory {
+  evidence: EvidenceSummary;
+  versions: EvidenceVersionSummary[];
+  events: EvidenceEventSummary[];
+}
+
 // --- Auditoria Interna (Feature 014, Fase 2) ---
 export type InternalAuditStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
 export type AuditFindingType = 'conforme' | 'nc_maior' | 'nc_menor' | 'oportunidade_melhoria' | 'observacao';

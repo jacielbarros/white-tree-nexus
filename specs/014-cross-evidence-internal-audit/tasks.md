@@ -139,7 +139,7 @@ some das listas, fica no histórico; trilha sem conteúdo/`storage_key`.
 ### Tests for User Story 3 (MANDATORY) ⚠️
 - [X] T027 [P] [US3] Custódia/imutabilidade em `wtnapp/test/test_evidence_custody.py`: replace cria
   versão N imutável (trigger bloqueia UPDATE/DELETE), inativação preserva histórico, eventos corretos.
-- [ ] T028 [P] [US3] Histórico gated por `manage_evidence` (versões anteriores/inativas) em
+- [X] T028 [P] [US3] Histórico gated por `manage_evidence` (versões anteriores/inativas) em
   `wtnapp/test/test_evidence_custody.py`.
 
 ### Implementation for User Story 3
@@ -147,7 +147,7 @@ some das listas, fica no histórico; trilha sem conteúdo/`storage_key`.
   corrente, evento `replaced`) e `inactivate` (status + `inactivated_*` + evento `inactivated`).
 - [X] T030 [US3] `wtnapp/routers/evidence.py`: `POST /evidence/{id}/versions`,
   `DELETE /evidence/{id}` (inativar), `GET /evidence/{id}/history` (`manage_evidence`).
-- [ ] T031 [P] [US3] `evidence-panel`: ações substituir/inativar + visão de histórico (versões+eventos)
+- [X] T031 [P] [US3] `evidence-panel`: ações substituir/inativar + visão de histórico (versões+eventos)
   para `manage_evidence`.
 
 **Checkpoint**: cadeia de custódia completa; Fase 1 (evidências) inteira entregue.
