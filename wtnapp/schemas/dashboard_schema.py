@@ -30,8 +30,9 @@ class DashboardModuleId(str, Enum):
     gap = "gap"
     soa = "soa"
     risk = "risk"  # Gestão de Riscos (Feature 012)
-    action_plan = "action_plan"  # placeholder (Módulo 4)
-    evidence = "evidence"  # placeholder (Módulo 5)
+    internal_audit = "internal_audit"  # Evidências & Auditoria Interna (Feature 014)
+    action_plan = "action_plan"  # placeholder (Módulo 5b)
+    evidence = "evidence"  # placeholder legado (compat)
 
 
 class NextAction(BaseModel):

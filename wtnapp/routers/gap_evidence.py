@@ -1,4 +1,10 @@
-"""Gap Analysis evidence attachments: upload, list, download, versioning, custody history."""
+"""Gap Analysis evidence attachments — superfície de compatibilidade da Feature 008.
+
+A partir da Feature 014 as evidências do Gap vivem no **repositório transversal unificado**
+(`evidence`/`evidence_version`/`evidence_link`/`evidence_event`). Este router preserva os mesmos
+paths, DTOs e permissões (`view_gap`/`manage_gap`) do 008, delegando o armazenamento ao store
+unificado via vínculo `target_type=gap_item`.
+"""
 
 import uuid
 from datetime import datetime, timezone
@@ -12,8 +18,8 @@ from sqlalchemy.orm import Session
 from wtnapp.database.database import get_db
 from wtnapp.helpers.permissions import has_permission, require_permission
 from wtnapp.helpers.tenant_scope import OrgContext, scoped_query
+from wtnapp.models.evidence_model import Evidence, EvidenceEvent, EvidenceLink, EvidenceVersion
 from wtnapp.models.gap_assessment_model import GapAssessmentItem
-from wtnapp.models.gap_evidence_model import GapEvidence, GapEvidenceEvent, GapEvidenceVersion
 from wtnapp.schemas.gap_evidence_schema import (
     GapEvidenceEventSummary,
     GapEvidenceHistory,
@@ -22,7 +28,7 @@ from wtnapp.schemas.gap_evidence_schema import (
     GapEvidenceVersionSummary,
 )
 from wtnapp.services.audit_service import AuditService
-from wtnapp.settings import AuditOutcome, Classification, GapEvidenceEventType, GapEvidenceStatus
+from wtnapp.settings import AuditOutcome, Classification, EvidenceEventType, EvidenceStatus, SgsiArtifactType
 from wtnapp.utils.evidence_storage import (
     EvidenceStorageError,
     EvidenceStorageUnavailable,
@@ -32,9 +38,11 @@ from wtnapp.utils.evidence_storage import (
 
 router = APIRouter(prefix="/gap/assessment/items/{item_id}/evidences", tags=["gap-evidence"])
 
-db_dep = Annotated[Session, Depends(get_db)]
+db_dependency = Annotated[Session, Depends(get_db)]
 view_dep = Annotated[OrgContext, Depends(require_permission("view_gap"))]
 manage_dep = Annotated[OrgContext, Depends(require_permission("manage_gap"))]
+
+_TARGET = SgsiArtifactType.gap_item
 
 
 def _now() -> datetime:
@@ -57,17 +65,25 @@ def _audit_access_denied(request: Request | None, ctx: OrgContext, *, resource: 
     )
 
 
-def _get_item(
-    db: Session,
-    ctx: OrgContext,
-    item_id: uuid.UUID,
-    request: Request | None = None,
-) -> GapAssessmentItem:
+def _get_item(db: Session, ctx: OrgContext, item_id: uuid.UUID, request: Request | None = None) -> GapAssessmentItem:
     item = scoped_query(db, GapAssessmentItem, ctx).filter(GapAssessmentItem.id == item_id).first()
     if item is None:
         _audit_access_denied(request, ctx, resource="gap_assessment_item", target_id=item_id)
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurso nao encontrado.")
     return item
+
+
+def _linked_evidence_ids(db: Session, ctx: OrgContext, item_id: uuid.UUID) -> set[uuid.UUID]:
+    rows = (
+        scoped_query(db, EvidenceLink, ctx)
+        .filter(
+            EvidenceLink.target_type == _TARGET,
+            EvidenceLink.target_id == item_id,
+            EvidenceLink.active.is_(True),
+        )
+        .all()
+    )
+    return {row.evidence_id for row in rows}
 
 
 def _get_evidence(
@@ -78,13 +94,13 @@ def _get_evidence(
     *,
     include_inactive: bool = False,
     request: Request | None = None,
-) -> GapEvidence:
-    query = scoped_query(db, GapEvidence, ctx).filter(
-        GapEvidence.id == evidence_id,
-        GapEvidence.assessment_item_id == item_id,
-    )
+) -> Evidence:
+    if evidence_id not in _linked_evidence_ids(db, ctx, item_id):
+        _audit_access_denied(request, ctx, resource="gap_evidence", target_id=evidence_id)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Recurso nao encontrado.")
+    query = scoped_query(db, Evidence, ctx).filter(Evidence.id == evidence_id)
     if not include_inactive:
-        query = query.filter(GapEvidence.status == GapEvidenceStatus.active)
+        query = query.filter(Evidence.status == EvidenceStatus.active)
     evidence = query.first()
     if evidence is None:
         _audit_access_denied(request, ctx, resource="gap_evidence", target_id=evidence_id)
@@ -92,10 +108,10 @@ def _get_evidence(
     return evidence
 
 
-def _current_version(db: Session, evidence: GapEvidence) -> GapEvidenceVersion:
+def _current_version(db: Session, evidence: Evidence) -> EvidenceVersion:
     if evidence.current_version_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Evidencia sem versao corrente.")
-    version = db.get(GapEvidenceVersion, evidence.current_version_id)
+    version = db.get(EvidenceVersion, evidence.current_version_id)
     if version is None or version.tenant_id != evidence.tenant_id or version.evidence_id != evidence.id:
         raise HTTPException(status.HTTP_409_CONFLICT, "Evidencia sem versao corrente.")
     return version
@@ -107,14 +123,14 @@ def _can_download(ctx: OrgContext, classification: Classification) -> bool:
     return has_permission(ctx.role, "manage_gap")
 
 
-def _summary(evidence: GapEvidence, version: GapEvidenceVersion, ctx: OrgContext) -> GapEvidenceSummary:
+def _summary(evidence: Evidence, version: EvidenceVersion, item_id: uuid.UUID, ctx: OrgContext) -> GapEvidenceSummary:
     return GapEvidenceSummary(
         id=evidence.id,
-        assessment_item_id=evidence.assessment_item_id,
+        assessment_item_id=item_id,
         title=evidence.title,
         description=evidence.description,
         classification=evidence.classification,
-        status=evidence.status,
+        status=evidence.status.value,
         current_version_id=version.id,
         file_name=version.original_filename,
         mime_type=version.mime_type,
@@ -129,7 +145,7 @@ def _summary(evidence: GapEvidence, version: GapEvidenceVersion, ctx: OrgContext
     )
 
 
-def _version_summary(version: GapEvidenceVersion, evidence: GapEvidence) -> GapEvidenceVersionSummary:
+def _version_summary(version: EvidenceVersion, evidence: Evidence) -> GapEvidenceVersionSummary:
     return GapEvidenceVersionSummary(
         id=version.id,
         version_number=version.version_number,
@@ -146,7 +162,7 @@ def _version_summary(version: GapEvidenceVersion, evidence: GapEvidence) -> GapE
     )
 
 
-def _event_summary(event: GapEvidenceEvent) -> GapEvidenceEventSummary:
+def _event_summary(event: EvidenceEvent) -> GapEvidenceEventSummary:
     return GapEvidenceEventSummary(
         id=event.id,
         event_type=event.event_type,
@@ -171,19 +187,22 @@ def _log_event(
     db: Session,
     *,
     ctx: OrgContext,
-    event_type: GapEvidenceEventType,
+    event_type: EvidenceEventType,
     outcome: AuditOutcome = AuditOutcome.success,
     evidence_id: uuid.UUID | None = None,
     version_id: uuid.UUID | None = None,
+    link_id: uuid.UUID | None = None,
     item_id: uuid.UUID | None = None,
     details: dict | None = None,
 ) -> None:
     db.add(
-        GapEvidenceEvent(
+        EvidenceEvent(
             tenant_id=ctx.tenant_id,
             evidence_id=evidence_id,
             version_id=version_id,
-            assessment_item_id=item_id,
+            link_id=link_id,
+            target_type=_TARGET if item_id is not None else None,
+            target_id=item_id,
             event_type=event_type.value,
             outcome=outcome.value,
             actor_id=ctx.principal.user.id,
@@ -221,31 +240,25 @@ def _storage_http_error(exc: Exception) -> HTTPException:
 
 
 @router.get("", response_model=list[GapEvidenceSummary])
-def list_evidences(
-    item_id: uuid.UUID,
-    request: Request,
-    db: db_dep,
-    ctx: view_dep,
-    include_history: bool = False,
-):
+def list_evidences(item_id: uuid.UUID, request: Request, db: db_dependency, ctx: view_dep, include_history: bool = False):
     _get_item(db, ctx, item_id, request)
     if include_history and not has_permission(ctx.role, "manage_gap"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Permissao insuficiente.")
-    query = scoped_query(db, GapEvidence, ctx).filter(GapEvidence.assessment_item_id == item_id)
+    evidence_ids = _linked_evidence_ids(db, ctx, item_id)
+    if not evidence_ids:
+        return []
+    query = scoped_query(db, Evidence, ctx).filter(Evidence.id.in_(evidence_ids))
     if not include_history:
-        query = query.filter(GapEvidence.status == GapEvidenceStatus.active)
-    evidences = query.order_by(GapEvidence.created_at.desc()).all()
-    summaries: list[GapEvidenceSummary] = []
-    for evidence in evidences:
-        summaries.append(_summary(evidence, _current_version(db, evidence), ctx))
-    return summaries
+        query = query.filter(Evidence.status == EvidenceStatus.active)
+    evidences = query.order_by(Evidence.created_at.desc()).all()
+    return [_summary(e, _current_version(db, e), item_id, ctx) for e in evidences]
 
 
 @router.post("", response_model=GapEvidenceSummary, status_code=status.HTTP_201_CREATED)
 async def upload_evidence(
     item_id: uuid.UUID,
     request: Request,
-    db: db_dep,
+    db: db_dependency,
     ctx: manage_dep,
     file: UploadFile = File(...),
     classification: Classification = Form(...),
@@ -256,30 +269,23 @@ async def upload_evidence(
     evidence_id = uuid.uuid4()
     version_id = uuid.uuid4()
     try:
-        stored = await store_upload_file(
-            upload=file,
-            tenant_id=ctx.tenant_id,
-            evidence_id=evidence_id,
-            version_id=version_id,
-        )
+        stored = await store_upload_file(upload=file, tenant_id=ctx.tenant_id, evidence_id=evidence_id, version_id=version_id)
     except (EvidenceStorageError, EvidenceStorageUnavailable) as exc:
         _audit(request, ctx=ctx, operation="UPLOAD_EVIDENCE_DENIED", outcome=AuditOutcome.denied, details={"reason": type(exc).__name__})
         raise _storage_http_error(exc)
 
-    evidence = GapEvidence(
+    evidence = Evidence(
         id=evidence_id,
         tenant_id=ctx.tenant_id,
-        assessment_item_id=item.id,
         title=_safe_title(title, stored.original_filename),
         description=_safe_description(description),
         classification=classification,
-        status=GapEvidenceStatus.active,
+        status=EvidenceStatus.active,
         created_by=ctx.principal.user.id,
     )
     db.add(evidence)
     db.flush()
-
-    version = GapEvidenceVersion(
+    version = EvidenceVersion(
         id=version_id,
         tenant_id=ctx.tenant_id,
         evidence_id=evidence.id,
@@ -299,50 +305,28 @@ async def upload_evidence(
     db.add(version)
     db.flush()
     evidence.current_version_id = version.id
-    _log_event(
-        db,
-        ctx=ctx,
-        event_type=GapEvidenceEventType.uploaded,
-        evidence_id=evidence.id,
-        version_id=version.id,
-        item_id=item.id,
-        details={"version_number": 1, "classification": classification.value, "size_bytes": stored.size_bytes},
+    link = EvidenceLink(
+        tenant_id=ctx.tenant_id, evidence_id=evidence.id, target_type=_TARGET,
+        target_id=item.id, created_by=ctx.principal.user.id,
     )
+    db.add(link)
+    db.flush()
+    _log_event(db, ctx=ctx, event_type=EvidenceEventType.uploaded, evidence_id=evidence.id, version_id=version.id, item_id=item.id, details={"version_number": 1, "classification": classification.value, "size_bytes": stored.size_bytes})
+    _log_event(db, ctx=ctx, event_type=EvidenceEventType.linked, evidence_id=evidence.id, link_id=link.id, item_id=item.id)
     db.commit()
     db.refresh(evidence)
     db.refresh(version)
-    _audit(
-        request,
-        ctx=ctx,
-        operation="UPLOAD_EVIDENCE",
-        evidence_id=evidence.id,
-        details={"item_id": str(item.id), "classification": classification.value, "size_bytes": stored.size_bytes},
-    )
-    return _summary(evidence, version, ctx)
+    _audit(request, ctx=ctx, operation="UPLOAD_EVIDENCE", evidence_id=evidence.id, details={"item_id": str(item.id), "classification": classification.value, "size_bytes": stored.size_bytes})
+    return _summary(evidence, version, item.id, ctx)
 
 
 @router.get("/{evidence_id}/download")
-def download_evidence(
-    item_id: uuid.UUID,
-    evidence_id: uuid.UUID,
-    request: Request,
-    db: db_dep,
-    ctx: view_dep,
-):
+def download_evidence(item_id: uuid.UUID, evidence_id: uuid.UUID, request: Request, db: db_dependency, ctx: view_dep):
     _get_item(db, ctx, item_id, request)
     evidence = _get_evidence(db, ctx, item_id, evidence_id, request=request)
     version = _current_version(db, evidence)
     if not _can_download(ctx, evidence.classification):
-        _log_event(
-            db,
-            ctx=ctx,
-            event_type=GapEvidenceEventType.access_denied,
-            outcome=AuditOutcome.denied,
-            evidence_id=evidence.id,
-            version_id=version.id,
-            item_id=item_id,
-            details={"reason": "classification"},
-        )
+        _log_event(db, ctx=ctx, event_type=EvidenceEventType.access_denied, outcome=AuditOutcome.denied, evidence_id=evidence.id, version_id=version.id, item_id=item_id, details={"reason": "classification"})
         db.commit()
         _audit(request, ctx=ctx, operation="DOWNLOAD_EVIDENCE_DENIED", outcome=AuditOutcome.denied, evidence_id=evidence.id)
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Permissao insuficiente.")
@@ -351,30 +335,11 @@ def download_evidence(
     except EvidenceStorageUnavailable as exc:
         _audit(request, ctx=ctx, operation="DOWNLOAD_EVIDENCE_DENIED", outcome=AuditOutcome.denied, evidence_id=evidence.id, details={"reason": type(exc).__name__})
         raise _storage_http_error(exc)
-
-    _log_event(
-        db,
-        ctx=ctx,
-        event_type=GapEvidenceEventType.downloaded,
-        evidence_id=evidence.id,
-        version_id=version.id,
-        item_id=item_id,
-        details={"classification": evidence.classification.value, "version_number": version.version_number},
-    )
+    _log_event(db, ctx=ctx, event_type=EvidenceEventType.downloaded, evidence_id=evidence.id, version_id=version.id, item_id=item_id, details={"classification": evidence.classification.value, "version_number": version.version_number})
     db.commit()
-    _audit(
-        request,
-        ctx=ctx,
-        operation="DOWNLOAD_EVIDENCE",
-        evidence_id=evidence.id,
-        details={"classification": evidence.classification.value, "version_number": version.version_number},
-    )
+    _audit(request, ctx=ctx, operation="DOWNLOAD_EVIDENCE", evidence_id=evidence.id, details={"classification": evidence.classification.value, "version_number": version.version_number})
     filename = quote(version.original_filename)
-    return Response(
-        content=content,
-        media_type=version.mime_type or "application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
-    )
+    return Response(content=content, media_type=version.mime_type or "application/octet-stream", headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"})
 
 
 @router.post("/{evidence_id}/versions", response_model=GapEvidenceSummary, status_code=status.HTTP_201_CREATED)
@@ -382,7 +347,7 @@ async def replace_evidence(
     item_id: uuid.UUID,
     evidence_id: uuid.UUID,
     request: Request,
-    db: db_dep,
+    db: db_dependency,
     ctx: manage_dep,
     file: UploadFile = File(...),
     classification: Classification = Form(...),
@@ -392,23 +357,17 @@ async def replace_evidence(
     evidence = _get_evidence(db, ctx, item_id, evidence_id, request=request)
     version_id = uuid.uuid4()
     next_number = (
-        db.query(func.max(GapEvidenceVersion.version_number))
-        .filter(GapEvidenceVersion.tenant_id == ctx.tenant_id, GapEvidenceVersion.evidence_id == evidence.id)
+        db.query(func.max(EvidenceVersion.version_number))
+        .filter(EvidenceVersion.tenant_id == ctx.tenant_id, EvidenceVersion.evidence_id == evidence.id)
         .scalar()
         or 0
     ) + 1
     try:
-        stored = await store_upload_file(
-            upload=file,
-            tenant_id=ctx.tenant_id,
-            evidence_id=evidence.id,
-            version_id=version_id,
-        )
+        stored = await store_upload_file(upload=file, tenant_id=ctx.tenant_id, evidence_id=evidence.id, version_id=version_id)
     except (EvidenceStorageError, EvidenceStorageUnavailable) as exc:
         _audit(request, ctx=ctx, operation="REPLACE_EVIDENCE_DENIED", outcome=AuditOutcome.denied, evidence_id=evidence.id, details={"reason": type(exc).__name__})
         raise _storage_http_error(exc)
-
-    version = GapEvidenceVersion(
+    version = EvidenceVersion(
         id=version_id,
         tenant_id=ctx.tenant_id,
         evidence_id=evidence.id,
@@ -431,26 +390,12 @@ async def replace_evidence(
     evidence.classification = classification
     if description is not None:
         evidence.description = _safe_description(description)
-    _log_event(
-        db,
-        ctx=ctx,
-        event_type=GapEvidenceEventType.replaced,
-        evidence_id=evidence.id,
-        version_id=version.id,
-        item_id=item_id,
-        details={"version_number": next_number, "classification": classification.value, "size_bytes": stored.size_bytes},
-    )
+    _log_event(db, ctx=ctx, event_type=EvidenceEventType.replaced, evidence_id=evidence.id, version_id=version.id, item_id=item_id, details={"version_number": next_number, "classification": classification.value, "size_bytes": stored.size_bytes})
     db.commit()
     db.refresh(evidence)
     db.refresh(version)
-    _audit(
-        request,
-        ctx=ctx,
-        operation="REPLACE_EVIDENCE",
-        evidence_id=evidence.id,
-        details={"version_number": next_number, "classification": classification.value, "size_bytes": stored.size_bytes},
-    )
-    return _summary(evidence, version, ctx)
+    _audit(request, ctx=ctx, operation="REPLACE_EVIDENCE", evidence_id=evidence.id, details={"version_number": next_number, "classification": classification.value, "size_bytes": stored.size_bytes})
+    return _summary(evidence, version, item_id, ctx)
 
 
 @router.delete("/{evidence_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -458,62 +403,32 @@ def inactivate_evidence(
     item_id: uuid.UUID,
     evidence_id: uuid.UUID,
     request: Request,
-    db: db_dep,
+    db: db_dependency,
     ctx: manage_dep,
     body: GapEvidenceInactivateRequest | None = Body(default=None),
 ):
     _get_item(db, ctx, item_id, request)
     evidence = _get_evidence(db, ctx, item_id, evidence_id, request=request)
     version = _current_version(db, evidence)
-    evidence.status = GapEvidenceStatus.inactive
+    evidence.status = EvidenceStatus.inactive
     evidence.inactivated_by = ctx.principal.user.id
     evidence.inactivated_at = _now()
     evidence.inactivation_reason = _safe_description(body.reason if body else None)
-    _log_event(
-        db,
-        ctx=ctx,
-        event_type=GapEvidenceEventType.inactivated,
-        evidence_id=evidence.id,
-        version_id=version.id,
-        item_id=item_id,
-        details={"reason_provided": bool(evidence.inactivation_reason)},
-    )
+    _log_event(db, ctx=ctx, event_type=EvidenceEventType.inactivated, evidence_id=evidence.id, version_id=version.id, item_id=item_id, details={"reason_provided": bool(evidence.inactivation_reason)})
     db.commit()
-    _audit(
-        request,
-        ctx=ctx,
-        operation="INACTIVATE_EVIDENCE",
-        evidence_id=evidence.id,
-        details={"reason_provided": bool(evidence.inactivation_reason)},
-    )
+    _audit(request, ctx=ctx, operation="INACTIVATE_EVIDENCE", evidence_id=evidence.id, details={"reason_provided": bool(evidence.inactivation_reason)})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{evidence_id}/history", response_model=GapEvidenceHistory)
-def evidence_history(
-    item_id: uuid.UUID,
-    evidence_id: uuid.UUID,
-    request: Request,
-    db: db_dep,
-    ctx: manage_dep,
-):
+def evidence_history(item_id: uuid.UUID, evidence_id: uuid.UUID, request: Request, db: db_dependency, ctx: manage_dep):
     _get_item(db, ctx, item_id, request)
     evidence = _get_evidence(db, ctx, item_id, evidence_id, include_inactive=True, request=request)
     current = _current_version(db, evidence)
-    versions = (
-        scoped_query(db, GapEvidenceVersion, ctx)
-        .filter(GapEvidenceVersion.evidence_id == evidence.id)
-        .order_by(GapEvidenceVersion.version_number.desc())
-        .all()
-    )
-    events = (
-        scoped_query(db, GapEvidenceEvent, ctx)
-        .filter(GapEvidenceEvent.evidence_id == evidence.id)
-        .order_by(GapEvidenceEvent.occurred_at.desc())
-        .all()
-    )
+    versions = scoped_query(db, EvidenceVersion, ctx).filter(EvidenceVersion.evidence_id == evidence.id).order_by(EvidenceVersion.version_number.desc()).all()
+    events = scoped_query(db, EvidenceEvent, ctx).filter(EvidenceEvent.evidence_id == evidence.id).order_by(EvidenceEvent.occurred_at.desc()).all()
     return GapEvidenceHistory(
-        evidence=_summary(evidence, current, ctx),
-        versions=[_version_summary(version, evidence) for version in versions],
-        events=[_event_summary(event) for event in events],
+        evidence=_summary(evidence, current, item_id, ctx),
+        versions=[_version_summary(v, evidence) for v in versions],
+        events=[_event_summary(e) for e in events],
     )

@@ -6,7 +6,7 @@ from cryptography.fernet import Fernet
 from wtnapp import settings
 from wtnapp.models.audit_log_model import AuditLog
 from wtnapp.models.gap_assessment_model import GapAssessment, GapAssessmentItem
-from wtnapp.models.gap_evidence_model import GapEvidence, GapEvidenceEvent, GapEvidenceVersion
+from wtnapp.models.evidence_model import Evidence, EvidenceEvent, EvidenceVersion
 from wtnapp.services.gap_seed_service import adopt_seed
 from wtnapp.settings import GapStatus
 
@@ -63,15 +63,15 @@ def test_upload_creates_evidence_version_hash_event_audit_and_keeps_item_status(
     assert payload["content_hash"] == "388911fba5f7bf053a680a5cabefe6fe1d023bf28eb74d0dccd99bfc21cc21d2"
     assert payload["can_download"] is True
 
-    evidence = db.get(GapEvidence, uuid.UUID(payload["id"]))
-    version = db.get(GapEvidenceVersion, uuid.UUID(payload["current_version_id"]))
+    evidence = db.get(Evidence, uuid.UUID(payload["id"]))
+    version = db.get(EvidenceVersion, uuid.UUID(payload["current_version_id"]))
     assert evidence.tenant_id == seed["org"].id
     assert version.version_number == 1
     assert version.storage_key not in json.dumps(payload)
     assert b"policy evidence" not in (tmp_path / version.storage_key).read_bytes()
     assert db.get(GapAssessmentItem, item.id).status == GapStatus.not_meet
 
-    event = db.query(GapEvidenceEvent).filter_by(evidence_id=evidence.id, event_type="uploaded").one()
+    event = db.query(EvidenceEvent).filter_by(evidence_id=evidence.id, event_type="uploaded").one()
     assert event.details["classification"] == "uso_interno"
     audit = db.query(AuditLog).filter_by(operation="UPLOAD_EVIDENCE", entity_id=str(evidence.id)).one()
     assert "storage_key" not in json.dumps(audit.details)
@@ -105,7 +105,7 @@ def test_upload_rejects_invalid_files_classification_and_missing_key(
     monkeypatch.setattr(settings, "FIELD_ENCRYPTION_KEY", "")
     resp = _upload(client, item_id, headers, content=b"x")
     assert resp.status_code == 503
-    assert db.query(GapEvidence).filter_by(assessment_item_id=item_id).count() == 0
+    assert db.query(Evidence).filter_by(tenant_id=seed["org"].id).count() == 0
 
 
 def test_view_gap_cannot_upload_and_manage_gap_can_upload(

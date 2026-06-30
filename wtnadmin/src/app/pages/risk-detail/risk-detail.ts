@@ -7,6 +7,8 @@ import { ButtonModule } from 'primeng/button';
 import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
+import { EvidencePanel } from '@app/shared/evidence-panel/evidence-panel';
+import { TraceabilityTimeline } from '@app/shared/traceability-timeline/traceability-timeline';
 import { MembershipRow, Risk, RiskControl, RiskEvent } from '@app/core/models';
 import { RISK_STATUS_LABELS, TREATMENT_LABELS, levelColor, levelLabel } from '@app/pages/risks/risk-labels';
 
@@ -15,7 +17,7 @@ interface GapItem { id: string; ref_code: string; name: string; dimension: strin
 @Component({
   selector: 'app-risk-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, FormsModule, ButtonModule, DatePipe],
+  imports: [RouterLink, FormsModule, ButtonModule, DatePipe, EvidencePanel, TraceabilityTimeline],
   template: `
     <a routerLink="../../risks" class="back">← Voltar ao registro</a>
 
@@ -137,6 +139,16 @@ interface GapItem { id: string; ref_code: string; name: string; dimension: strin
           </div>
         } @empty { <p class="muted">Sem eventos.</p> }
       </section>
+
+      <!-- Evidências transversais (Feature 014) -->
+      <section class="wtn-card pad">
+        <app-evidence-panel [targetType]="'risk'" [targetId]="id" [canManage]="canManageEvidence()" title="Evidências do risco" />
+      </section>
+
+      <!-- Rastreabilidade (Feature 014) -->
+      <section class="wtn-card pad">
+        <app-traceability-timeline [targetType]="'risk'" [targetId]="id" title="Linha do tempo do risco" />
+      </section>
     } @else if (loading()) {
       <div class="wtn-card pad"><div class="wtn-skeleton skeleton-line"></div></div>
     } @else {
@@ -188,7 +200,7 @@ export class RiskDetailPage implements OnInit {
   readonly controlError = signal<string | null>(null);
   readonly acceptError = signal<string | null>(null);
 
-  private id = '';
+  protected id = '';
   evalProb: number | null = null;
   evalImpact: number | null = null;
   overrideReason = '';
@@ -228,6 +240,7 @@ export class RiskDetailPage implements OnInit {
   }
 
   canManage(): boolean { return hasPermission(this.store.currentRole(), 'manage_risk'); }
+  canManageEvidence(): boolean { return hasPermission(this.store.currentRole(), 'manage_evidence'); }
 
   saveEval(): void {
     this.saving.set(true); this.evalError.set(null);

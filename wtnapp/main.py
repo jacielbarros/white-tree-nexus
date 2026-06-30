@@ -26,6 +26,7 @@ from wtnapp.routers import (
     context_overview,
     dashboard,
     diagnostic,
+    evidence,
     form_assignments,
     form_respond,
     form_signature_policy,
@@ -35,10 +36,15 @@ from wtnapp.routers import (
     gap_catalog,
     gap_evidence,
     gap_guidance,
+    improvement,
+    internal_audit,
     invitations,
+    management_review,
+    nonconformity,
     me,
     memberships,
     organizations,
+    traceability,
     print_documents,
     risk,
     scope,
@@ -152,3 +158,9 @@ app.include_router(soa.router)
 app.include_router(dashboard.router)
 app.include_router(assets.router)
 app.include_router(risk.router)
+app.include_router(evidence.router)
+app.include_router(internal_audit.router)
+app.include_router(traceability.router)
+app.include_router(nonconformity.router)
+app.include_router(management_review.router)
+app.include_router(improvement.router)

@@ -77,6 +77,163 @@ export interface InviteLookup {
 export type Level = 'alto' | 'medio' | 'baixo';
 export type Classification = 'publico' | 'uso_interno' | 'confidencial' | 'restrito';
 
+// --- Repositório transversal de evidências (Feature 014; estendido na 015) ---
+export type SgsiArtifactType =
+  | 'soa_item'
+  | 'gap_item'
+  | 'risk'
+  | 'asset'
+  | 'audit_finding'
+  | 'nonconformity'
+  | 'corrective_action';
+
+export interface EvidenceLink {
+  id: string;
+  target_type: SgsiArtifactType;
+  target_id: string;
+  active: boolean;
+}
+
+export interface EvidenceSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  classification: Classification;
+  status: 'active' | 'inactive';
+  current_version_id: string;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  created_at: string;
+  can_download: boolean;
+  links: EvidenceLink[];
+}
+
+export interface EvidenceVersionSummary {
+  id: string;
+  version_number: number;
+  classification: Classification;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  is_current: boolean;
+}
+
+export interface EvidenceEventSummary {
+  id: string;
+  event_type: string;
+  outcome: string;
+  actor_id: string | null;
+  occurred_at: string;
+  details: Record<string, unknown> | null;
+}
+
+export interface EvidenceHistory {
+  evidence: EvidenceSummary;
+  versions: EvidenceVersionSummary[];
+  events: EvidenceEventSummary[];
+}
+
+// --- Auditoria Interna (Feature 014, Fase 2) ---
+export type InternalAuditStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
+export type AuditFindingType = 'conforme' | 'nc_maior' | 'nc_menor' | 'oportunidade_melhoria' | 'observacao';
+export type AuditChecklistResult = 'conforme' | 'nao_conforme' | 'nao_aplicavel' | 'pendente';
+
+export interface AuditProgram {
+  id: string;
+  name: string;
+  objective: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+}
+
+export interface AuditSummary {
+  id: string;
+  program_id: string;
+  code: string;
+  title: string;
+  status: InternalAuditStatus;
+  auditor_member_id: string;
+  period_start: string | null;
+  period_end: string | null;
+  current_version_id: string | null;
+  draft_status: string;
+}
+
+export interface AuditReadiness {
+  can_approve_report: boolean;
+  pending_items: number;
+  findings_count: number;
+}
+
+export interface AuditDetail extends AuditSummary {
+  scope: string;
+  criteria: string;
+  readiness: AuditReadiness;
+}
+
+export interface AuditChecklistItem {
+  id: string;
+  audit_id: string;
+  criterion: string;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+  result: AuditChecklistResult;
+  note: string | null;
+  order_index: number;
+}
+
+export interface AuditFinding {
+  id: string;
+  audit_id: string;
+  finding_type: AuditFindingType;
+  title: string;
+  description: string;
+  checklist_item_id: string | null;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+  promotable: boolean;
+  nonconformity_ref: string | null;
+  status: 'active' | 'inactive';
+  evidence_links: EvidenceLink[];
+}
+
+export interface AuditReportVersion {
+  id: string;
+  version_number: number;
+  status: string;
+  classification: Classification;
+  signed: boolean;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+export interface AuditDashboardData {
+  evidence_by_status: Record<string, number>;
+  evidence_by_classification: Record<string, number>;
+  audits_by_status: Record<string, number>;
+  findings_by_type: Record<string, number>;
+}
+
+export interface TimelineEntry {
+  occurred_at: string;
+  kind: 'evidence' | 'finding' | 'event';
+  ref_id: string;
+  label: string;
+  detail: string;
+}
+
 export type PrintableDocumentType =
   | 'context_report'
   | 'gap_report'
@@ -907,4 +1064,109 @@ export interface RiskPlan {
   id: string;
   draft_status: string;
   current_version_id: string | null;
+}
+
+// --- NC / Ações Corretivas + Análise Crítica + Melhoria / PDCA (Feature 015) ---
+export type NCOrigin = 'audit_finding' | 'external_audit' | 'incident' | 'management_review' | 'other';
+export type NCSeverity = 'maior' | 'menor' | 'observacao';
+export type NCStatus = 'open' | 'in_progress' | 'in_verification' | 'closed' | 'cancelled';
+export type CorrectiveActionStatus = 'planned' | 'in_progress' | 'done' | 'cancelled';
+export type VerificationResult = 'effective' | 'ineffective';
+export type ImprovementOrigin = 'audit' | 'nonconformity' | 'management_review' | 'suggestion';
+export type ImprovementStatus = 'proposed' | 'in_progress' | 'implemented' | 'rejected';
+
+export interface NCSummary {
+  id: string;
+  code: string;
+  origin: NCOrigin;
+  title: string;
+  severity: NCSeverity;
+  status: NCStatus;
+  source_finding_id: string | null;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+}
+
+export interface NCReadiness {
+  can_close: boolean;
+  has_effective_verification: boolean;
+  overdue_actions: number;
+  open_actions: number;
+}
+
+export interface NCDetail extends NCSummary {
+  description: string;
+  root_cause: string | null;
+  root_cause_method: string | null;
+  readiness: NCReadiness;
+}
+
+export interface CorrectiveAction {
+  id: string;
+  nonconformity_id: string;
+  description: string;
+  responsible_member_id: string;
+  due_date: string | null;
+  status: CorrectiveActionStatus;
+  overdue: boolean;
+}
+
+export interface NCVerification {
+  id: string;
+  result: VerificationResult;
+  notes: string | null;
+  verified_by: string;
+  verified_at: string;
+}
+
+export interface NcDashboard {
+  nc_by_status: Record<string, number>;
+  nc_by_severity: Record<string, number>;
+  overdue_actions: number;
+  improvements_by_status: Record<string, number>;
+}
+
+export interface ManagementReviewSummary {
+  id: string;
+  title: string;
+  review_date: string;
+  draft_status: string;
+  current_version_id: string | null;
+}
+
+export interface ManagementReviewDetail extends ManagementReviewSummary {
+  inputs: Record<string, unknown>;
+  outputs: Record<string, unknown>;
+  readiness: { can_approve: boolean };
+}
+
+export interface ManagementReviewVersion {
+  id: string;
+  version_number: number;
+  status: string;
+  classification: Classification;
+  signed: boolean;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+export interface Improvement {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  origin: ImprovementOrigin;
+  source_ref: string | null;
+  status: ImprovementStatus;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+}
+
+export interface PdcaEntry {
+  occurred_at: string;
+  phase: 'check' | 'act' | 'plan';
+  kind: 'finding' | 'nonconformity' | 'corrective_action' | 'management_review' | 'improvement';
+  ref_id: string;
+  label: string;
+  detail: string;
 }

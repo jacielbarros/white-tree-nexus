@@ -171,6 +171,66 @@ export const routes: Routes = [
           import('@app/pages/risk-dashboard/risk-dashboard').then((m) => m.RiskDashboardPage),
       },
       {
+        path: 'evidence-repository',
+        canActivate: [permissionGuard('view_evidence')],
+        loadComponent: () =>
+          import('@app/pages/evidence-repository/evidence-repository').then((m) => m.EvidenceRepositoryPage),
+      },
+      {
+        path: 'internal-audit',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit/internal-audit').then((m) => m.InternalAuditPage),
+      },
+      {
+        path: 'internal-audit-detail/:id',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit-detail/internal-audit-detail').then((m) => m.InternalAuditDetailPage),
+      },
+      {
+        path: 'internal-audit-dashboard',
+        canActivate: [permissionGuard('view_internal_audit')],
+        loadComponent: () =>
+          import('@app/pages/internal-audit-dashboard/internal-audit-dashboard').then((m) => m.InternalAuditDashboardPage),
+      },
+      {
+        path: 'nonconformities',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformities/nonconformities').then((m) => m.NonconformitiesPage),
+      },
+      {
+        path: 'nonconformity-detail/:id',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformity-detail/nonconformity-detail').then((m) => m.NonconformityDetailPage),
+      },
+      {
+        path: 'nonconformity-dashboard',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformity-dashboard/nonconformity-dashboard').then((m) => m.NonconformityDashboardPage),
+      },
+      {
+        path: 'management-reviews',
+        canActivate: [permissionGuard('view_management_review')],
+        loadComponent: () =>
+          import('@app/pages/management-reviews/management-reviews').then((m) => m.ManagementReviewsPage),
+      },
+      {
+        path: 'management-review-detail/:id',
+        canActivate: [permissionGuard('view_management_review')],
+        loadComponent: () =>
+          import('@app/pages/management-review-detail/management-review-detail').then((m) => m.ManagementReviewDetailPage),
+      },
+      {
+        path: 'improvements',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/improvements/improvements').then((m) => m.ImprovementsPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

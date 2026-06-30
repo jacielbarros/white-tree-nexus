@@ -315,6 +315,65 @@ interface OrgOption { label: string; value: string; }
                 @if (!collapsed()) { <span>Versões</span> }
               </a>
             </div>
+
+            <!-- Evidências & Auditoria Interna (Feature 014) -->
+            <div class="wtn-nav-group">
+              @if (!collapsed()) { <div class="wtn-nav-label">Evidências & Auditoria</div> }
+              <a class="wtn-nav-item" routerLink="evidence-repository" routerLinkActive="active" [title]="collapsed() ? 'Repositório de Evidências' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Repositório de Evidências</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="internal-audit" routerLinkActive="active" [title]="collapsed() ? 'Auditoria Interna' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 11l2 2 4-4M5 4h14a1 1 0 0 1 1 1v14l-4-2-4 2-4-2-4 2V5a1 1 0 0 1 1-1Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Auditoria Interna</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="internal-audit-dashboard" routerLinkActive="active" [title]="collapsed() ? 'Dashboard Auditoria' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Dashboard Auditoria</span> }
+              </a>
+            </div>
+
+            <!-- NC / Ações Corretivas + Análise Crítica + Melhoria / PDCA (Feature 015) -->
+            <div class="wtn-nav-group">
+              @if (!collapsed()) { <div class="wtn-nav-label">Melhoria & PDCA</div> }
+              <a class="wtn-nav-item" routerLink="nonconformities" routerLinkActive="active" [title]="collapsed() ? 'Não Conformidades' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4m0 4h.01M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Não Conformidades</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="management-reviews" routerLinkActive="active" [title]="collapsed() ? 'Análise Crítica' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M13 21l8-8-3-3-8 8v3h3Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Análise Crítica</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="improvements" routerLinkActive="active" [title]="collapsed() ? 'Melhoria Contínua' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 12a9 9 0 1 1 3 6.7M21 12a9 9 0 0 0-3-6.7M16 8h5V3M8 16H3v5"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Melhoria Contínua</span> }
+              </a>
+              <a class="wtn-nav-item" routerLink="nonconformity-dashboard" routerLinkActive="active" [title]="collapsed() ? 'Dashboard NC/PDCA' : ''">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6V11h-6v9Zm0-16v5h6V4h-6Z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                @if (!collapsed()) { <span>Dashboard NC/PDCA</span> }
+              </a>
+            </div>
           }
         </nav>
 

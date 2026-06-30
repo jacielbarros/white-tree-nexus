@@ -413,6 +413,117 @@ exibe como **três fases**: Ameaças/Vulnerabilidades → Avaliação → Tratam
   **pré-existente** (módulo Gap) que faz `alembic upgrade head` falhar a partir de DB zerado
   (`gap_seed_item.referencia` em migration de backfill) — independente deste módulo.
 
+#### Módulo 5a — Repositório Transversal de Evidências + Auditoria Interna (Feature 014 — implementada)
+Etapa final da esteira (Evidências/Auditoria/PDCA). Spec/plano em `specs/014-cross-evidence-internal-audit/`.
+Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna (9.2). **Backend + frontend
+completos e testados (US1–US8; backend 361 testes, admin 197); migração aplicada e validada no
+PostgreSQL real.** Prepara a base para a Feature 5b (NC/ações corretivas 10.2, análise crítica 9.3,
+PDCA 10.1) **sem implementá-la**. Pendente apenas o roteiro E2E manual no browser (`quickstart.md`).
+- **Fase 1 — Repositório transversal de evidências** (`wtnapp/`): domínio unificado `evidence_*`
+  (4 tabelas: `evidence`, `evidence_version`, `evidence_link`, `evidence_event`; todas `tenant_id`+RLS;
+  versão/evento append-only). A evidência é objeto de 1ª classe vinculável a **1..N** artefatos via
+  `evidence_link` **polimórfico** (`SgsiArtifactType`: `soa_item`/`gap_item`/`risk`/`asset`/`audit_finding`,
+  extensível p/ 5b) apontando para **linhas de artefato tenant-scoped**. Reusa `utils/evidence_storage`
+  (upload + SHA-256 + cifragem **Fernet** em repouso), `classification_access` (acesso ao conteúdo por
+  classificação) e auditoria. Serviço `services/evidence_service.py`; router `routers/evidence.py`
+  (`/evidence`: repositório central pesquisável/filtrável, upload+vínculo, download, versões, inativação,
+  histórico, link/unlink). **Unificação do 008**: `routers/gap_evidence.py` virou **adaptador** sobre o
+  store unificado (mesmos paths/DTOs/permissões `view_gap`/`manage_gap`/audit); o modelo `GapEvidence` foi
+  **removido** e os dados migrados.
+- **Fase 2 — Auditoria interna (9.2)** (`wtnapp/`): domínio `internal_audit_*` (5 tabelas:
+  `internal_audit_program`/`internal_audit`/`internal_audit_checklist_item`/`internal_audit_finding`/
+  `internal_audit_event` append-only). Programa → auditoria (código `AUD-####`, máquina de estados
+  planned→in_progress→completed/cancel) → checklist (manual + importação opcional do escopo SoA/Gap, com
+  atualização de resultado) → **constatações** (5 tipos; NC maior/menor ⇒ `promotable=true` +
+  `nonconformity_ref` **reservado p/ 5b**; evidência anexada via `target_type=audit_finding`).
+  **Relatório** como Documento Controlado (reusa `controlled_document_service`+`document_versions`, novo
+  `DocType.internal_audit_report`; **gate duro**: aprovar exige auditoria `completed` + zero itens de
+  checklist `pendente`; assinatura avançada opcional SHA-256; **PDF** via `internal_audit_export_service`/
+  reportlab). Serviços `internal_audit_service`/`_report_service`/`_export_service`; router
+  `routers/internal_audit.py` (`/internal-audit`, 20 endpoints).
+- **Transversal**: `routers/traceability.py` (`GET /traceability/timeline`, read-only, **RBAC composto**:
+  view do módulo do alvo + `view_evidence`; constatações só com `view_internal_audit`); dashboard do
+  módulo (`audit_metrics_service` + `GET /internal-audit/dashboard`); card de readiness **Evidências &
+  Auditoria Interna** na esteira (`dashboard_service` + `DashboardModuleId.internal_audit`).
+- **RBAC**: 5 permissões novas — `view_evidence`/`manage_evidence`, `view_internal_audit`/
+  `manage_internal_audit`/`approve_audit_report` (nome de auditoria interna distinto de um futuro
+  `view_audit` de leitura de audit logs). Enums + `DocType.internal_audit_report` + `AUDIT_CODE_PREFIX`
+  em `settings.py`. **Sem novas dependências.**
+- **Frontend** (`wtnadmin/`): `shared/evidence-panel` (lista/upload/download/**substituir**/**histórico**/
+  inativar, gated por classificação/`manage_evidence`) embutido em `pages/soa`, `pages/risk-detail`,
+  `pages/asset-detail` (o `pages/gap-analysis` mantém o painel próprio do 008, que já consome o store
+  unificado); `pages/evidence-repository` (repositório central pesquisável/filtrável);
+  `shared/traceability-timeline` (linha do tempo read-only) nas mesmas telas de artefato;
+  `pages/internal-audit` (programas+auditorias), `pages/internal-audit-detail` (condução: checklist +
+  constatações + relatório assinável/PDF) e `pages/internal-audit-dashboard` (cards do módulo). Rotas com
+  `permissionGuard('view_evidence')`/`view_internal_audit` + grupo "Evidências & Auditoria" no shell;
+  tipos e métodos de API em `core/models.ts`/`core/api.service.ts`; 5 permissões espelhadas em
+  `core/permissions.ts`.
+- **Testes backend** (361 verdes): `test_evidence_repository.py`,
+  `test_tenant_isolation_evidence.py`, `test_evidence_migration_008.py`, `test_internal_audit_lifecycle.py`,
+  `test_internal_audit_findings.py`, `test_internal_audit_report.py`, `test_tenant_isolation_internal_audit.py`,
+  `test_traceability_timeline.py`, `test_audit_metrics.py` (+ 008/dashboard atualizados à unificação).
+  **Testes frontend** (197 verdes): specs de `evidence-panel`, `evidence-repository`,
+  `traceability-timeline`, `internal-audit`, `internal-audit-detail`, `internal-audit-dashboard`.
+- **Migrations**: `f6a7b8c9d014_cross_evidence_repository.py` (cria `evidence_*` + RLS + triggers, migra
+  dados do 008 e dropa tabelas legadas; **merge** dos dois heads anteriores `a9b0c1d2e308`+`d3e4f5a6b217`,
+  idempotente) e `a7b8c9d0e015_internal_audit_module.py` (`down_revision="f6a7b8c9d014"`, 5 tabelas + RLS +
+  trigger) + `b8c9d0e1f016_internal_audit_rename_current_version.py` (auto-correção idempotente:
+  renomeia `internal_audit.current_report_version_id`→`current_version_id` em bancos que criaram a
+  tabela via `create_all()` antes do rename; no-op em bancos novos). Head único `b8c9d0e1f016`.
+  **`alembic upgrade head` aplicado e validado no PostgreSQL real**
+  (a migração do 008 exigiu ordenação por causa da FK circular `evidence.current_version_id↔evidence_version`
+  e do drop das tabelas legadas — resolvido). **Pendente**: apenas o E2E manual no browser.
+
+#### Módulo 5b — NC/Ações Corretivas (10.2) + Análise Crítica (9.3) + Melhoria/PDCA (10.1) (Feature 015 — implementada)
+**Fecha o ciclo PDCA** do SGSI e realimenta a esteira. Spec/plano em `specs/015-nonconformity-corrective-pdca/`.
+**Consome a 5a** (promove constatações a NC; evidências via repositório transversal); **não** reimplementa
+evidências nem auditoria. Backend (US1–US7) + frontend completos e testados (suíte backend completa verde;
+admin 216 testes). **Pendente**: E2E manual no browser (`quickstart.md`) + `alembic upgrade head` no Postgres real.
+- **Backend** (`wtnapp/`): **3 domínios novos = 7 tabelas**, todas `tenant_id`+RLS; trilhas append-only
+  (`nonconformity_event`/`improvement_event`, triggers SQLite+PG):
+  - **NC/Ações (10.2)** — `nonconformity_model.py` (`NonConformity` código `NC-####`, origem, severidade
+    **Maior/Menor/Observação**, causa raiz+método, status `open→in_progress→in_verification→closed`/`cancelled`;
+    `CorrectiveAction` resp.+prazo+status; `NonConformityVerification` resultado eficaz/não-eficaz;
+    `NonConformityEvent`). **Gate de encerramento** (`can_close`) = verificação eficaz **e** zero ações
+    abertas (terminal = `CORRECTIVE_ACTION_TERMINAL`). **Promoção** de constatação 5a → NC **1:1 idempotente**
+    (preenche o `internal_audit_finding.nonconformity_ref` reservado — **única escrita num módulo consumido**;
+    constatação permanece). Serviço `nonconformity_service.py`; router `nonconformity.py` (`/nonconformities`,
+    incl. `GET /dashboard` antes de `/{id}`, `POST /promote`, `/{id}/transition`).
+  - **Análise crítica (9.3)** — `management_review_model.py` (`ManagementReview` **coleção**: uma por reunião,
+    `inputs`/`outputs` JSON 9.3.2/9.3.3) como **Documento Controlado** (reusa `controlled_document_service`+
+    `document_versions`, novo `DocType.management_review`; **gate**: aprovar exige entradas **e** saídas
+    preenchidas; assinatura avançada opcional; **PDF** via `management_review_export_service`/reportlab).
+    Serviço `management_review_service.py`; router `management_review.py` (`/management-reviews`).
+  - **Melhoria/PDCA (10.1)** — `improvement_model.py` (`Improvement` código `IMP-####`, origem, status;
+    `ImprovementEvent`). **Visão de ciclo PDCA** read-only (`pdca_service.build_cycle`) agregando constatação→
+    NC→ação→verificação→melhoria por artefato, em fases Plan/Check/Act. Serviço `improvement_service.py`;
+    router `improvement.py` (`/improvements` + `GET /improvements/pdca` com **RBAC composto** —
+    `view_internal_audit`/`view_management_review` conforme o tipo de evento exposto).
+  - **Dashboard/readiness** — `nc_metrics_service.build_metrics` (NC por status/severidade, ações vencidas,
+    melhorias por status) + `GET /nonconformities/dashboard`; card real **NC & Melhoria (PDCA)** na esteira
+    reusa o id `DashboardModuleId.action_plan` (substitui o placeholder), gating `view_nonconformity`, fail-open.
+  - **Evidências por extensão**: `SgsiArtifactType` ganha `nonconformity`/`corrective_action` (resolução
+    deferida em `evidence_service._deferred_target_model`) — sem novo esquema de evidências.
+  - **RBAC**: 5 permissões novas — `view_nonconformity`/`manage_nonconformity`, `view_management_review`/
+    `manage_management_review`/`approve_management_review`. Enums + `DocType.management_review` +
+    `NC_CODE_PREFIX`/`IMPROVEMENT_CODE_PREFIX` + `FINDING_TO_NC_SEVERITY` + `CORRECTIVE_ACTION_TERMINAL` em
+    `settings.py`. **Sem novas dependências.**
+- **Frontend** (`wtnadmin/`): `pages/nonconformities` (lista+filtros+criar), `pages/nonconformity-detail`
+  (causa raiz/status/ações/verificação/gate + `shared/evidence-panel` + `shared/traceability-timeline`),
+  `pages/management-reviews` + `pages/management-review-detail` (entradas/saídas/revisar/aprovar±assinar/
+  versões/PDF), `pages/improvements` (lista + visão de ciclo PDCA), `pages/nonconformity-dashboard`. Rotas com
+  `permissionGuard('view_nonconformity')`/`view_management_review`; grupo "Melhoria & PDCA" no shell; tipos em
+  `core/models.ts` (incl. `SgsiArtifactType` estendido); 5 permissões espelhadas em `core/permissions.ts`.
+- **Testes backend** (verdes): `test_nonconformity.py`, `test_nc_promotion.py`, `test_corrective_action.py`,
+  `test_nc_verification_gate.py`, `test_nc_evidence.py`, `test_nc_migration.py`, `test_nc_metrics.py`,
+  `test_tenant_isolation_nonconformity.py`, `test_management_review.py`, `test_tenant_isolation_management_review.py`,
+  `test_improvement_pdca.py` (+ `test_dashboard.py` estendido ao card real). **Frontend** (216 no admin):
+  specs de `nonconformities`, `nonconformity-detail`, `management-reviews`, `management-review-detail`,
+  `improvements`, `nonconformity-dashboard`.
+- **Migration**: `wtnapp/alembic/versions/c9d0e1f2a017_nonconformity_pdca_module.py`
+  (`down_revision="b8c9d0e1f016"`, 7 tabelas + RLS + triggers append-only, idempotente). Head único `c9d0e1f2a017`.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -552,6 +663,76 @@ specify em `docs/README.md`).
 
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
+
+**Feature 015 — NC/Ações Corretivas (10.2) + Análise Crítica (9.3) + Melhoria Contínua/PDCA (10.1)**
+(`015-nonconformity-corrective-pdca`) — **implementada** (US1–US7 backend+frontend; suíte backend
+completa verde, admin **216 testes** verdes; resta só E2E manual no browser + `alembic upgrade head` no
+Postgres real). Ver a seção do módulo "Módulo 5b" acima. Feature **5b** — **fecha o ciclo PDCA** do SGSI
+e realimenta a esteira. **Consome a 5a** (promove constatações a NC + evidências via repositório
+transversal); **não** reimplementa evidências nem auditoria.
+- Plano: `specs/015-nonconformity-corrective-pdca/plan.md` · Spec: `.../spec.md` · Research:
+  `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+  Quickstart: `.../quickstart.md`
+- Escopo: **Fase 1** — domínio `nonconformity_*` (NC com origem/severidade Maior-Menor-Observação/
+  causa raiz/status; **ação corretiva** resp.+prazo; **verificação de eficácia** = gate de
+  encerramento; **promoção** de constatação 5a → NC preenchendo o `nonconformity_ref` reservado).
+  **Fase 2** — `management_review_*` (análise crítica 9.3 como **coleção**: uma por reunião, Documento
+  Controlado, novo `DocType.management_review`, PDF + assinatura opcional). **Fase 3** — `improvement_*`
+  (melhorias + **visão de ciclo PDCA** read-only reusando `traceability_service`). Evidências por
+  **extensão** do `SgsiArtifactType` (`nonconformity`/`corrective_action`) — sem novo esquema.
+- Decisões-chave (clarify 2026-06-30): (1) promoção **1:1 idempotente**, constatação permanece;
+  (2) análise crítica = **coleção** (uma por reunião); (3) severidade **Maior/Menor/Observação**;
+  (4) vínculo NC↔artefato = **um primário opcional**; (5) PDCA = **referência read-only** + visualização
+  (sem write-back nos módulos consumidos).
+- Arquitetura: **3 domínios novos** (`nonconformity_*` 4 tabelas, `management_review` 1, `improvement_*`
+  2 = **7 tabelas**), todas `tenant_id`+RLS; trilhas append-only (`nonconformity_event`/
+  `improvement_event`). Routers `nonconformity`/`management_review`/`improvement` em `main.py`; serviços
+  `nonconformity_service`/`management_review_service`/`_export_service`/`improvement_service`/
+  `pdca_service`/`nc_metrics_service`. Reusa `controlled_document_service`+`document_versions`,
+  `signature_service`, reportlab, `evidence_*` (5a) + `traceability_service`, `dashboard_service`.
+  **5 permissões novas** + enums + `DocType.management_review` + `NC_/IMPROVEMENT_CODE_PREFIX`. Migration
+  `down_revision="b8c9d0e1f016"`, idempotente. **Sem novas dependências.** Frontend: `pages/
+  nonconformities`/`nonconformity-detail`/`management-reviews`/`management-review-detail`/`improvements`
+  (+visão PDCA)/`nonconformity-dashboard`, reusando `shared/evidence-panel` e `traceability-timeline`.
+  **Única escrita num módulo consumido**: `internal_audit_finding.nonconformity_ref` na promoção (gancho
+  reservado pela 5a).
+
+**Feature 014 — Repositório Transversal de Evidências + Auditoria Interna (9.2)**
+(`014-cross-evidence-internal-audit`) — **implementada** (US1–US8 backend+frontend; backend 361 testes,
+admin 197; migração aplicada e validada no PostgreSQL real; resta só o E2E manual no browser). Ver a
+seção do módulo "Módulo 5a" acima. Feature **5a** da etapa final da esteira (Evidências/Auditoria/PDCA).
+Generaliza o módulo de evidências do Gap (008) e adiciona auditoria interna; **prepara a base para a
+Feature 5b** (NC/ações corretivas 10.2, análise crítica 9.3, PDCA 10.1) sem implementá-la.
+- Plano: `specs/014-cross-evidence-internal-audit/plan.md` · Spec: `.../spec.md` · Research:
+  `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+  Quickstart: `.../quickstart.md`
+- Escopo: **Fase 1** — store **unificado** `evidence_*` (evidência 1ª-classe vinculável a **1..N**
+  artefatos via `evidence_link` polimórfico → `soa_item`/`gap_item`/`risk`/`asset`/`audit_finding`,
+  extensível p/ 5b); reusa `utils/evidence_storage` (upload+SHA-256+Fernet), versões imutáveis,
+  inativação lógica, custódia append-only, auditoria e `classification_access`; **migra** o 008 e
+  mantém os endpoints do Gap via adaptador; repositório central pesquisável + painel reutilizável.
+  **Fase 2** — domínio `internal_audit_*` (programa→auditoria→checklist→constatação) com constatações
+  **promovíveis** (`nonconformity_ref` reservado p/ 5b) e **relatório** como Documento Controlado
+  (novo `DocType.internal_audit_report`, assinatura opcional, PDF). Transversal: timeline read-only +
+  dashboard do módulo + card de readiness na esteira.
+- Decisões-chave (clarify 2026-06-30): (1) repositório **unificado** + evidência reutilizável 1..N +
+  **migração** do 008; (2) constatação pertence à **auditoria**, vínculo a item de checklist
+  **opcional**; (3) checklist **manual** + importação **opcional** do escopo SoA/Gap; (4) vínculos
+  apontam para **linhas de artefato tenant-scoped** (SoA/Gap/risco/ativo), sem códigos abstratos;
+  (5) proteção em repouso = **storage + acesso por classificação** (cifragem Fernet **herdada** do
+  `evidence_storage`, sem novo esquema de aplicação).
+- Arquitetura: domínios novos `evidence_*` (4 tabelas) + `internal_audit_*` (5 tabelas), todas
+  `tenant_id`+RLS; trilhas append-only (`evidence_version`/`evidence_event`/`internal_audit_event`).
+  Routers novos `evidence`/`internal_audit`/`traceability` em `main.py`; serviços `evidence_service`,
+  `internal_audit_service`/`_report_service`/`_export_service`, `traceability_service`,
+  `audit_metrics_service`. Reusa `controlled_document_service`+`document_versions`, `signature_service`,
+  reportlab, `dashboard_service`. **5 permissões novas** (`view_evidence`/`manage_evidence`,
+  `view_internal_audit`/`manage_internal_audit`/`approve_audit_report`). Enums novos +
+  `DocType.internal_audit_report` + `AUDIT_CODE_PREFIX` em `settings.py`. Migration **merge** dos dois
+  heads atuais (`a9b0c1d2e308` + `d3e4f5a6b217`), idempotente, com migração de dados do 008. **Sem
+  novas dependências.** Frontend: `pages/evidence-repository`, `pages/internal-audit`,
+  `pages/internal-audit-detail`, `pages/internal-audit-dashboard`, `shared/evidence-panel`
+  (`permissionGuard`). Consome SoA/Gap/Risco/Ativo **read-only** (vínculos); não os altera.
 
 **Feature 013 — SoA Normativa dirigida pelo Tratamento de Riscos** (`013-soa-normativa-risco`) —
 **planejada** (spec + clarify + plano prontos; implementação pendente). **Evolução in-place** do módulo

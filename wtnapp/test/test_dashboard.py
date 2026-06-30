@@ -29,11 +29,14 @@ def test_dashboard_happy_path_and_kpis(client, soa_seed, org_headers, db):
     body = client.get("/dashboard", headers=org_headers(seed["admin"].email, seed["org"].id)).json()
     by_id = {c["id"]: c for c in body["cards"]}
 
-    # Cards reais + placeholders (inclui o card de Riscos — Feature 012, FR-037)
-    assert set(by_id) == {"context", "gap", "soa", "risk", "action_plan", "evidence"}
+    # Cards reais + placeholder (inclui Riscos — Feature 012 — e Evidências & Auditoria — Feature 014)
+    assert set(by_id) == {"context", "gap", "soa", "risk", "internal_audit", "action_plan"}
     assert by_id["risk"]["not_started"] is True  # sem riscos cadastrados no cenário
-    assert by_id["action_plan"]["placeholder"] is True
-    assert by_id["evidence"]["placeholder"] is True
+    assert by_id["internal_audit"]["not_started"] is True  # sem auditorias no cenário
+    assert by_id["internal_audit"]["placeholder"] is False
+    # action_plan agora é card real (Feature 015 / PDCA); sem NCs ⇒ not_started
+    assert by_id["action_plan"]["placeholder"] is False
+    assert by_id["action_plan"]["not_started"] is True
 
     # Gap metrics ainda mostram aderencia DOS AVALIADOS; o KPI executivo do dashboard usa a
     # conformidade CONSOLIDADA da jornada completa (cláusulas + Anexo A) p/ evitar falso 100%.
@@ -48,7 +51,7 @@ def test_dashboard_happy_path_and_kpis(client, soa_seed, org_headers, db):
     assert body["kpis"]["conformance_annex"] == metrics["dimensions"]["annex_a"]["conformance"]
     assert body["kpis"]["conformance_clause"] == metrics["dimensions"]["clause"]["conformance"]
     assert body["kpis"]["critical_gaps"] == 1           # priority==critical, não not_meet (C1)
-    assert body["kpis"]["modules_total"] == 4  # context, gap, soa, risk (Feature 012)
+    assert body["kpis"]["modules_total"] == 6  # context, gap, soa, risk, internal_audit, action_plan (NC/PDCA)
     assert body["kpis"]["modules_approved"] == 0
 
     # Gap card: rascunho (sem versão aprovada), progresso = completude

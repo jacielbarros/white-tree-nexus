@@ -1,0 +1,507 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — Evidências Transversais + Auditoria Interna (Feature 014 / 5a)
+  version: 0.1.0
+  description: >
+    Endpoints novos. Tudo tenant-scoped (header X-Org-Context + JWT). Acesso cross-tenant ⇒ 404
+    genérico + audit. Trilhas append-only. Reusa Documento Controlado, assinatura avançada,
+    classificação e exportação PDF. Endpoints do Gap (/gap/.../evidences) permanecem com o mesmo
+    contrato, agora servidos pelo store unificado (não redocumentados aqui).
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+tags:
+  - name: evidence
+  - name: internal-audit
+  - name: traceability
+
+paths:
+  # ───────────────────────── Repositório transversal de evidências ─────────────────────────
+  /evidence:
+    get:
+      tags: [evidence]
+      summary: Repositório central pesquisável/filtrável (view_evidence)
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: texto livre }
+        - { name: target_type, in: query, schema: { $ref: '#/components/schemas/SgsiArtifactType' } }
+        - { name: target_id, in: query, schema: { type: string, format: uuid } }
+        - { name: classification, in: query, schema: { $ref: '#/components/schemas/Classification' } }
+        - { name: author_id, in: query, schema: { type: string, format: uuid } }
+        - { name: date_from, in: query, schema: { type: string, format: date-time } }
+        - { name: date_to, in: query, schema: { type: string, format: date-time } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/EvidenceStatus' } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: page_size, in: query, schema: { type: integer, default: 50 } }
+      responses:
+        '200':
+          description: Lista paginada (apenas tenant ativo; inativas só com manage_evidence)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/EvidenceSummary' }
+    post:
+      tags: [evidence]
+      summary: Upload de evidência com vínculo inicial (manage_evidence)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, classification, target_type, target_id]
+              properties:
+                file: { type: string, format: binary }
+                classification: { $ref: '#/components/schemas/Classification' }
+                target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+                target_id: { type: string, format: uuid }
+                title: { type: string }
+                description: { type: string }
+      responses:
+        '201': { description: Criada, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceSummary' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { description: Arquivo inválido/não permitido }
+        '503': { description: Storage de evidências indisponível }
+
+  /evidence/{evidence_id}:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [evidence]
+      summary: Detalhe + vínculos atuais (view_evidence)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceDetail' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [evidence]
+      summary: Inativação lógica (manage_evidence)
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, properties: { reason: { type: string } } } } }
+      responses:
+        '204': { description: Inativada }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /evidence/{evidence_id}/versions:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [evidence]
+      summary: Substituir por nova versão (manage_evidence)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, classification]
+              properties:
+                file: { type: string, format: binary }
+                classification: { $ref: '#/components/schemas/Classification' }
+                description: { type: string }
+      responses:
+        '201': { description: Nova versão, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceSummary' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /evidence/{evidence_id}/download:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [evidence]
+      summary: Baixar conteúdo da versão corrente (acesso por classificação; gera audit)
+      responses:
+        '200': { description: Conteúdo binário, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+        '403': { description: Classificação exige permissão elevada }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /evidence/{evidence_id}/history:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [evidence]
+      summary: Versões + eventos de custódia (manage_evidence)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceHistory' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /evidence/{evidence_id}/links:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [evidence]
+      summary: Vincular a um artefato adicional (manage_evidence)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_type, target_id]
+              properties:
+                target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+                target_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Vínculo criado, content: { application/json: { schema: { $ref: '#/components/schemas/EvidenceLink' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Vínculo já existe }
+
+  /evidence/{evidence_id}/links/{link_id}:
+    parameters:
+      - { name: evidence_id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: link_id, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [evidence]
+      summary: Desvincular (lógico) de um artefato (manage_evidence)
+      responses:
+        '204': { description: Desvinculado }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ──────────────────────────────── Auditoria interna (9.2) ────────────────────────────────
+  /internal-audit/programs:
+    get:
+      tags: [internal-audit]
+      summary: Listar programas (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ProgramSummary' } } } } } }
+    post:
+      tags: [internal-audit]
+      summary: Criar programa (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProgramRequest' } } } }
+      responses: { '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/ProgramSummary' } } } } }
+
+  /internal-audit/audits:
+    get:
+      tags: [internal-audit]
+      summary: Listar auditorias (filtros por programa/status) (view_internal_audit)
+      parameters:
+        - { name: program_id, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/InternalAuditStatus' } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AuditSummary' } } } } } }
+    post:
+      tags: [internal-audit]
+      summary: Criar auditoria (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AuditRequest' } } } }
+      responses: { '201': { description: Criada (status planned), content: { application/json: { schema: { $ref: '#/components/schemas/AuditSummary' } } } } }
+
+  /internal-audit/audits/{audit_id}:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [internal-audit]
+      summary: Detalhe da auditoria + readiness (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditDetail' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    put:
+      tags: [internal-audit]
+      summary: Editar campos da auditoria (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AuditRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditSummary' } } } } }
+
+  /internal-audit/audits/{audit_id}/transition:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [internal-audit]
+      summary: Transição de estado (start/complete/cancel) (manage_internal_audit)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [action], properties: { action: { type: string, enum: [start, complete, cancel] } } }
+      responses:
+        '200': { description: Novo estado, content: { application/json: { schema: { $ref: '#/components/schemas/AuditSummary' } } } }
+        '409': { description: Transição inválida }
+
+  /internal-audit/audits/{audit_id}/checklist:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [internal-audit]
+      summary: Itens de checklist (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChecklistItemSummary' } } } } } }
+    post:
+      tags: [internal-audit]
+      summary: Adicionar item manual (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ChecklistItemRequest' } } } }
+      responses: { '201': { description: Criado, content: { application/json: { schema: { $ref: '#/components/schemas/ChecklistItemSummary' } } } } }
+
+  /internal-audit/audits/{audit_id}/checklist/import:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [internal-audit]
+      summary: Importação opcional de controles/cláusulas do escopo SoA/Gap (manage_internal_audit)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source]
+              properties:
+                source: { type: string, enum: [soa, gap] }
+                only_applicable: { type: boolean, default: true }
+      responses: { '201': { description: Itens importados, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ChecklistItemSummary' } } } } } }
+
+  /internal-audit/audits/{audit_id}/findings:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [internal-audit]
+      summary: Listar constatações (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/FindingSummary' } } } } } }
+    post:
+      tags: [internal-audit]
+      summary: Registrar constatação (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FindingRequest' } } } }
+      responses: { '201': { description: Criada, content: { application/json: { schema: { $ref: '#/components/schemas/FindingSummary' } } } } }
+
+  /internal-audit/findings/{finding_id}:
+    parameters: [ { name: finding_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      tags: [internal-audit]
+      summary: Editar constatação (manage_internal_audit)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/FindingRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/FindingSummary' } } } } }
+    delete:
+      tags: [internal-audit]
+      summary: Remoção lógica da constatação (manage_internal_audit)
+      responses: { '204': { description: Inativada } }
+
+  /internal-audit/audits/{audit_id}/report/submit-review:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [internal-audit]
+      summary: Submeter relatório à revisão (manage_internal_audit); gate de completude
+      responses:
+        '200': { description: draft_status=in_review }
+        '409': { description: Auditoria incompleta (gate duro) }
+
+  /internal-audit/audits/{audit_id}/report/approve:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [internal-audit]
+      summary: Aprovar/congelar relatório como versão imutável (approve_audit_report); assinatura opcional
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sign: { type: boolean, default: false }
+                otp: { type: string, description: OTP da assinatura avançada quando sign=true }
+      responses:
+        '201': { description: Versão congelada, content: { application/json: { schema: { $ref: '#/components/schemas/ReportVersionSummary' } } } }
+        '409': { description: Gate de completude / não está em revisão }
+
+  /internal-audit/audits/{audit_id}/report/versions:
+    parameters: [ { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [internal-audit]
+      summary: Listar versões do relatório (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ReportVersionSummary' } } } } } }
+
+  /internal-audit/audits/{audit_id}/report/versions/{version_id}/export:
+    parameters:
+      - { name: audit_id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [internal-audit]
+      summary: Exportar PDF da versão (view_internal_audit; gera audit)
+      responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+
+  /internal-audit/dashboard:
+    get:
+      tags: [internal-audit]
+      summary: Dashboard do módulo — contagens simples (view_internal_audit)
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AuditDashboard' } } } } }
+
+  # ──────────────────────────────── Rastreabilidade / Timeline ────────────────────────────────
+  /traceability/timeline:
+    get:
+      tags: [traceability]
+      summary: Timeline agregada (read-only) por artefato (view permissão do módulo do artefato)
+      parameters:
+        - { name: target_type, in: query, required: true, schema: { $ref: '#/components/schemas/SgsiArtifactType' } }
+        - { name: target_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Eventos cronológicos (só metadados), content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TimelineEntry' } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    NotFound:
+      description: Recurso não encontrado (genérico — não revela existência cross-tenant)
+      content: { application/json: { schema: { type: object, properties: { detail: { type: string } } } } }
+  schemas:
+    Classification:
+      type: string
+      enum: [publico, uso_interno, confidencial, restrito]
+    EvidenceStatus:
+      type: string
+      enum: [active, inactive]
+    SgsiArtifactType:
+      type: string
+      enum: [soa_item, gap_item, risk, asset, audit_finding]
+    InternalAuditStatus:
+      type: string
+      enum: [planned, in_progress, completed, cancelled]
+    AuditFindingType:
+      type: string
+      enum: [conforme, nc_maior, nc_menor, oportunidade_melhoria, observacao]
+    AuditChecklistResult:
+      type: string
+      enum: [conforme, nao_conforme, nao_aplicavel, pendente]
+    EvidenceLink:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+        target_id: { type: string, format: uuid }
+        active: { type: boolean }
+    EvidenceSummary:
+      type: object
+      description: Sem storage_key. can_download reflete classificação + permissão.
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        classification: { $ref: '#/components/schemas/Classification' }
+        status: { $ref: '#/components/schemas/EvidenceStatus' }
+        current_version_id: { type: string, format: uuid }
+        file_name: { type: string }
+        mime_type: { type: string, nullable: true }
+        extension: { type: string }
+        size_bytes: { type: integer }
+        content_hash: { type: string }
+        hash_algorithm: { type: string }
+        uploaded_by: { type: string, format: uuid }
+        uploaded_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        can_download: { type: boolean }
+        links:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceLink' }
+    EvidenceDetail:
+      allOf:
+        - $ref: '#/components/schemas/EvidenceSummary'
+    EvidenceHistory:
+      type: object
+      properties:
+        evidence: { $ref: '#/components/schemas/EvidenceSummary' }
+        versions: { type: array, items: { type: object } }
+        events: { type: array, items: { type: object } }
+    ProgramRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        objective: { type: string }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+    ProgramSummary:
+      allOf:
+        - $ref: '#/components/schemas/ProgramRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+    AuditRequest:
+      type: object
+      required: [program_id, title, scope, criteria, auditor_member_id]
+      properties:
+        program_id: { type: string, format: uuid }
+        title: { type: string }
+        scope: { type: string }
+        criteria: { type: string }
+        auditor_member_id: { type: string, format: uuid }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+    AuditSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        program_id: { type: string, format: uuid }
+        code: { type: string }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/InternalAuditStatus' }
+        auditor_member_id: { type: string, format: uuid }
+        period_start: { type: string, format: date, nullable: true }
+        period_end: { type: string, format: date, nullable: true }
+        current_report_version_id: { type: string, format: uuid, nullable: true }
+    AuditDetail:
+      allOf:
+        - $ref: '#/components/schemas/AuditSummary'
+        - type: object
+          properties:
+            scope: { type: string }
+            criteria: { type: string }
+            readiness:
+              type: object
+              properties:
+                can_approve_report: { type: boolean }
+                pending_items: { type: integer }
+                findings_count: { type: integer }
+    ChecklistItemRequest:
+      type: object
+      required: [criterion]
+      properties:
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+        target_id: { type: string, format: uuid }
+        criterion: { type: string }
+        result: { $ref: '#/components/schemas/AuditChecklistResult' }
+        note: { type: string }
+        order_index: { type: integer }
+    ChecklistItemSummary:
+      allOf:
+        - $ref: '#/components/schemas/ChecklistItemRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            audit_id: { type: string, format: uuid }
+    FindingRequest:
+      type: object
+      required: [finding_type, title, description]
+      properties:
+        finding_type: { $ref: '#/components/schemas/AuditFindingType' }
+        title: { type: string }
+        description: { type: string }
+        checklist_item_id: { type: string, format: uuid, nullable: true }
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+        target_id: { type: string, format: uuid }
+    FindingSummary:
+      allOf:
+        - $ref: '#/components/schemas/FindingRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            audit_id: { type: string, format: uuid }
+            promotable: { type: boolean }
+            nonconformity_ref: { type: string, format: uuid, nullable: true, description: reservado p/ 5b (vazio) }
+            status: { type: string, enum: [active, inactive] }
+            evidence_links:
+              type: array
+              items: { $ref: '#/components/schemas/EvidenceLink' }
+    ReportVersionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version_number: { type: integer }
+        status: { type: string }
+        classification: { $ref: '#/components/schemas/Classification' }
+        signed: { type: boolean }
+        approved_by: { type: string, format: uuid }
+        approved_at: { type: string, format: date-time }
+    TimelineEntry:
+      type: object
+      description: Apenas metadados/referências; sem conteúdo de arquivo.
+      properties:
+        occurred_at: { type: string, format: date-time }
+        kind: { type: string, enum: [evidence, finding, event] }
+        ref_id: { type: string, format: uuid }
+        label: { type: string }
+        detail: { type: string }
+    AuditDashboard:
+      type: object
+      properties:
+        evidence_by_status: { type: object, additionalProperties: { type: integer } }
+        evidence_by_classification: { type: object, additionalProperties: { type: integer } }
+        audits_by_status: { type: object, additionalProperties: { type: integer } }
+        findings_by_type: { type: object, additionalProperties: { type: integer } }

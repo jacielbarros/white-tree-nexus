@@ -1,0 +1,346 @@
+openapi: 3.1.0
+info:
+  title: White Tree Nexus — NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015 / 5b)
+  version: 0.1.0
+  description: >
+    Endpoints novos. Tudo tenant-scoped (JWT + X-Org-Context). Cross-tenant ⇒ 404 genérico + audit.
+    Trilhas append-only. Reusa Documento Controlado, assinatura avançada, exportação PDF, e o
+    repositório de evidências da 5a (vínculo a `nonconformity`/`corrective_action`). A promoção é a
+    única escrita num módulo consumido (preenche `internal_audit_finding.nonconformity_ref`).
+servers: [{ url: / }]
+security: [{ bearerAuth: [] }]
+tags:
+  - name: nonconformity
+  - name: management-review
+  - name: improvement
+
+paths:
+  # ───────────────────────── Não Conformidades (10.2) ─────────────────────────
+  /nonconformities:
+    get:
+      tags: [nonconformity]
+      summary: Listar NCs com filtros (view_nonconformity)
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/NCStatus' } }
+        - { name: severity, in: query, schema: { $ref: '#/components/schemas/NCSeverity' } }
+        - { name: responsible_member_id, in: query, schema: { type: string, format: uuid } }
+        - { name: overdue, in: query, schema: { type: boolean }, description: só NCs com ação vencida }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/NCSummary' } } } } }
+    post:
+      tags: [nonconformity]
+      summary: Registrar NC manual (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NCRequest' } } } }
+      responses: { '201': { description: Criada (status open), content: { application/json: { schema: { $ref: '#/components/schemas/NCSummary' } } } } }
+
+  /nonconformities/promote:
+    post:
+      tags: [nonconformity]
+      summary: Promover constatação de auditoria (5a) a NC (manage_nonconformity)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [finding_id], properties: { finding_id: { type: string, format: uuid } } } } }
+      responses:
+        '201': { description: NC criada (preenche nonconformity_ref na constatação), content: { application/json: { schema: { $ref: '#/components/schemas/NCSummary' } } } }
+        '200': { description: Já promovida — retorna a NC existente (idempotente), content: { application/json: { schema: { $ref: '#/components/schemas/NCSummary' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { description: Constatação não promovível }
+
+  /nonconformities/dashboard:
+    get:
+      tags: [nonconformity]
+      summary: Dashboard do módulo (view_nonconformity)
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/NcDashboard' } } } } }
+
+  /nonconformities/{nc_id}:
+    parameters: [ { name: nc_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [nonconformity]
+      summary: Detalhe da NC + readiness (view_nonconformity)
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/NCDetail' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    put:
+      tags: [nonconformity]
+      summary: Editar NC (descrição/causa raiz/severidade/vínculo) (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/NCRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/NCSummary' } } } } }
+
+  /nonconformities/{nc_id}/transition:
+    parameters: [ { name: nc_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [nonconformity]
+      summary: Transição de estado (start/send-verify/close/cancel) (manage_nonconformity)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [action], properties: { action: { type: string, enum: [start, send-verify, close, cancel] } } } } }
+      responses:
+        '200': { description: Novo estado, content: { application/json: { schema: { $ref: '#/components/schemas/NCSummary' } } } }
+        '409': { description: Transição inválida ou gate de encerramento não satisfeito }
+
+  /nonconformities/{nc_id}/actions:
+    parameters: [ { name: nc_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [nonconformity]
+      summary: Listar ações corretivas (view_nonconformity)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ActionSummary' } } } } } }
+    post:
+      tags: [nonconformity]
+      summary: Criar ação corretiva (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ActionRequest' } } } }
+      responses: { '201': { description: Criada, content: { application/json: { schema: { $ref: '#/components/schemas/ActionSummary' } } } } }
+
+  /nonconformities/actions/{action_id}:
+    parameters: [ { name: action_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      tags: [nonconformity]
+      summary: Atualizar ação corretiva (status/responsável/prazo) (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ActionRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ActionSummary' } } } } }
+    delete:
+      tags: [nonconformity]
+      summary: Remoção lógica da ação (manage_nonconformity)
+      responses: { '204': { description: Inativada } }
+
+  /nonconformities/{nc_id}/verifications:
+    parameters: [ { name: nc_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [nonconformity]
+      summary: Listar verificações de eficácia (view_nonconformity)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/VerificationSummary' } } } } } }
+    post:
+      tags: [nonconformity]
+      summary: Registrar verificação de eficácia (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VerificationRequest' } } } }
+      responses: { '201': { description: Registrada, content: { application/json: { schema: { $ref: '#/components/schemas/VerificationSummary' } } } } }
+
+  # ───────────────────────── Análise Crítica (9.3) ─────────────────────────
+  /management-reviews:
+    get:
+      tags: [management-review]
+      summary: Listar análises críticas (coleção) (view_management_review)
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ReviewSummary' } } } } } }
+    post:
+      tags: [management-review]
+      summary: Criar análise crítica (manage_management_review)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewRequest' } } } }
+      responses: { '201': { description: Criada (rascunho), content: { application/json: { schema: { $ref: '#/components/schemas/ReviewSummary' } } } } }
+
+  /management-reviews/{review_id}:
+    parameters: [ { name: review_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [management-review]
+      summary: Detalhe (entradas/saídas/readiness) (view_management_review)
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewDetail' } } } } }
+    put:
+      tags: [management-review]
+      summary: Editar entradas/saídas (manage_management_review)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewSummary' } } } } }
+
+  /management-reviews/{review_id}/submit-review:
+    parameters: [ { name: review_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post: { tags: [management-review], summary: Submeter à revisão (manage_management_review), responses: { '200': { description: in_review }, '409': { description: Incompleta (gate) } } }
+
+  /management-reviews/{review_id}/approve:
+    parameters: [ { name: review_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [management-review]
+      summary: Aprovar/congelar a Ata (approve_management_review); assinatura opcional
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { sign: { type: boolean }, otp: { type: string }, classification: { $ref: '#/components/schemas/Classification' } } } } } }
+      responses: { '201': { description: Versão imutável, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewVersionSummary' } } } }, '409': { description: Gate / não está em revisão } }
+
+  /management-reviews/{review_id}/versions:
+    parameters: [ { name: review_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get: { tags: [management-review], summary: Listar versões (view_management_review), responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ReviewVersionSummary' } } } } } } }
+
+  /management-reviews/{review_id}/versions/{version_id}/export:
+    parameters:
+      - { name: review_id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: version_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get: { tags: [management-review], summary: Exportar PDF da versão (view_management_review), responses: { '200': { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } } }
+
+  # ───────────────────────── Melhorias + PDCA (10.1) ─────────────────────────
+  /improvements:
+    get:
+      tags: [improvement]
+      summary: Listar melhorias (view_nonconformity)
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ImprovementStatus' } }
+        - { name: origin, in: query, schema: { $ref: '#/components/schemas/ImprovementOrigin' } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ImprovementSummary' } } } } } }
+    post:
+      tags: [improvement]
+      summary: Registrar melhoria (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ImprovementRequest' } } } }
+      responses: { '201': { description: Criada, content: { application/json: { schema: { $ref: '#/components/schemas/ImprovementSummary' } } } } }
+
+  /improvements/{improvement_id}:
+    parameters: [ { name: improvement_id, in: path, required: true, schema: { type: string, format: uuid } } ]
+    put:
+      tags: [improvement]
+      summary: Atualizar melhoria/status (manage_nonconformity)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ImprovementRequest' } } } }
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ImprovementSummary' } } } } }
+
+  /improvements/pdca:
+    get:
+      tags: [improvement]
+      summary: Visão de ciclo PDCA (read-only) (view_nonconformity)
+      parameters:
+        - { name: target_type, in: query, schema: { $ref: '#/components/schemas/SgsiArtifactType' } }
+        - { name: target_id, in: query, schema: { type: string, format: uuid } }
+      responses: { '200': { description: Loop fechado (só metadados), content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PdcaEntry' } } } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    NotFound: { description: Recurso não encontrado (genérico), content: { application/json: { schema: { type: object, properties: { detail: { type: string } } } } } }
+  schemas:
+    Classification: { type: string, enum: [publico, uso_interno, confidencial, restrito] }
+    SgsiArtifactType: { type: string, enum: [soa_item, gap_item, risk, asset, audit_finding, nonconformity, corrective_action] }
+    NCStatus: { type: string, enum: [open, in_progress, in_verification, closed, cancelled] }
+    NCSeverity: { type: string, enum: [maior, menor, observacao] }
+    NCOrigin: { type: string, enum: [audit_finding, external_audit, incident, management_review, other] }
+    CorrectiveActionStatus: { type: string, enum: [planned, in_progress, done, cancelled] }
+    VerificationResult: { type: string, enum: [effective, ineffective] }
+    ImprovementStatus: { type: string, enum: [proposed, in_progress, implemented, rejected] }
+    ImprovementOrigin: { type: string, enum: [audit, nonconformity, management_review, suggestion] }
+
+    NCRequest:
+      type: object
+      required: [origin, title, description, severity]
+      properties:
+        origin: { $ref: '#/components/schemas/NCOrigin' }
+        title: { type: string }
+        description: { type: string }
+        severity: { $ref: '#/components/schemas/NCSeverity' }
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+        target_id: { type: string, format: uuid }
+        root_cause: { type: string }
+        root_cause_method: { type: string }
+    NCSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        origin: { $ref: '#/components/schemas/NCOrigin' }
+        title: { type: string }
+        severity: { $ref: '#/components/schemas/NCSeverity' }
+        status: { $ref: '#/components/schemas/NCStatus' }
+        source_finding_id: { type: string, format: uuid, nullable: true }
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType', nullable: true }
+        target_id: { type: string, format: uuid, nullable: true }
+    NCReadiness:
+      type: object
+      properties:
+        can_close: { type: boolean }
+        has_effective_verification: { type: boolean }
+        overdue_actions: { type: integer }
+        open_actions: { type: integer }
+    NCDetail:
+      allOf:
+        - $ref: '#/components/schemas/NCSummary'
+        - type: object
+          properties:
+            description: { type: string }
+            root_cause: { type: string, nullable: true }
+            root_cause_method: { type: string, nullable: true }
+            readiness: { $ref: '#/components/schemas/NCReadiness' }
+    ActionRequest:
+      type: object
+      required: [description, responsible_member_id]
+      properties:
+        description: { type: string }
+        responsible_member_id: { type: string, format: uuid }
+        due_date: { type: string, format: date }
+        status: { $ref: '#/components/schemas/CorrectiveActionStatus' }
+    ActionSummary:
+      allOf:
+        - $ref: '#/components/schemas/ActionRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            nonconformity_id: { type: string, format: uuid }
+            overdue: { type: boolean }
+    VerificationRequest:
+      type: object
+      required: [result]
+      properties:
+        result: { $ref: '#/components/schemas/VerificationResult' }
+        notes: { type: string }
+    VerificationSummary:
+      allOf:
+        - $ref: '#/components/schemas/VerificationRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            verified_by: { type: string, format: uuid }
+            verified_at: { type: string, format: date-time }
+    ReviewRequest:
+      type: object
+      required: [title, review_date]
+      properties:
+        title: { type: string }
+        review_date: { type: string, format: date }
+        inputs: { type: object, additionalProperties: true }
+        outputs: { type: object, additionalProperties: true }
+    ReviewSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        review_date: { type: string, format: date }
+        draft_status: { type: string }
+        current_version_id: { type: string, format: uuid, nullable: true }
+    ReviewDetail:
+      allOf:
+        - $ref: '#/components/schemas/ReviewSummary'
+        - type: object
+          properties:
+            inputs: { type: object, additionalProperties: true }
+            outputs: { type: object, additionalProperties: true }
+            readiness: { type: object, properties: { can_approve: { type: boolean } } }
+    ReviewVersionSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version_number: { type: integer }
+        status: { type: string }
+        classification: { $ref: '#/components/schemas/Classification' }
+        signed: { type: boolean }
+        approved_at: { type: string, format: date-time }
+    ImprovementRequest:
+      type: object
+      required: [title, description, origin]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        origin: { $ref: '#/components/schemas/ImprovementOrigin' }
+        source_ref: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ImprovementStatus' }
+        target_type: { $ref: '#/components/schemas/SgsiArtifactType' }
+        target_id: { type: string, format: uuid }
+    ImprovementSummary:
+      allOf:
+        - $ref: '#/components/schemas/ImprovementRequest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+    PdcaEntry:
+      type: object
+      description: Entrada read-only do ciclo (constatação→NC→ação→melhoria→artefato). Só metadados.
+      properties:
+        occurred_at: { type: string, format: date-time }
+        phase: { type: string, enum: [check, act, plan] }
+        kind: { type: string, enum: [finding, nonconformity, corrective_action, management_review, improvement] }
+        ref_id: { type: string, format: uuid }
+        label: { type: string }
+        detail: { type: string }
+    NcDashboard:
+      type: object
+      properties:
+        nc_by_status: { type: object, additionalProperties: { type: integer } }
+        nc_by_severity: { type: object, additionalProperties: { type: integer } }
+        overdue_actions: { type: integer }
+        improvements_by_status: { type: object, additionalProperties: { type: integer } }
