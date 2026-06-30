@@ -13,6 +13,7 @@ import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
 import { EvidencePanel } from '@app/shared/evidence-panel/evidence-panel';
+import { TraceabilityTimeline } from '@app/shared/traceability-timeline/traceability-timeline';
 import {
   AssetItem,
   AssetItemDetail,
@@ -41,7 +42,7 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SlicePipe, RouterLink, FormsModule, ReactiveFormsModule, ButtonModule, DialogModule,
-    InputTextModule, SelectModule, TextareaModule, EvidencePanel,
+    InputTextModule, SelectModule, TextareaModule, EvidencePanel, TraceabilityTimeline,
   ],
   template: `
     @if (detail(); as d) {
@@ -193,6 +194,11 @@ const FUTURE_SECTIONS = ['Ameaças vinculadas', 'Vulnerabilidades vinculadas', '
         <!-- Evidências transversais (Feature 014) -->
         <article class="wtn-card pad span2">
           <app-evidence-panel [targetType]="'asset'" [targetId]="itemId" [canManage]="canManageEvidence()" title="Evidências do ativo" />
+        </article>
+
+        <!-- Rastreabilidade (Feature 014) -->
+        <article class="wtn-card pad span2">
+          <app-traceability-timeline [targetType]="'asset'" [targetId]="itemId" title="Linha do tempo do ativo" />
         </article>
 
         <!-- Histórico -->

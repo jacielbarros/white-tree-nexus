@@ -22,6 +22,7 @@ import { ApiService } from '@app/core/api.service';
 import { AuthStore } from '@app/core/auth.store';
 import { hasPermission } from '@app/core/permissions';
 import { EvidencePanel } from '@app/shared/evidence-panel/evidence-panel';
+import { TraceabilityTimeline } from '@app/shared/traceability-timeline/traceability-timeline';
 import { Soa, SoaItem, SoaImplementationStatus, SoaInclusionReason, GapTheme } from '@app/core/models';
 import { DocumentHistory } from '@app/shared/document-history/document-history';
 import { DocumentPreview } from '@app/shared/document-preview/document-preview';
@@ -75,6 +76,7 @@ const ORIGIN_LABELS: Record<string, string> = {
     DocumentPreview,
     DocumentHistory,
     EvidencePanel,
+    TraceabilityTimeline,
   ],
   template: `
     <div class="page-header">
@@ -297,6 +299,8 @@ const ORIGIN_LABELS: Record<string, string> = {
 
             <!-- Evidências transversais anexadas (Feature 014) -->
             <app-evidence-panel [targetType]="'soa_item'" [targetId]="it.id" [canManage]="canManageEvidence()" title="Evidências anexadas ao controle" />
+            <!-- Rastreabilidade (Feature 014) -->
+            <app-traceability-timeline [targetType]="'soa_item'" [targetId]="it.id" title="Linha do tempo do controle" />
           </div>
 
           <ng-template pTemplate="footer">

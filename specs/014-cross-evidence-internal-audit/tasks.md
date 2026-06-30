@@ -263,7 +263,7 @@ claro; nunca agrega outro tenant.
 - [X] T053 [US7] `wtnapp/routers/traceability.py`: `GET /traceability/timeline` com **RBAC composto**
   (view do módulo do artefato-alvo + `view_evidence`; constatações só com `view_internal_audit`, senão
   omitidas sem revelar contagem) + scoped_query + 404 genérico (ver RBAC da timeline no data-model).
-- [ ] T054 [P] [US7] Componente de timeline embutido nas telas `pages/soa`/`risk-detail`/`asset-detail`
+- [X] T054 [P] [US7] Componente de timeline embutido nas telas `pages/soa`/`risk-detail`/`asset-detail`
   + `.spec.ts`.
 
 **Checkpoint**: rastreabilidade transversal de leitura.

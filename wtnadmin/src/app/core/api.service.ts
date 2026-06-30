@@ -35,6 +35,7 @@ import {
   SgsiArtifactType,
   Stakeholder,
   StakeholderMap,
+  TimelineEntry,
   Suggestion,
   TokenResponse,
 } from '@app/core/models';
@@ -507,6 +508,12 @@ export class ApiService {
 
   unlinkEvidence(evidenceId: string, linkId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/evidence/${evidenceId}/links/${linkId}`);
+  }
+
+  listTimeline(targetType: SgsiArtifactType, targetId: string): Observable<TimelineEntry[]> {
+    return this.http.get<TimelineEntry[]>(`${this.base}/traceability/timeline`, {
+      params: { target_type: targetType, target_id: targetId },
+    });
   }
 
   // --- Respondente externo (sem auth) ---

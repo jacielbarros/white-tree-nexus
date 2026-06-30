@@ -189,6 +189,14 @@ export interface AuditDashboardData {
   findings_by_type: Record<string, number>;
 }
 
+export interface TimelineEntry {
+  occurred_at: string;
+  kind: 'evidence' | 'finding' | 'event';
+  ref_id: string;
+  label: string;
+  detail: string;
+}
+
 export type PrintableDocumentType =
   | 'context_report'
   | 'gap_report'
