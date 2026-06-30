@@ -52,9 +52,9 @@ description: "Task list — Feature 014: Evidências Transversais + Auditoria In
 - [X] T008 [P] Teste de regressão da migração em `wtnapp/test/test_evidence_migration_008.py`:
   histórico/hash/autoria preservados, vínculo `gap_item` criado, contagens batem, sem vazamento
   cross-tenant.
-- [ ] T009 Registrar routers vazios `evidence`, `internal_audit`, `traceability` em `wtnapp/main.py`
+- [X] T009 Registrar routers vazios `evidence`, `internal_audit`, `traceability` em `wtnapp/main.py`
   (`app.include_router(...)`) e criar os arquivos de router stub correspondentes.
-- [ ] T010 [P] Confirmar cobertura de `helpers/tenant_scope.py` para as 9 entidades novas (todas via
+- [X] T010 [P] Confirmar cobertura de `helpers/tenant_scope.py` para as 9 entidades novas (todas via
   `scoped_query`) e o reuso de `helpers/classification_access.py` para acesso ao conteúdo.
 
 **Checkpoint**: schema + permissões + migração 008 prontos — user stories podem começar.
@@ -302,7 +302,7 @@ concluída/relatório aprovado; estado vazio sem erro.
   traceability/metrics) escapou de `scoped_query`; consolidação/timeline fail-closed.
 - [X] T063 [P] Atualizar seção do módulo no `CLAUDE.md` (Feature 014 implementada) e mover o bloco do
   plano ativo.
-- [ ] T064 Rodar suíte backend completa (`pytest wtnapp/test`) e frontend (`npm test` em `wtnadmin/`).
+- [X] T064 Rodar suíte backend completa (`pytest wtnapp/test`) e frontend (`npm test` em `wtnadmin/`).
 - [ ] T065 Validar `quickstart.md` no browser + `alembic upgrade head` no Postgres real (inclui
   regressão do 008 e merge dos heads).
 
