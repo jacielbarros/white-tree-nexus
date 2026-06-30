@@ -301,17 +301,43 @@ def _internal_audit_card(db: Session, ctx: OrgContext) -> ModuleCard:
     )
 
 
-def _placeholder_cards() -> list[ModuleCard]:
-    return [
-        ModuleCard(
+def _nonconformity_card(db: Session, ctx: OrgContext) -> ModuleCard:
+    """Readiness do fechamento do PDCA (Feature 015): NC/ações corretivas + melhoria."""
+    from wtnapp.models.nonconformity_model import NonConformity
+    from wtnapp.settings import NCStatus
+
+    ncs = db.query(NonConformity).filter_by(tenant_id=ctx.tenant_id).all()
+    if not ncs:
+        return ModuleCard(
             id=DashboardModuleId.action_plan,
-            title="NC & Ações Corretivas",
+            title="NC & Melhoria (PDCA)",
             status=DashboardCardStatus.not_started,
             not_started=True,
-            placeholder=True,
-            next_action=NextAction(label="Em breve · Módulo 5b", route="dashboard"),
-        ),
-    ]
+            next_action=NextAction(label="Registrar não conformidade", route="nonconformities"),
+        )
+
+    closed = sum(1 for nc in ncs if nc.status == NCStatus.closed)
+    open_ncs = [nc for nc in ncs if nc.status not in (NCStatus.closed, NCStatus.cancelled)]
+    progress = round(closed / len(ncs) * 100, 1)
+
+    if not open_ncs:
+        status = DashboardCardStatus.in_force  # ciclo fechado (todas tratadas)
+        action = NextAction(label="Ver melhorias / PDCA", route="improvements")
+    else:
+        status = DashboardCardStatus.draft
+        action = NextAction(label="Tratar não conformidades", route="nonconformities")
+
+    return ModuleCard(
+        id=DashboardModuleId.action_plan,
+        title="NC & Melhoria (PDCA)",
+        status=status,
+        progress_pct=progress,
+        next_action=action,
+    )
+
+
+def _placeholder_cards() -> list[ModuleCard]:
+    return []
 
 
 def _error_card(module_id: DashboardModuleId, title: str) -> ModuleCard:
@@ -361,6 +387,7 @@ def build_dashboard(db: Session, ctx: OrgContext) -> DashboardResponse:
         ("view_soa", DashboardModuleId.soa, "Declaração de Aplicabilidade", lambda: _soa_card(db, ctx)),
         ("view_risk", DashboardModuleId.risk, "Gestão de Riscos", lambda: _risk_card(db, ctx)),
         ("view_internal_audit", DashboardModuleId.internal_audit, "Evidências & Auditoria Interna", lambda: _internal_audit_card(db, ctx)),
+        ("view_nonconformity", DashboardModuleId.action_plan, "NC & Melhoria (PDCA)", lambda: _nonconformity_card(db, ctx)),
     ]
     for perm, module_id, title, build in builders:
         if not has_permission(ctx.role, perm):

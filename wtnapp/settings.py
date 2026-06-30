@@ -133,6 +133,7 @@ class DocType(str, Enum):
     soa = "soa"
     risk_treatment_plan = "risk_treatment_plan"  # Plano de Tratamento de Riscos (Feature 012)
     internal_audit_report = "internal_audit_report"  # Relatório de Auditoria Interna (Feature 014)
+    management_review = "management_review"  # Ata de Análise Crítica pela Direção (Feature 015)
 
 
 class IssueOrigin(str, Enum):
@@ -307,6 +308,9 @@ class SgsiArtifactType(str, Enum):
     risk = "risk"
     asset = "asset"
     audit_finding = "audit_finding"
+    # Feature 5b (015)
+    nonconformity = "nonconformity"
+    corrective_action = "corrective_action"
 
 
 class EvidenceStatus(str, Enum):
@@ -357,6 +361,71 @@ PROMOTABLE_FINDING_TYPES = frozenset({AuditFindingType.nc_maior, AuditFindingTyp
 
 # Código por auditoria interna, sequência por tenant (ex.: AUD-0001). Imutável.
 AUDIT_CODE_PREFIX = os.getenv("AUDIT_CODE_PREFIX", "AUD-")
+
+
+# --- NC/Ações Corretivas + Análise Crítica + Melhoria Contínua/PDCA (Feature 015 / 5b) ---
+
+class NCOrigin(str, Enum):
+    audit_finding = "audit_finding"
+    external_audit = "external_audit"
+    incident = "incident"
+    management_review = "management_review"
+    other = "other"
+
+
+class NCSeverity(str, Enum):
+    maior = "maior"
+    menor = "menor"
+    observacao = "observacao"
+
+
+class NCStatus(str, Enum):
+    open = "open"
+    in_progress = "in_progress"
+    in_verification = "in_verification"
+    closed = "closed"
+    cancelled = "cancelled"
+
+
+class CorrectiveActionStatus(str, Enum):
+    planned = "planned"
+    in_progress = "in_progress"
+    done = "done"
+    cancelled = "cancelled"
+
+
+# Estados terminais de ação corretiva (gate de encerramento da NC usa isto, não um campo "obrigatória").
+CORRECTIVE_ACTION_TERMINAL = frozenset({CorrectiveActionStatus.done, CorrectiveActionStatus.cancelled})
+
+
+class VerificationResult(str, Enum):
+    effective = "effective"
+    ineffective = "ineffective"
+
+
+class ImprovementOrigin(str, Enum):
+    audit = "audit"
+    nonconformity = "nonconformity"
+    management_review = "management_review"
+    suggestion = "suggestion"
+
+
+class ImprovementStatus(str, Enum):
+    proposed = "proposed"
+    in_progress = "in_progress"
+    implemented = "implemented"
+    rejected = "rejected"
+
+
+# Códigos por tenant (imutáveis): NC-#### e IMP-####.
+NC_CODE_PREFIX = os.getenv("NC_CODE_PREFIX", "NC-")
+IMPROVEMENT_CODE_PREFIX = os.getenv("IMPROVEMENT_CODE_PREFIX", "IMP-")
+
+# Mapa severidade da constatação → severidade da NC na promoção.
+FINDING_TO_NC_SEVERITY = {
+    AuditFindingType.nc_maior: NCSeverity.maior,
+    AuditFindingType.nc_menor: NCSeverity.menor,
+}
 
 
 # --- Motor de Workflow de Preenchimento (Feature 003) ---

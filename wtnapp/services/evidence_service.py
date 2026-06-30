@@ -39,18 +39,29 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _deferred_target_model(target_type: SgsiArtifactType):
+    """Modelos de alvo de features posteriores, resolvidos sob demanda (evita acoplamento)."""
+    if target_type is SgsiArtifactType.audit_finding:
+        from wtnapp.models.internal_audit_model import InternalAuditFinding  # noqa: PLC0415
+        return InternalAuditFinding
+    if target_type is SgsiArtifactType.nonconformity:
+        from wtnapp.models.nonconformity_model import NonConformity  # noqa: PLC0415
+        return NonConformity
+    if target_type is SgsiArtifactType.corrective_action:
+        from wtnapp.models.nonconformity_model import CorrectiveAction  # noqa: PLC0415
+        return CorrectiveAction
+    return None
+
+
 def target_exists(db: Session, ctx: OrgContext, target_type: SgsiArtifactType, target_id: uuid.UUID) -> bool:
     """True se o alvo existe no tenant do contexto."""
     model = _TARGET_MODELS.get(target_type)
     if model is None:
-        if target_type is SgsiArtifactType.audit_finding:
-            try:
-                from wtnapp.models.internal_audit_model import InternalAuditFinding  # noqa: PLC0415
-            except ModuleNotFoundError:
-                # Domínio de auditoria interna ainda não implementado (US5).
-                return False
-            model = InternalAuditFinding
-        else:
+        try:
+            model = _deferred_target_model(target_type)
+        except ModuleNotFoundError:
+            return False
+        if model is None:
             return False
     return scoped_query(db, model, ctx).filter(model.id == target_id).first() is not None
 

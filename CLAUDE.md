@@ -475,6 +475,55 @@ PDCA 10.1) **sem implementá-la**. Pendente apenas o roteiro E2E manual no brows
   (a migração do 008 exigiu ordenação por causa da FK circular `evidence.current_version_id↔evidence_version`
   e do drop das tabelas legadas — resolvido). **Pendente**: apenas o E2E manual no browser.
 
+#### Módulo 5b — NC/Ações Corretivas (10.2) + Análise Crítica (9.3) + Melhoria/PDCA (10.1) (Feature 015 — implementada)
+**Fecha o ciclo PDCA** do SGSI e realimenta a esteira. Spec/plano em `specs/015-nonconformity-corrective-pdca/`.
+**Consome a 5a** (promove constatações a NC; evidências via repositório transversal); **não** reimplementa
+evidências nem auditoria. Backend (US1–US7) + frontend completos e testados (suíte backend completa verde;
+admin 216 testes). **Pendente**: E2E manual no browser (`quickstart.md`) + `alembic upgrade head` no Postgres real.
+- **Backend** (`wtnapp/`): **3 domínios novos = 7 tabelas**, todas `tenant_id`+RLS; trilhas append-only
+  (`nonconformity_event`/`improvement_event`, triggers SQLite+PG):
+  - **NC/Ações (10.2)** — `nonconformity_model.py` (`NonConformity` código `NC-####`, origem, severidade
+    **Maior/Menor/Observação**, causa raiz+método, status `open→in_progress→in_verification→closed`/`cancelled`;
+    `CorrectiveAction` resp.+prazo+status; `NonConformityVerification` resultado eficaz/não-eficaz;
+    `NonConformityEvent`). **Gate de encerramento** (`can_close`) = verificação eficaz **e** zero ações
+    abertas (terminal = `CORRECTIVE_ACTION_TERMINAL`). **Promoção** de constatação 5a → NC **1:1 idempotente**
+    (preenche o `internal_audit_finding.nonconformity_ref` reservado — **única escrita num módulo consumido**;
+    constatação permanece). Serviço `nonconformity_service.py`; router `nonconformity.py` (`/nonconformities`,
+    incl. `GET /dashboard` antes de `/{id}`, `POST /promote`, `/{id}/transition`).
+  - **Análise crítica (9.3)** — `management_review_model.py` (`ManagementReview` **coleção**: uma por reunião,
+    `inputs`/`outputs` JSON 9.3.2/9.3.3) como **Documento Controlado** (reusa `controlled_document_service`+
+    `document_versions`, novo `DocType.management_review`; **gate**: aprovar exige entradas **e** saídas
+    preenchidas; assinatura avançada opcional; **PDF** via `management_review_export_service`/reportlab).
+    Serviço `management_review_service.py`; router `management_review.py` (`/management-reviews`).
+  - **Melhoria/PDCA (10.1)** — `improvement_model.py` (`Improvement` código `IMP-####`, origem, status;
+    `ImprovementEvent`). **Visão de ciclo PDCA** read-only (`pdca_service.build_cycle`) agregando constatação→
+    NC→ação→verificação→melhoria por artefato, em fases Plan/Check/Act. Serviço `improvement_service.py`;
+    router `improvement.py` (`/improvements` + `GET /improvements/pdca` com **RBAC composto** —
+    `view_internal_audit`/`view_management_review` conforme o tipo de evento exposto).
+  - **Dashboard/readiness** — `nc_metrics_service.build_metrics` (NC por status/severidade, ações vencidas,
+    melhorias por status) + `GET /nonconformities/dashboard`; card real **NC & Melhoria (PDCA)** na esteira
+    reusa o id `DashboardModuleId.action_plan` (substitui o placeholder), gating `view_nonconformity`, fail-open.
+  - **Evidências por extensão**: `SgsiArtifactType` ganha `nonconformity`/`corrective_action` (resolução
+    deferida em `evidence_service._deferred_target_model`) — sem novo esquema de evidências.
+  - **RBAC**: 5 permissões novas — `view_nonconformity`/`manage_nonconformity`, `view_management_review`/
+    `manage_management_review`/`approve_management_review`. Enums + `DocType.management_review` +
+    `NC_CODE_PREFIX`/`IMPROVEMENT_CODE_PREFIX` + `FINDING_TO_NC_SEVERITY` + `CORRECTIVE_ACTION_TERMINAL` em
+    `settings.py`. **Sem novas dependências.**
+- **Frontend** (`wtnadmin/`): `pages/nonconformities` (lista+filtros+criar), `pages/nonconformity-detail`
+  (causa raiz/status/ações/verificação/gate + `shared/evidence-panel` + `shared/traceability-timeline`),
+  `pages/management-reviews` + `pages/management-review-detail` (entradas/saídas/revisar/aprovar±assinar/
+  versões/PDF), `pages/improvements` (lista + visão de ciclo PDCA), `pages/nonconformity-dashboard`. Rotas com
+  `permissionGuard('view_nonconformity')`/`view_management_review`; grupo "Melhoria & PDCA" no shell; tipos em
+  `core/models.ts` (incl. `SgsiArtifactType` estendido); 5 permissões espelhadas em `core/permissions.ts`.
+- **Testes backend** (verdes): `test_nonconformity.py`, `test_nc_promotion.py`, `test_corrective_action.py`,
+  `test_nc_verification_gate.py`, `test_nc_evidence.py`, `test_nc_migration.py`, `test_nc_metrics.py`,
+  `test_tenant_isolation_nonconformity.py`, `test_management_review.py`, `test_tenant_isolation_management_review.py`,
+  `test_improvement_pdca.py` (+ `test_dashboard.py` estendido ao card real). **Frontend** (216 no admin):
+  specs de `nonconformities`, `nonconformity-detail`, `management-reviews`, `management-review-detail`,
+  `improvements`, `nonconformity-dashboard`.
+- **Migration**: `wtnapp/alembic/versions/c9d0e1f2a017_nonconformity_pdca_module.py`
+  (`down_revision="b8c9d0e1f016"`, 7 tabelas + RLS + triggers append-only, idempotente). Head único `c9d0e1f2a017`.
+
 ### Schema management
 Alembic migrations (`wtnapp/alembic/`) **e** `create_all()` no startup. Ao mudar tabelas,
 atualizar o modelo SQLAlchemy **e** adicionar migration; não remover `create_all()`.
@@ -614,6 +663,39 @@ specify em `docs/README.md`).
 
 <!-- SPECKIT START -->
 ## Plano ativo (Spec Kit)
+
+**Feature 015 — NC/Ações Corretivas (10.2) + Análise Crítica (9.3) + Melhoria Contínua/PDCA (10.1)**
+(`015-nonconformity-corrective-pdca`) — **implementada** (US1–US7 backend+frontend; suíte backend
+completa verde, admin **216 testes** verdes; resta só E2E manual no browser + `alembic upgrade head` no
+Postgres real). Ver a seção do módulo "Módulo 5b" acima. Feature **5b** — **fecha o ciclo PDCA** do SGSI
+e realimenta a esteira. **Consome a 5a** (promove constatações a NC + evidências via repositório
+transversal); **não** reimplementa evidências nem auditoria.
+- Plano: `specs/015-nonconformity-corrective-pdca/plan.md` · Spec: `.../spec.md` · Research:
+  `.../research.md` · Data model: `.../data-model.md` · Contracts: `.../contracts/openapi.yaml` ·
+  Quickstart: `.../quickstart.md`
+- Escopo: **Fase 1** — domínio `nonconformity_*` (NC com origem/severidade Maior-Menor-Observação/
+  causa raiz/status; **ação corretiva** resp.+prazo; **verificação de eficácia** = gate de
+  encerramento; **promoção** de constatação 5a → NC preenchendo o `nonconformity_ref` reservado).
+  **Fase 2** — `management_review_*` (análise crítica 9.3 como **coleção**: uma por reunião, Documento
+  Controlado, novo `DocType.management_review`, PDF + assinatura opcional). **Fase 3** — `improvement_*`
+  (melhorias + **visão de ciclo PDCA** read-only reusando `traceability_service`). Evidências por
+  **extensão** do `SgsiArtifactType` (`nonconformity`/`corrective_action`) — sem novo esquema.
+- Decisões-chave (clarify 2026-06-30): (1) promoção **1:1 idempotente**, constatação permanece;
+  (2) análise crítica = **coleção** (uma por reunião); (3) severidade **Maior/Menor/Observação**;
+  (4) vínculo NC↔artefato = **um primário opcional**; (5) PDCA = **referência read-only** + visualização
+  (sem write-back nos módulos consumidos).
+- Arquitetura: **3 domínios novos** (`nonconformity_*` 4 tabelas, `management_review` 1, `improvement_*`
+  2 = **7 tabelas**), todas `tenant_id`+RLS; trilhas append-only (`nonconformity_event`/
+  `improvement_event`). Routers `nonconformity`/`management_review`/`improvement` em `main.py`; serviços
+  `nonconformity_service`/`management_review_service`/`_export_service`/`improvement_service`/
+  `pdca_service`/`nc_metrics_service`. Reusa `controlled_document_service`+`document_versions`,
+  `signature_service`, reportlab, `evidence_*` (5a) + `traceability_service`, `dashboard_service`.
+  **5 permissões novas** + enums + `DocType.management_review` + `NC_/IMPROVEMENT_CODE_PREFIX`. Migration
+  `down_revision="b8c9d0e1f016"`, idempotente. **Sem novas dependências.** Frontend: `pages/
+  nonconformities`/`nonconformity-detail`/`management-reviews`/`management-review-detail`/`improvements`
+  (+visão PDCA)/`nonconformity-dashboard`, reusando `shared/evidence-panel` e `traceability-timeline`.
+  **Única escrita num módulo consumido**: `internal_audit_finding.nonconformity_ref` na promoção (gancho
+  reservado pela 5a).
 
 **Feature 014 — Repositório Transversal de Evidências + Auditoria Interna (9.2)**
 (`014-cross-evidence-internal-audit`) — **implementada** (US1–US8 backend+frontend; backend 361 testes,

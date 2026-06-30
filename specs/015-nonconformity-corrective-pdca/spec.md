@@ -297,8 +297,10 @@ escopadas ao tenant; verificar o card de readiness/PDCA no Dashboard de Conformi
   descrição, **responsável** (referência a membro da organização), **prazo** e status próprio.
 - **FR-006**: O sistema MUST permitir registrar **verificação de eficácia** da NC (quem verificou,
   quando, resultado eficaz/ineficaz, observações).
-- **FR-007**: O encerramento da NC MUST ser bloqueado por um **gate** enquanto não houver verificação de
-  eficácia com resultado **eficaz** (e ações obrigatórias concluídas), com mensagem clara.
+- **FR-007**: O encerramento da NC MUST ser bloqueado por um **gate** enquanto: (a) não houver uma
+  verificação de eficácia mais recente com resultado **eficaz**; **ou** (b) existir qualquer ação
+  corretiva em estado **não terminal** (i.e., alguma ação fora de `done`/`cancelled`). Mensagem clara
+  ao bloquear. *(Sem campo `obrigatória` na ação — a completude usa o status da ação.)*
 - **FR-008**: O sistema MUST sinalizar **ações corretivas com prazo vencido** (prazo no passado e não
   concluídas).
 - **FR-009**: O sistema MUST oferecer **lista de NCs** filtrável por status, severidade, responsável e
@@ -330,7 +332,10 @@ escopadas ao tenant; verificar o card de readiness/PDCA no Dashboard de Conformi
   artefato/módulo consumido.
 - **FR-032**: O sistema MUST oferecer uma **visão de ciclo PDCA** (somente leitura) que exibe o loop
   fechado — auditorias/NCs/análise crítica → melhorias → artefatos realimentados — reusando a
-  rastreabilidade/timeline da 5a, sem expor conteúdo sensível.
+  rastreabilidade/timeline da 5a, sem expor conteúdo sensível. **RBAC composto** (espelha a timeline da
+  5a): exige `view_nonconformity`; entradas de **constatação** só entram com `view_internal_audit` e
+  entradas de **análise crítica** só com `view_management_review` — caso contrário são **omitidas** (sem
+  revelar contagem). Sempre tenant-scoped (fail-closed).
 
 #### Transversal — Evidências, dashboard, readiness
 
@@ -457,8 +462,9 @@ escopadas ao tenant; verificar o card de readiness/PDCA no Dashboard de Conformi
   SoA/risco/ativo); múltiplos vínculos ficam para evolução.
 - **Realimentação do PDCA** (resolvido): **referência read-only** + visualização (timeline/visão PDCA);
   **sem write-back automático** nos módulos consumidos.
-- **Gate de encerramento da NC**: encerrar exige verificação de eficácia "eficaz" (e ações obrigatórias
-  concluídas); o que conta como "obrigatória" é parametrizado no planejamento.
+- **Gate de encerramento da NC** (resolvido — ver FR-007): encerrar exige uma verificação de eficácia
+  mais recente "eficaz" **e** nenhuma ação corretiva em estado não terminal (todas `done`/`cancelled`).
+  Usa o `status` da ação — sem campo `obrigatória`.
 - **Extensão do vínculo de evidência**: os novos alvos ("não conformidade", "ação corretiva") são
   acrescentados à taxonomia polimórfica da 5a — sem novo esquema de evidência.
 - **Permissões novas**: `view_nonconformity`/`manage_nonconformity` (NC+ações+melhorias+PDCA) e

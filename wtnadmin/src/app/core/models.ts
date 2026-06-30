@@ -77,8 +77,15 @@ export interface InviteLookup {
 export type Level = 'alto' | 'medio' | 'baixo';
 export type Classification = 'publico' | 'uso_interno' | 'confidencial' | 'restrito';
 
-// --- Repositório transversal de evidências (Feature 014) ---
-export type SgsiArtifactType = 'soa_item' | 'gap_item' | 'risk' | 'asset' | 'audit_finding';
+// --- Repositório transversal de evidências (Feature 014; estendido na 015) ---
+export type SgsiArtifactType =
+  | 'soa_item'
+  | 'gap_item'
+  | 'risk'
+  | 'asset'
+  | 'audit_finding'
+  | 'nonconformity'
+  | 'corrective_action';
 
 export interface EvidenceLink {
   id: string;
@@ -1057,4 +1064,109 @@ export interface RiskPlan {
   id: string;
   draft_status: string;
   current_version_id: string | null;
+}
+
+// --- NC / Ações Corretivas + Análise Crítica + Melhoria / PDCA (Feature 015) ---
+export type NCOrigin = 'audit_finding' | 'external_audit' | 'incident' | 'management_review' | 'other';
+export type NCSeverity = 'maior' | 'menor' | 'observacao';
+export type NCStatus = 'open' | 'in_progress' | 'in_verification' | 'closed' | 'cancelled';
+export type CorrectiveActionStatus = 'planned' | 'in_progress' | 'done' | 'cancelled';
+export type VerificationResult = 'effective' | 'ineffective';
+export type ImprovementOrigin = 'audit' | 'nonconformity' | 'management_review' | 'suggestion';
+export type ImprovementStatus = 'proposed' | 'in_progress' | 'implemented' | 'rejected';
+
+export interface NCSummary {
+  id: string;
+  code: string;
+  origin: NCOrigin;
+  title: string;
+  severity: NCSeverity;
+  status: NCStatus;
+  source_finding_id: string | null;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+}
+
+export interface NCReadiness {
+  can_close: boolean;
+  has_effective_verification: boolean;
+  overdue_actions: number;
+  open_actions: number;
+}
+
+export interface NCDetail extends NCSummary {
+  description: string;
+  root_cause: string | null;
+  root_cause_method: string | null;
+  readiness: NCReadiness;
+}
+
+export interface CorrectiveAction {
+  id: string;
+  nonconformity_id: string;
+  description: string;
+  responsible_member_id: string;
+  due_date: string | null;
+  status: CorrectiveActionStatus;
+  overdue: boolean;
+}
+
+export interface NCVerification {
+  id: string;
+  result: VerificationResult;
+  notes: string | null;
+  verified_by: string;
+  verified_at: string;
+}
+
+export interface NcDashboard {
+  nc_by_status: Record<string, number>;
+  nc_by_severity: Record<string, number>;
+  overdue_actions: number;
+  improvements_by_status: Record<string, number>;
+}
+
+export interface ManagementReviewSummary {
+  id: string;
+  title: string;
+  review_date: string;
+  draft_status: string;
+  current_version_id: string | null;
+}
+
+export interface ManagementReviewDetail extends ManagementReviewSummary {
+  inputs: Record<string, unknown>;
+  outputs: Record<string, unknown>;
+  readiness: { can_approve: boolean };
+}
+
+export interface ManagementReviewVersion {
+  id: string;
+  version_number: number;
+  status: string;
+  classification: Classification;
+  signed: boolean;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+export interface Improvement {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  origin: ImprovementOrigin;
+  source_ref: string | null;
+  status: ImprovementStatus;
+  target_type: SgsiArtifactType | null;
+  target_id: string | null;
+}
+
+export interface PdcaEntry {
+  occurred_at: string;
+  phase: 'check' | 'act' | 'plan';
+  kind: 'finding' | 'nonconformity' | 'corrective_action' | 'management_review' | 'improvement';
+  ref_id: string;
+  label: string;
+  detail: string;
 }

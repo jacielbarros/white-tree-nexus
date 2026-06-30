@@ -195,6 +195,42 @@ export const routes: Routes = [
           import('@app/pages/internal-audit-dashboard/internal-audit-dashboard').then((m) => m.InternalAuditDashboardPage),
       },
       {
+        path: 'nonconformities',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformities/nonconformities').then((m) => m.NonconformitiesPage),
+      },
+      {
+        path: 'nonconformity-detail/:id',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformity-detail/nonconformity-detail').then((m) => m.NonconformityDetailPage),
+      },
+      {
+        path: 'nonconformity-dashboard',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/nonconformity-dashboard/nonconformity-dashboard').then((m) => m.NonconformityDashboardPage),
+      },
+      {
+        path: 'management-reviews',
+        canActivate: [permissionGuard('view_management_review')],
+        loadComponent: () =>
+          import('@app/pages/management-reviews/management-reviews').then((m) => m.ManagementReviewsPage),
+      },
+      {
+        path: 'management-review-detail/:id',
+        canActivate: [permissionGuard('view_management_review')],
+        loadComponent: () =>
+          import('@app/pages/management-review-detail/management-review-detail').then((m) => m.ManagementReviewDetailPage),
+      },
+      {
+        path: 'improvements',
+        canActivate: [permissionGuard('view_nonconformity')],
+        loadComponent: () =>
+          import('@app/pages/improvements/improvements').then((m) => m.ImprovementsPage),
+      },
+      {
         path: 'soa',
         canActivate: [permissionGuard('view_soa')],
         loadComponent: () => import('@app/pages/soa/soa').then((m) => m.SoaPage),

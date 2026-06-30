@@ -14,6 +14,8 @@ const ARTIFACT_LABELS: Record<SgsiArtifactType, string> = {
   risk: 'Risco',
   asset: 'Ativo',
   audit_finding: 'Constatação',
+  nonconformity: 'Não conformidade',
+  corrective_action: 'Ação corretiva',
 };
 
 const CLASSIFICATION_LABELS: Record<Classification, string> = {

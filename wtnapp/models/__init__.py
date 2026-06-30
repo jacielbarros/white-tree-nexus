@@ -17,6 +17,15 @@ from wtnapp.models.internal_audit_model import (
     InternalAuditFinding,
     InternalAuditProgram,
 )
+# NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+from wtnapp.models.nonconformity_model import (
+    CorrectiveAction,
+    NonConformity,
+    NonConformityEvent,
+    NonConformityVerification,
+)
+from wtnapp.models.management_review_model import ManagementReview
+from wtnapp.models.improvement_model import Improvement, ImprovementEvent
 from wtnapp.models.form_assignment_event_model import FormAssignmentEvent
 from wtnapp.models.form_assignment_model import FormAssignment
 from wtnapp.models.form_signature_model import FormSignature, FormSignatureOTP
@@ -83,6 +92,13 @@ __all__ = [
     "InternalAuditChecklistItem",
     "InternalAuditFinding",
     "InternalAuditEvent",
+    "NonConformity",
+    "CorrectiveAction",
+    "NonConformityVerification",
+    "NonConformityEvent",
+    "ManagementReview",
+    "Improvement",
+    "ImprovementEvent",
     "FormAssignment",
     "FormAssignmentEvent",
     "FormSignature",

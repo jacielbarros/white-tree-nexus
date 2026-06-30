@@ -47,6 +47,12 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_internal_audit",
         "manage_internal_audit",
         "approve_audit_report",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+        "view_nonconformity",
+        "manage_nonconformity",
+        "view_management_review",
+        "manage_management_review",
+        "approve_management_review",
     },
     Role.org_admin: {
         "invite_users",
@@ -83,6 +89,12 @@ PERMISSIONS: dict[Role, set[str]] = {
         "view_internal_audit",
         "manage_internal_audit",
         "approve_audit_report",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+        "view_nonconformity",
+        "manage_nonconformity",
+        "view_management_review",
+        "manage_management_review",
+        "approve_management_review",
     },
     Role.consultant: {
         "invite_users",
@@ -111,6 +123,11 @@ PERMISSIONS: dict[Role, set[str]] = {
         "manage_evidence",
         "view_internal_audit",
         "manage_internal_audit",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015) — gere mas não aprova a Ata
+        "view_nonconformity",
+        "manage_nonconformity",
+        "view_management_review",
+        "manage_management_review",
     },
     Role.client: {
         "view_organization",
@@ -130,6 +147,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Evidências transversais + Auditoria Interna (Feature 014)
         "view_evidence",
         "view_internal_audit",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+        "view_nonconformity",
+        "view_management_review",
     },
     Role.manager: {
         "view_organization",
@@ -149,6 +169,9 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Evidências transversais + Auditoria Interna (Feature 014)
         "view_evidence",
         "view_internal_audit",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+        "view_nonconformity",
+        "view_management_review",
     },
     Role.process_owner: {
         "view_organization",
@@ -168,16 +191,22 @@ PERMISSIONS: dict[Role, set[str]] = {
         # Evidências transversais + Auditoria Interna (Feature 014)
         "view_evidence",
         "view_internal_audit",
+        # NC/Ações Corretivas + Análise Crítica + PDCA (Feature 015)
+        "view_nonconformity",
+        "view_management_review",
     },
     Role.control_owner: {
         "view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset",
         "view_risk", "view_evidence", "view_internal_audit",
+        "view_nonconformity", "view_management_review",
     },
     Role.internal_auditor: {
         "view_organization", "view_context", "view_form", "view_gap", "view_soa", "view_asset",
         "view_risk",
         # Auditor interno: conduz auditorias e anexa evidências a constatações (Feature 014)
         "view_evidence", "manage_evidence", "view_internal_audit", "manage_internal_audit",
+        # Visualiza NCs e atas (Feature 015)
+        "view_nonconformity", "view_management_review",
     },
     Role.guest_collaborator: {"view_organization", "view_context", "view_form"},
 }

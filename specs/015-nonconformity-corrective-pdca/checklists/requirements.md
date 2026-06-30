@@ -39,3 +39,7 @@
   4. **Vínculo NC↔artefato** — um vínculo primário opcional por NC.
   5. **PDCA** — referência read-only + visualização, sem write-back automático.
 - Nenhum item do checklist está incompleto. Spec pronta para `/speckit-plan`.
+- `/speckit-analyze` (2026-06-30) aplicou remediações: **U1** gate de encerramento da NC fixado (sem
+  campo `obrigatória` — usa `status` da ação: zero ações em estado não terminal + verificação eficaz);
+  **A1** RBAC composto da visão PDCA (espelha a timeline da 5a); e notas (coleção testada em T031, `close`
+  só na US2 já com o gate, card reusa `DashboardModuleId.action_plan`). Nenhuma violação de constitution.

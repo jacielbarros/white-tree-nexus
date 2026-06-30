@@ -36,8 +36,11 @@ from wtnapp.routers import (
     gap_catalog,
     gap_evidence,
     gap_guidance,
+    improvement,
     internal_audit,
     invitations,
+    management_review,
+    nonconformity,
     me,
     memberships,
     organizations,
@@ -158,3 +161,6 @@ app.include_router(risk.router)
 app.include_router(evidence.router)
 app.include_router(internal_audit.router)
 app.include_router(traceability.router)
+app.include_router(nonconformity.router)
+app.include_router(management_review.router)
+app.include_router(improvement.router)
