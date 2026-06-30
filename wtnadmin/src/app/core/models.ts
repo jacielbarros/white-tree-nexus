@@ -77,6 +77,36 @@ export interface InviteLookup {
 export type Level = 'alto' | 'medio' | 'baixo';
 export type Classification = 'publico' | 'uso_interno' | 'confidencial' | 'restrito';
 
+// --- Repositório transversal de evidências (Feature 014) ---
+export type SgsiArtifactType = 'soa_item' | 'gap_item' | 'risk' | 'asset' | 'audit_finding';
+
+export interface EvidenceLink {
+  id: string;
+  target_type: SgsiArtifactType;
+  target_id: string;
+  active: boolean;
+}
+
+export interface EvidenceSummary {
+  id: string;
+  title: string;
+  description: string | null;
+  classification: Classification;
+  status: 'active' | 'inactive';
+  current_version_id: string;
+  file_name: string;
+  mime_type: string | null;
+  extension: string;
+  size_bytes: number;
+  content_hash: string;
+  hash_algorithm: string;
+  uploaded_by: string;
+  uploaded_at: string;
+  created_at: string;
+  can_download: boolean;
+  links: EvidenceLink[];
+}
+
 export type PrintableDocumentType =
   | 'context_report'
   | 'gap_report'

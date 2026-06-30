@@ -9,6 +9,8 @@ import {
   Diagnostic,
   DocumentPreview,
   DocumentVersion,
+  EvidenceLink,
+  EvidenceSummary,
   FormAssignment,
   FormSignature,
   FormTemplate,
@@ -30,6 +32,7 @@ import {
   SignaturePolicy,
   SignedSignaturePlacement,
   SignedDocument,
+  SgsiArtifactType,
   Stakeholder,
   StakeholderMap,
   Suggestion,
@@ -472,6 +475,38 @@ export class ApiService {
   /** Download binário (ex.: exportação de PDF). */
   getBlob(path: string): Observable<Blob> {
     return this.http.get(`${this.base}${path}`, { responseType: 'blob' });
+  }
+
+  // --- Repositório transversal de evidências (Feature 014) ---
+  listEvidence(params?: Record<string, string>): Observable<EvidenceSummary[]> {
+    return this.http.get<EvidenceSummary[]>(`${this.base}/evidence`, params ? { params } : {});
+  }
+
+  uploadEvidence(body: FormData): Observable<EvidenceSummary> {
+    return this.http.post<EvidenceSummary>(`${this.base}/evidence`, body);
+  }
+
+  replaceEvidence(evidenceId: string, body: FormData): Observable<EvidenceSummary> {
+    return this.http.post<EvidenceSummary>(`${this.base}/evidence/${evidenceId}/versions`, body);
+  }
+
+  inactivateEvidence(evidenceId: string, reason?: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/evidence/${evidenceId}`, { body: { reason: reason ?? null } });
+  }
+
+  downloadEvidence(evidenceId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/evidence/${evidenceId}/download`, { responseType: 'blob' });
+  }
+
+  linkEvidence(evidenceId: string, targetType: SgsiArtifactType, targetId: string): Observable<EvidenceLink> {
+    return this.http.post<EvidenceLink>(`${this.base}/evidence/${evidenceId}/links`, {
+      target_type: targetType,
+      target_id: targetId,
+    });
+  }
+
+  unlinkEvidence(evidenceId: string, linkId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/evidence/${evidenceId}/links/${linkId}`);
   }
 
   // --- Respondente externo (sem auth) ---

@@ -89,11 +89,11 @@ metadados; recusa arquivo inválido; conteúdo confidencial barrado por classifi
   `GET /evidence/{id}/download` com `require_permission`, `scoped_query`, audit e 404 genérico.
 - [X] T017 [US1] Adaptar `wtnapp/routers/gap_evidence.py` para delegar ao `evidence_service`
   (filtro `target_type=gap_item`), **mantendo os mesmos paths/contratos** do 008.
-- [ ] T018 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/`: componente reutilizável (lista +
+- [X] T018 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/`: componente reutilizável (lista +
   upload + download) com Signals/OnPush/Reactive Forms; helpers de upload/blob em `core/api.ts`.
 - [ ] T019 [US1] Embutir `evidence-panel` nas telas `pages/soa`, `pages/risk-detail`,
   `pages/asset-detail` e migrar o painel atual de `pages/gap-analysis` para o componente compartilhado.
-- [ ] T020 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/evidence-panel.spec.ts` (lista/upload/
+- [X] T020 [P] [US1] `wtnadmin/src/app/shared/evidence-panel/evidence-panel.spec.ts` (lista/upload/
   estado vazio/regressão do Gap).
 
 **Checkpoint**: US1 funcional — MVP da Fase 1, isolamento verificado, 008 sem regressão.
