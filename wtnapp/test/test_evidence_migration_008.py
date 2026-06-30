@@ -102,10 +102,14 @@ def test_migration_copies_gap_evidence_into_unified_store_preserving_custody(tmp
         assert "gap_evidence" not in names and "gap_evidence_version" not in names
 
         # evidências preservadas (hash/autoria)
-        ev = conn.execute(sa.text("SELECT id, tenant_id, created_by FROM evidence ORDER BY tenant_id")).mappings().all()
+        ev = conn.execute(sa.text("SELECT id, tenant_id, created_by, current_version_id FROM evidence ORDER BY tenant_id")).mappings().all()
         assert {r["id"] for r in ev} == {ev_a, ev_b}
         ver = conn.execute(sa.text("SELECT content_hash, uploaded_by FROM evidence_version WHERE evidence_id=:e"), {"e": ev_a}).mappings().one()
         assert ver["content_hash"] == hash_a and ver["uploaded_by"] == user
+
+        # ponteiro da versão corrente preservado (resolve a FK circular evidence↔version no PG)
+        cur = {r["id"]: r["current_version_id"] for r in ev}
+        assert cur[ev_a] == ver_a and cur[ev_b] == ver_b
 
         # vínculos gap_item criados, apontando ao item correto
         links = conn.execute(sa.text("SELECT evidence_id, target_type, target_id FROM evidence_link")).mappings().all()

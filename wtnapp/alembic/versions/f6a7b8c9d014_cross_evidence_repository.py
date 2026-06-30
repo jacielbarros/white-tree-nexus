@@ -213,10 +213,16 @@ def _migrate_008_data(conn: sa.engine.Connection) -> None:
 
     ev_src = list(conn.execute(sa.select(g_evidence)).mappings())
     ev_rows, link_rows = [], []
+    current_version_map: dict = {}  # evidence_id -> current_version_id (aplicado após inserir versões)
     for r in ev_src:
         if r["id"] in existing:
             continue
-        ev_rows.append({c: r[c] for c in _EVIDENCE_COLS})
+        row = {c: r[c] for c in _EVIDENCE_COLS}
+        # FK circular evidence.current_version_id ↔ evidence_version.evidence_id (PG): insere com
+        # NULL e aponta depois que as versões existirem.
+        current_version_map[r["id"]] = row["current_version_id"]
+        row["current_version_id"] = None
+        ev_rows.append(row)
         link_rows.append({
             "id": str(uuid.uuid4()), "tenant_id": r["tenant_id"], "evidence_id": r["id"],
             "target_type": "gap_item", "target_id": r["assessment_item_id"],
@@ -243,6 +249,11 @@ def _migrate_008_data(conn: sa.engine.Connection) -> None:
         evt_rows.append(row)
     if evt_rows:
         conn.execute(event_t.insert(), evt_rows)
+
+    # Agora que as versões existem, aponta a versão corrente de cada evidência (resolve a FK).
+    for eid, vid in current_version_map.items():
+        if vid is not None:
+            conn.execute(evidence_t.update().where(evidence_t.c.id == eid).values(current_version_id=vid))
 
 
 def _drop_legacy(conn: sa.engine.Connection) -> None:
