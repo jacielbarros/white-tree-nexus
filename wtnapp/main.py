@@ -41,6 +41,7 @@ from wtnapp.routers import (
     me,
     memberships,
     organizations,
+    traceability,
     print_documents,
     risk,
     scope,
@@ -156,3 +157,4 @@ app.include_router(assets.router)
 app.include_router(risk.router)
 app.include_router(evidence.router)
 app.include_router(internal_audit.router)
+app.include_router(traceability.router)

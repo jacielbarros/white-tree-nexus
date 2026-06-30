@@ -254,13 +254,13 @@ assinatura) congela versão imutável, exportar PDF.
 claro; nunca agrega outro tenant.
 
 ### Tests for User Story 7 (MANDATORY) ⚠️
-- [ ] T051 [P] [US7] Agregação + ordem + estado vazio + isolation em
+- [X] T051 [P] [US7] Agregação + ordem + estado vazio + isolation em
   `wtnapp/test/test_traceability_timeline.py`.
 
 ### Implementation for User Story 7
-- [ ] T052 [US7] `wtnapp/services/traceability_service.py`: agrega `evidence_event`/`evidence_link`/
+- [X] T052 [US7] `wtnapp/services/traceability_service.py`: agrega `evidence_event`/`evidence_link`/
   `internal_audit_finding` por `target_type`+`target_id` (só metadados).
-- [ ] T053 [US7] `wtnapp/routers/traceability.py`: `GET /traceability/timeline` com **RBAC composto**
+- [X] T053 [US7] `wtnapp/routers/traceability.py`: `GET /traceability/timeline` com **RBAC composto**
   (view do módulo do artefato-alvo + `view_evidence`; constatações só com `view_internal_audit`, senão
   omitidas sem revelar contagem) + scoped_query + 404 genérico (ver RBAC da timeline no data-model).
 - [ ] T054 [P] [US7] Componente de timeline embutido nas telas `pages/soa`/`risk-detail`/`asset-detail`
@@ -279,14 +279,14 @@ tipo) + readiness no Dashboard de Conformidade.
 concluída/relatório aprovado; estado vazio sem erro.
 
 ### Tests for User Story 8 (MANDATORY) ⚠️
-- [ ] T055 [P] [US8] Contagens + isolation em `wtnapp/test/test_audit_metrics.py`.
-- [ ] T056 [P] [US8] Card de readiness em `wtnapp/test/test_dashboard.py` (extensão).
+- [X] T055 [P] [US8] Contagens + isolation em `wtnapp/test/test_audit_metrics.py`.
+- [X] T056 [P] [US8] Card de readiness em `wtnapp/test/test_dashboard.py` (extensão).
 
 ### Implementation for User Story 8
-- [ ] T057 [US8] `wtnapp/services/audit_metrics_service.py`: contagens simples por status/
+- [X] T057 [US8] `wtnapp/services/audit_metrics_service.py`: contagens simples por status/
   classificação/tipo (exclui inativas conforme regra).
-- [ ] T058 [US8] `wtnapp/routers/internal_audit.py`: `GET /internal-audit/dashboard`.
-- [ ] T059 [US8] Estender `wtnapp/services/dashboard_service.py` + `schemas/dashboard_schema.py` com
+- [X] T058 [US8] `wtnapp/routers/internal_audit.py`: `GET /internal-audit/dashboard`.
+- [X] T059 [US8] Estender `wtnapp/services/dashboard_service.py` + `schemas/dashboard_schema.py` com
   card desta etapa (`DashboardModuleId.internal_audit`, gating por `view_internal_audit`, fail-open).
 - [ ] T060 [P] [US8] `pages/internal-audit-dashboard/` (cards) + card na home; `.spec.ts`.
 

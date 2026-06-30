@@ -259,23 +259,57 @@ def _risk_card(db: Session, ctx: OrgContext) -> ModuleCard:
     )
 
 
+def _internal_audit_card(db: Session, ctx: OrgContext) -> ModuleCard:
+    """Readiness de Evidências & Auditoria Interna (Feature 014) na esteira."""
+    from wtnapp.models.internal_audit_model import InternalAudit
+    from wtnapp.settings import InternalAuditStatus
+
+    audits = db.query(InternalAudit).filter_by(tenant_id=ctx.tenant_id).all()
+    if not audits:
+        return ModuleCard(
+            id=DashboardModuleId.internal_audit,
+            title="Evidências & Auditoria Interna",
+            status=DashboardCardStatus.not_started,
+            not_started=True,
+            next_action=NextAction(label="Planejar auditoria", route="internal-audit"),
+        )
+
+    # Âncora: auditoria com relatório aprovado, senão a mais recente.
+    approved = [a for a in audits if a.current_version_id is not None]
+    anchor = approved[0] if approved else max(audits, key=lambda a: a.created_at)
+    completed = sum(1 for a in audits if a.status == InternalAuditStatus.completed)
+    progress = round(completed / len(audits) * 100, 1)
+
+    current = _current_version(db, anchor.current_version_id)
+    overdue = cds.review_overdue(current)
+    status = _card_status(anchor.draft_status, anchor.current_version_id, overdue)
+
+    if anchor.current_version_id is not None:
+        action = NextAction(label="Ver relatório de auditoria", route="internal-audit-detail")
+    elif anchor.status == InternalAuditStatus.completed:
+        action = NextAction(label="Aprovar relatório", route="internal-audit-detail")
+    else:
+        action = NextAction(label="Conduzir auditoria", route="internal-audit-detail")
+
+    return ModuleCard(
+        id=DashboardModuleId.internal_audit,
+        title="Evidências & Auditoria Interna",
+        status=status,
+        progress_pct=progress,
+        overdue=overdue,
+        next_action=action,
+    )
+
+
 def _placeholder_cards() -> list[ModuleCard]:
     return [
         ModuleCard(
             id=DashboardModuleId.action_plan,
-            title="Plano de Ação",
+            title="NC & Ações Corretivas",
             status=DashboardCardStatus.not_started,
             not_started=True,
             placeholder=True,
-            next_action=NextAction(label="Em breve · Módulo 4", route="dashboard"),
-        ),
-        ModuleCard(
-            id=DashboardModuleId.evidence,
-            title="Gestão de Evidências",
-            status=DashboardCardStatus.not_started,
-            not_started=True,
-            placeholder=True,
-            next_action=NextAction(label="Em breve · Módulo 5", route="dashboard"),
+            next_action=NextAction(label="Em breve · Módulo 5b", route="dashboard"),
         ),
     ]
 
@@ -326,6 +360,7 @@ def build_dashboard(db: Session, ctx: OrgContext) -> DashboardResponse:
         ("view_gap", DashboardModuleId.gap, "Gap Analysis · Anexo A", lambda: _gap_card(db, ctx, kpis)),
         ("view_soa", DashboardModuleId.soa, "Declaração de Aplicabilidade", lambda: _soa_card(db, ctx)),
         ("view_risk", DashboardModuleId.risk, "Gestão de Riscos", lambda: _risk_card(db, ctx)),
+        ("view_internal_audit", DashboardModuleId.internal_audit, "Evidências & Auditoria Interna", lambda: _internal_audit_card(db, ctx)),
     ]
     for perm, module_id, title, build in builders:
         if not has_permission(ctx.role, perm):

@@ -158,3 +158,10 @@ class ReportVersionSummary(BaseModel):
     signed: bool
     approved_by: uuid.UUID | None = None
     approved_at: datetime | None = None
+
+
+class AuditDashboard(BaseModel):
+    evidence_by_status: dict[str, int] = Field(default_factory=dict)
+    evidence_by_classification: dict[str, int] = Field(default_factory=dict)
+    audits_by_status: dict[str, int] = Field(default_factory=dict)
+    findings_by_type: dict[str, int] = Field(default_factory=dict)

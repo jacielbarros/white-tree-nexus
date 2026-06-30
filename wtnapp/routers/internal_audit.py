@@ -24,6 +24,7 @@ from wtnapp.models.internal_audit_model import (
 )
 from wtnapp.schemas.evidence_schema import EvidenceLinkOut
 from wtnapp.schemas.internal_audit_schema import (
+    AuditDashboard,
     AuditDetail,
     AuditReadiness,
     AuditRequest,
@@ -40,6 +41,7 @@ from wtnapp.schemas.internal_audit_schema import (
     ReportVersionSummary,
     TransitionRequest,
 )
+from wtnapp.services import audit_metrics_service
 from wtnapp.services import controlled_document_service as cds
 from wtnapp.services import internal_audit_export_service, internal_audit_report_service
 from wtnapp.services import internal_audit_service as svc
@@ -93,6 +95,13 @@ def _detail(db: Session, ctx: OrgContext, audit: InternalAudit) -> AuditDetail:
             findings_count=svc.findings_count(db, ctx, audit.id),
         ),
     )
+
+
+# ───────────────────────────── Dashboard do módulo ─────────────────────────────
+
+@router.get("/dashboard", response_model=AuditDashboard)
+def dashboard(db: db_dep, ctx: view_dep):
+    return AuditDashboard(**audit_metrics_service.build_metrics(db, ctx))
 
 
 # ───────────────────────────── Programas ─────────────────────────────
